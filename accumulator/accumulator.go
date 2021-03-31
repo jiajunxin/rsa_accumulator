@@ -2,74 +2,59 @@ package accumulator
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"math/big"
 	"math/rand"
 )
-
-const securityPara = 2048
-const securityParaInBits = 128
-const crs = "HKUST2021" //used as the seed for generating random numbers
-const crsNum = 100      //used as the seed for generating random numbers
-
-var one = big.NewInt(1)
-var two = big.NewInt(2)
-var Max2048 = big.NewInt(0)
 
 func init() {
 	_ = Max2048.Lsh(one, 2048)
 	_ = Max2048.Sub(Max2048, one)
 }
 
-type AccumulatorSetup struct {
-	p big.Int
-	q big.Int
-	N big.Int
-	g big.Int //generator in QR_N
-}
-
-func Init() *AccumulatorSetup {
-	var p, q, N, g big.Int
-
-	crand.Read([]byte(crs))
-	p = *getSafePrime()
-	q = *getSafePrime()
-	N.Mul(&p, &q)
-	g = *getRanQR(&p, &q)
-
+// TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
+func TrustedSetup() *AccumulatorSetup {
 	var ret AccumulatorSetup
-	ret.p = p
-	ret.q = q
-	ret.N = N
-	ret.g = g
+	ret.P.SetString(P2048String, 10)
+	ret.Q.SetString(Q2048String, 10)
+	ret.N.SetString(N2048String, 10)
+	ret.G.SetString(G2048String, 10)
 	return &ret
 }
 
 func getSafePrime() *big.Int {
-	ranNum, _ := crand.Prime(crand.Reader, securityPara)
-
+	ranNum, _ := crand.Prime(crand.Reader, securityPara/2)
+	fmt.Println("test 0.6")
 	var temp big.Int
 	flag := false
 	for !flag {
-		temp.Sub(ranNum, one)
-		temp.Div(&temp, two)
+		temp.Mul(ranNum, two)
+		temp.Add(&temp, one)
+		//fmt.Println("test 0.7")
 		flag = temp.ProbablyPrime(securityParaInBits)
+		//fmt.Println("test 0.8")
 		if !flag {
 			ranNum, _ = crand.Prime(crand.Reader, securityPara)
 		}
 	}
-	return ranNum
+	return &temp
 }
 
 func getRanQR(p, q *big.Int) *big.Int {
 	rng := rand.New(rand.NewSource(crsNum))
-	var ranNum *big.Int
-	ranNum.Rand(rng, Max2048)
+	var N big.Int
+	N.Mul(p, q)
+	var ranNum big.Int
+	ranNum.Rand(rng, &N)
 
 	flag := false
 	for !flag {
-		flag = isQR(ranNum, p, q)
+		flag = isQR(&ranNum, p, q)
+		if !flag {
+			ranNum.Rand(rng, &N)
+		}
 	}
-	return ranNum
+	return &ranNum
 }
 
 func isQR(input, p, q *big.Int) bool {
