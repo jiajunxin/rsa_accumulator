@@ -35,7 +35,19 @@ func GetDIHash(rnd *rand.Rand) *big.Int {
 	h.Write(ranNum.Bytes())
 	hashTemp := h.Sum(nil)
 	temp.SetBytes(hashTemp)
-	_ = temp.SetBit(&temp, 0, 0)
+	//_ = temp.SetBit(&temp, 0, 0)
+	_ = ret.Add(Delta, &temp)
+	return &ret
+}
+
+// GetDIHash returns the Delta + Sha256(input) with the last bit 1
+func DIHash(input []byte) *big.Int {
+	h := sha256.New()
+	var temp, ret big.Int
+	h.Write(input)
+	hashTemp := h.Sum(nil)
+	temp.SetBytes(hashTemp)
+	//_ = temp.SetBit(&temp, 0, 0)
 	_ = ret.Add(Delta, &temp)
 	return &ret
 }

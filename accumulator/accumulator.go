@@ -22,6 +22,12 @@ func TrustedSetup() *AccumulatorSetup {
 	return &ret
 }
 
+func Accumulate(g, power, n *big.Int) *big.Int {
+	var ret big.Int
+	ret.Exp(g, power, n)
+	return &ret
+}
+
 func getSafePrime() *big.Int {
 	ranNum, _ := crand.Prime(crand.Reader, securityPara/2)
 	fmt.Println("test 0.6")
