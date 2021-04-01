@@ -23,3 +23,12 @@ func HashToPrime(input []byte) *big.Int {
 	}
 	return &ret
 }
+
+func SHA256ToInt(input []byte) *big.Int {
+	var ret big.Int
+	h := sha256.New()
+	h.Write([]byte(input))
+	hashTemp := h.Sum(nil)
+	ret.SetBytes(hashTemp)
+	return &ret
+}

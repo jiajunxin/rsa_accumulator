@@ -8,6 +8,8 @@ import (
 	"github.com/rsa_accumulator/dihash"
 )
 
+const testString = "2021HKUST"
+
 func TestGcd(t *testing.T) {
 	var testObject AccumulatorSetup
 	testObject = *TrustedSetup()
@@ -30,7 +32,7 @@ func TestDIHash(t *testing.T) {
 	// we need to check if A ?= B + C
 	var testObject AccumulatorSetup
 	testObject = *TrustedSetup()
-	testString := "2021HKUST"
+
 	dihashValue := dihash.DIHash([]byte(testString))
 	A := Accumulate(&testObject.G, dihashValue, &testObject.N)
 
