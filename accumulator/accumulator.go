@@ -2,7 +2,6 @@ package accumulator
 
 import (
 	crand "crypto/rand"
-	"fmt"
 	"math/big"
 	"math/rand"
 )
@@ -30,15 +29,12 @@ func Accumulate(g, power, n *big.Int) *big.Int {
 
 func getSafePrime() *big.Int {
 	ranNum, _ := crand.Prime(crand.Reader, securityPara/2)
-	fmt.Println("test 0.6")
 	var temp big.Int
 	flag := false
 	for !flag {
 		temp.Mul(ranNum, two)
 		temp.Add(&temp, one)
-		//fmt.Println("test 0.7")
-		flag = temp.ProbablyPrime(securityParaInBits)
-		//fmt.Println("test 0.8")
+		flag = temp.ProbablyPrime(securityParaInBits / 2)
 		if !flag {
 			ranNum, _ = crand.Prime(crand.Reader, securityPara)
 		}

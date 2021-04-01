@@ -2,7 +2,6 @@ package accumulator
 
 import (
 	crand "crypto/rand"
-	"fmt"
 	"math/big"
 )
 
@@ -39,17 +38,11 @@ type AccumulatorSetup struct {
 // Init generates a private key pair (p,q), and N = pq and one generator g in QR
 func Init() *AccumulatorSetup {
 	var p, q, N, g big.Int
-	fmt.Println("test 0")
 	crand.Read([]byte(crs))
-	fmt.Println("test 0.5")
 	p = *getSafePrime()
-	fmt.Println("test 1")
 	q = *getSafePrime()
-	fmt.Println("p = ", p.String())
 	N.Mul(&p, &q)
-	fmt.Println("test 2")
 	g = *getRanQR(&p, &q)
-	fmt.Println("test 3")
 
 	var ret AccumulatorSetup
 	ret.P = p
