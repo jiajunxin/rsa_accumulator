@@ -28,7 +28,7 @@ func init() {
 }
 
 // GetDIHash returns the Delta + Sha256(input) with the last bit 1
-func GetDIHash(rnd *rand.Rand) *big.Int {
+func getDIHash(rnd *rand.Rand) *big.Int {
 	h := sha256.New()
 	var ranNum, temp, ret big.Int
 	ranNum.Rand(rnd, Max256)
@@ -53,7 +53,7 @@ func DIHash(input []byte) *big.Int {
 }
 
 // Get2048Rnd returns the Sha256(input||0) || Sha256(input||1) || ... Sha256(input||7)
-func Get2048Rnd(rnd *rand.Rand) *big.Int {
+func get2048Rnd(rnd *rand.Rand) *big.Int {
 	h := sha256.New()
 	var ranNum, ret big.Int
 	var hashJoint []byte
