@@ -2,6 +2,7 @@ package accumulator
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"math/big"
 )
 
@@ -35,6 +36,8 @@ type AccumulatorSetup struct {
 	G big.Int //generator in QR_N
 }
 
+type Element []byte
+
 // Init generates a private key pair (p,q), and N = pq and one generator g in QR
 func Init() *AccumulatorSetup {
 	var p, q, N, g big.Int
@@ -49,5 +52,79 @@ func Init() *AccumulatorSetup {
 	ret.Q = q
 	ret.N = N
 	ret.G = g
+	return &ret
+}
+
+func SetAccumulate(inputSet []Element) []big.Int {
+	setSize := len(inputSet)
+	hashValues := make([]big.Int, setSize)
+	ret := make([]big.Int, setSize)
+
+	for i := 0; i < setSize; i++ {
+		hashValues[i] = *SHA256ToInt(inputSet[i])
+	}
+
+	for i := 0; i < setSize; i++ {
+		ret[i] = *WindowMulThenSum(hashValues, 1+i)
+	}
+
+	return ret
+}
+
+/* WindowMulThenSum calculates the sum of partial products of the input set.
+For example, if the input set is x_1, x_2, x_3, x_4, and the windowSize is 2,
+this function calculates x_1x_2 + x_1x_3 + x_1x_4 + x_2x_3 + x_2x_4 + x_3x_4.
+*/
+func WindowMulThenSum(inputSet []big.Int, windowSize int) *big.Int {
+	var ret big.Int
+	setSize := len(inputSet)
+	if setSize < windowSize {
+		fmt.Println("Error in MulThenSum, the windowSize is larger than set size")
+		return &ret
+	}
+	if windowSize < 1 {
+		fmt.Println("Error in MulThenSum, the windowSize is less than 1")
+		return &ret
+	}
+	if windowSize == 1 {
+		ret = *SetSum(inputSet)
+		return &ret
+	}
+	if setSize == windowSize {
+		ret = *SetProduct(inputSet)
+		return &ret
+	}
+
+	// setSize > windowSize
+	var tempInt big.Int
+	for i := 0; i < setSize-windowSize+1; i++ {
+		tempInt = *WindowMulThenSum(inputSet[i+1:], windowSize-1)
+		tempInt.Mul(&tempInt, &inputSet[i])
+		ret.Add(&ret, &tempInt)
+	}
+
+	return &ret
+}
+
+// SetSum calculates the sum of the input set
+func SetSum(inputSet []big.Int) *big.Int {
+	var ret big.Int
+	setSize := len(inputSet)
+	// ret is set to zero by default
+	for i := 0; i < setSize; i++ {
+		ret.Add(&ret, &inputSet[i])
+	}
+	return &ret
+}
+
+// SetProduct calculates the products of the input set
+func SetProduct(inputSet []big.Int) *big.Int {
+	var ret big.Int
+	setSize := len(inputSet)
+	ret.Set(one)
+	// ret is set to 1
+	for i := 0; i < setSize; i++ {
+		ret.Mul(&ret, &inputSet[i])
+	}
 	return &ret
 }
