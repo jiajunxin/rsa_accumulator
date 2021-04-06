@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"math/big"
 	"math/rand"
+
+	"github.com/rsa_accumulator/dihash"
 )
 
 func init() {
@@ -25,6 +27,22 @@ func Accumulate(g, power, n *big.Int) *big.Int {
 	var ret big.Int
 	ret.Exp(g, power, n)
 	return &ret
+}
+
+// This function can be done in a smarter way, but not the current version
+func PreCompute() []big.Int {
+	trustedSetup := *TrustedSetup()
+	newBase := *Accumulate(&trustedSetup.G, dihash.Delta, &trustedSetup.N)
+
+	ret := make([]big.Int, PreComputeSize)
+
+	ret[0] = newBase
+	var temp big.Int
+	for i := 1; i < PreComputeSize; i++ {
+		temp.SetUint64(uint64(i + 1))
+		ret[i] = *Accumulate(&trustedSetup.G, &temp, &trustedSetup.N)
+	}
+	return ret
 }
 
 func getSafePrime() *big.Int {
