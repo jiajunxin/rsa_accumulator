@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"math/big"
+	"strconv"
 )
 
 const securityPara = 2048
@@ -131,5 +132,13 @@ func SetProduct(inputSet []big.Int) *big.Int {
 	for i := 0; i < setSize; i++ {
 		ret.Mul(&ret, &inputSet[i])
 	}
+	return &ret
+}
+
+// GetPseudoRandomElement returns the pseudo random element from the input integer, for test use only
+func GetPseudoRandomElement(input int) *Element {
+	var ret Element
+	temp := strconv.Itoa(input)
+	ret = []byte(temp[:])
 	return &ret
 }
