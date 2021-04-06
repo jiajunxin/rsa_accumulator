@@ -40,9 +40,26 @@ func PreCompute() []big.Int {
 	var temp big.Int
 	for i := 1; i < PreComputeSize; i++ {
 		temp.SetUint64(uint64(i + 1))
-		ret[i] = *Accumulate(&trustedSetup.G, &temp, &trustedSetup.N)
+		ret[i] = *Accumulate(&newBase, &temp, &trustedSetup.N)
 	}
 	return ret
+}
+
+func AccumulateSetWirhPreCompute(inputSet []Element, bases []big.Int) *big.Int {
+	trustedSetup := *TrustedSetup()
+	var ret big.Int
+	setSize := len(inputSet)
+	setWindowValue := SetWindowValue(inputSet)
+
+	var temp big.Int
+	for i := 0; i < setSize-1; i++ {
+		temp = *Accumulate(&bases[setSize-i-1], &setWindowValue[i], &trustedSetup.N)
+		ret.Add(&ret, &temp)
+	}
+	temp = *Accumulate(&trustedSetup.G, &setWindowValue[setSize-1], &trustedSetup.N)
+	ret.Add(&ret, &temp)
+
+	return &ret
 }
 
 func getSafePrime() *big.Int {

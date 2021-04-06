@@ -66,7 +66,7 @@ func SetWindowValue(inputSet []Element) []big.Int {
 	}
 
 	for windowSize := 0; windowSize < setSize; windowSize++ {
-		ret[windowSize] = *WindowMulThenSum(hashValues, 1+windowSize)
+		ret[windowSize] = *WindowMulThenSum(hashValues, windowSize)
 	}
 
 	return ret
@@ -75,6 +75,7 @@ func SetWindowValue(inputSet []Element) []big.Int {
 /* WindowMulThenSum calculates the sum of partial products of the input set.
 For example, if the input set is x_1, x_2, x_3, x_4, and the windowSize is 2,
 this function calculates x_1x_2 + x_1x_3 + x_1x_4 + x_2x_3 + x_2x_4 + x_3x_4.
+If windowSize is 0, return 1.
 */
 func WindowMulThenSum(inputSet []big.Int, windowSize int) *big.Int {
 	var ret big.Int
@@ -84,6 +85,9 @@ func WindowMulThenSum(inputSet []big.Int, windowSize int) *big.Int {
 		return &ret
 	}
 	if windowSize < 1 {
+		if windowSize == 0 {
+			return one
+		}
 		fmt.Println("Error in MulThenSum, the windowSize is less than 1")
 		return &ret
 	}
