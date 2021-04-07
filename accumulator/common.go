@@ -11,7 +11,7 @@ const securityPara = 2048
 const securityParaInBits = 128
 const crs = "HKUST2021" //used as the seed for generating random numbers
 const crsNum = 100      //used as the seed for generating random numbers
-const PreComputeSize = 1000
+const PreComputeSize = 200
 
 // P2048String is p pre-generated using Init()
 const P2048String = "63352778221927519361028463103750221448767352640233427497891399621493053762051700657931788556273902172185299032880373838940518063653253544038031035433413689867999659003837299132948209523942044375512707481879312162665398560984845365739680903745638207932972867945527614242168559637147989390689484323784675311291328928194683043070907622356523214367904866096427467353460642373184311945182134333502590473515421876528784622819173675165323917555281622848828732216045471000014824093521020555215602159615508774566425389790918241516894488428553979917141143240992021158121969388427052119009390574659447463689128757342765773031179"
@@ -60,16 +60,16 @@ func Init() *AccumulatorSetup {
 func SetWindowValue(inputSet []Element) []big.Int {
 	setSize := len(inputSet)
 	hashValues := make([]big.Int, setSize)
-	ret := make([]big.Int, setSize)
-
+	ret := make([]big.Int, setSize+1)
 	for i := 0; i < setSize; i++ {
 		hashValues[i] = *SHA256ToInt(inputSet[i])
 	}
-
-	for windowSize := 0; windowSize < setSize; windowSize++ {
+	fmt.Println("SetWindowValue 1")
+	for windowSize := 0; windowSize < setSize+1; windowSize++ {
+		fmt.Println("SetWindowValue 1.1, windowSize = ", windowSize)
 		ret[windowSize] = *WindowMulThenSum(hashValues, windowSize)
 	}
-
+	fmt.Println("test in SetWindowValue 2")
 	return ret
 }
 
@@ -87,7 +87,8 @@ func WindowMulThenSum(inputSet []big.Int, windowSize int) *big.Int {
 	}
 	if windowSize < 1 {
 		if windowSize == 0 {
-			return one
+			ret.Set(one)
+			return &ret
 		}
 		fmt.Println("Error in MulThenSum, the windowSize is less than 1")
 		return &ret
@@ -100,7 +101,7 @@ func WindowMulThenSum(inputSet []big.Int, windowSize int) *big.Int {
 		ret = *SetProduct(inputSet)
 		return &ret
 	}
-
+	fmt.Println("test in WindowMulThenSum 1, setsize = ", setSize, ", windowSize = ", windowSize)
 	// setSize > windowSize
 	var tempInt big.Int
 	for i := 0; i < setSize-windowSize+1; i++ {

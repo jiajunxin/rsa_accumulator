@@ -9,11 +9,21 @@ import (
 func main() {
 	fmt.Println("test in main")
 	newBases := accumulator.PreCompute()
-
-	elements := make([]accumulator.Element, 1000)
-	for i := 0; i < 1000; i++ {
-		elements[i] = *accumulator.GetPseudoRandomElement(i)
+	fmt.Println("precompute finished")
+	setSize := 2
+	elements := make([]accumulator.Element, setSize)
+	for i := 0; i < setSize; i++ {
+		elements[i] = *accumulator.GetPseudoRandomElement(i + 1)
+		//fmt.Println("elements = ", elements[i])
 	}
+	fmt.Println("GetPseudoRandomElement finished")
 	result := accumulator.AccumulateSetWirhPreCompute(elements, newBases)
-	fmt.Println("result = ", result.String())
+	//fmt.Println("result = ", result.String())
+
+	result2 := accumulator.AccumulateSetWithoutPreCompute(elements)
+	if result.Cmp(result2) != 0 {
+		fmt.Println("result2 != result1")
+	} else {
+		fmt.Println("result2 == result1")
+	}
 }
