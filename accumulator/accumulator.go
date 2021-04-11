@@ -37,16 +37,13 @@ func PreCompute() []big.Int {
 
 func preCompute(preComputeSize int) []big.Int {
 	trustedSetup := *TrustedSetup()
-	newBase := *Accumulate(&trustedSetup.G, dihash.Delta, &trustedSetup.N)
 
 	ret := make([]big.Int, preComputeSize)
 
-	ret[0] = newBase
-	var temp big.Int
-	for i := 1; i < preComputeSize; i++ {
-		temp.SetUint64(uint64(i + 1))
-		ret[i] = *Accumulate(&newBase, &temp, &trustedSetup.N)
-		//fmt.Println("i = ", i)
+	ret[0] = trustedSetup.G
+	ret[1] = *Accumulate(&trustedSetup.G, dihash.Delta, &trustedSetup.N)
+	for i := 2; i < preComputeSize; i++ {
+		ret[i] = *Accumulate(&ret[i-1], dihash.Delta, &trustedSetup.N)
 	}
 	return ret
 }
@@ -57,23 +54,25 @@ func AccumulateSetWirhPreCompute(inputSet []Element, bases []big.Int) *big.Int {
 	var ret big.Int
 	setSize := len(inputSet)
 	fmt.Println("set size = ", setSize)
+	fmt.Println("G = ", trustedSetup.G.String())
 	setWindowValue := SetWindowValue(inputSet)
 	fmt.Println("setWindowValue size = ", len(setWindowValue))
 	fmt.Println("set window value 0 = ", setWindowValue[0].String())
-	//fmt.Println("set window value 1 = ", setWindowValue[1].String())
-	//fmt.Println("set window value 2 = ", setWindowValue[2].String())
+	fmt.Println("set window value 1 = ", setWindowValue[1].String())
+	fmt.Println("set window value 2 = ", setWindowValue[2].String())
 	fmt.Println("test in AccumulateSetWirhPreCompute 0")
 	var temp big.Int
 	ret.Set(one)
-	for i := 0; i < setSize; i++ {
-		temp = *Accumulate(&bases[setSize-i-1], &setWindowValue[i], &trustedSetup.N)
+	for i := 0; i < setSize+1; i++ {
+		temp = *Accumulate(&bases[setSize-i], &setWindowValue[i], &trustedSetup.N)
+		//fmt.Println("temp = ", temp.String())
 		ret.Mul(&ret, &temp)
 		ret.Mod(&ret, &trustedSetup.N)
 	}
 	fmt.Println("test in AccumulateSetWirhPreCompute 1")
-	temp = *Accumulate(&trustedSetup.G, &setWindowValue[setSize], &trustedSetup.N)
-	ret.Mul(&ret, &temp)
-	ret.Mod(&ret, &trustedSetup.N)
+	// temp = *Accumulate(&trustedSetup.G, &setWindowValue[setSize], &trustedSetup.N)
+	// ret.Mul(&ret, &temp)
+	// ret.Mod(&ret, &trustedSetup.N)
 
 	return &ret
 }
@@ -84,7 +83,7 @@ func AccumulateSetWithoutPreCompute(inputSet []Element) *big.Int {
 	var ret big.Int
 	setSize := len(inputSet)
 	hashValues := make([]big.Int, setSize)
-
+	fmt.Println("setSize = ", setSize)
 	{
 		//sha256 values
 		a := SHA256ToInt(inputSet[0])
@@ -99,16 +98,18 @@ func AccumulateSetWithoutPreCompute(inputSet []Element) *big.Int {
 	for i := 0; i < setSize; i++ {
 		hashValues[i] = *dihash.DIHash(inputSet[i])
 	}
-	fmt.Println("di hashValues 0 = ", hashValues[0])
-	//fmt.Println("di hashValues 1 = ", hashValues[1])
+	fmt.Println("di hashValues 0 = ", hashValues[0].String())
+	fmt.Println("di hashValues 1 = ", hashValues[1].String())
 
-	var tempGenerator big.Int
-	tempGenerator.Set(&trustedSetup.G)
+	var tempGenerator1, tempGenerator2 big.Int
+	tempGenerator1.Set(&trustedSetup.G)
 
 	for i := 0; i < setSize; i++ {
-		tempGenerator = *Accumulate(&tempGenerator, &hashValues[i], &trustedSetup.N)
+		tempGenerator2 = *Accumulate(&tempGenerator1, &hashValues[i], &trustedSetup.N)
+		tempGenerator2.Mod(&tempGenerator2, &trustedSetup.N)
+		tempGenerator1.Set(&tempGenerator2)
 	}
-	ret.Set(&tempGenerator)
+	ret.Set(&tempGenerator1)
 
 	return &ret
 }
