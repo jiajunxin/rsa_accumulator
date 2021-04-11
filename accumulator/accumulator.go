@@ -54,13 +54,12 @@ func AccumulateSetWirhPreCompute(inputSet []Element, bases []big.Int) *big.Int {
 	var ret big.Int
 	setSize := len(inputSet)
 	fmt.Println("set size = ", setSize)
-	fmt.Println("G = ", trustedSetup.G.String())
 	setWindowValue := SetWindowValue(inputSet)
-	fmt.Println("setWindowValue size = ", len(setWindowValue))
-	fmt.Println("set window value 0 = ", setWindowValue[0].String())
-	fmt.Println("set window value 1 = ", setWindowValue[1].String())
-	fmt.Println("set window value 2 = ", setWindowValue[2].String())
-	fmt.Println("test in AccumulateSetWirhPreCompute 0")
+	// fmt.Println("setWindowValue size = ", len(setWindowValue))
+	// fmt.Println("set window value 0 = ", setWindowValue[0].String())
+	// fmt.Println("set window value 1 = ", setWindowValue[1].String())
+	// fmt.Println("set window value 2 = ", setWindowValue[2].String())
+	// fmt.Println("test in AccumulateSetWirhPreCompute 0")
 	var temp big.Int
 	ret.Set(one)
 	for i := 0; i < setSize+1; i++ {
@@ -70,9 +69,6 @@ func AccumulateSetWirhPreCompute(inputSet []Element, bases []big.Int) *big.Int {
 		ret.Mod(&ret, &trustedSetup.N)
 	}
 	fmt.Println("test in AccumulateSetWirhPreCompute 1")
-	// temp = *Accumulate(&trustedSetup.G, &setWindowValue[setSize], &trustedSetup.N)
-	// ret.Mul(&ret, &temp)
-	// ret.Mod(&ret, &trustedSetup.N)
 
 	return &ret
 }
