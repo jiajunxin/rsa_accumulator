@@ -10,7 +10,7 @@ func main() {
 	fmt.Println("test in main")
 	newBases := accumulator.PreCompute()
 	fmt.Println("precompute finished")
-	setSize := 3
+	setSize := 100
 	elements := make([]accumulator.Element, setSize)
 	for i := 0; i < setSize; i++ {
 		elements[i] = *accumulator.GetPseudoRandomElement(i + 1)
