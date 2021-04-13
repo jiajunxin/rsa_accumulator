@@ -58,19 +58,16 @@ func Init() *AccumulatorSetup {
 	return &ret
 }
 
-func SetWindowValue(inputSet []Element) []big.Int {
+func CoefficientValue(inputSet []Element) []big.Int {
 	setSize := len(inputSet)
 	hashValues := make([]big.Int, setSize)
 	ret := make([]big.Int, setSize+1)
 	for i := 0; i < setSize; i++ {
 		hashValues[i] = *SHA256ToInt(inputSet[i])
 	}
-	fmt.Println("SetWindowValue 1")
 	for windowSize := 0; windowSize < setSize+1; windowSize++ {
-		fmt.Println("SetWindowValue 1.1, windowSize = ", windowSize)
 		ret[windowSize] = *WindowMulThenSum(hashValues, windowSize)
 	}
-	fmt.Println("test in SetWindowValue 2")
 	return ret
 }
 

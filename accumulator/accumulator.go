@@ -54,7 +54,7 @@ func AccumulateSetWirhPreCompute(inputSet []Element, bases []big.Int) *big.Int {
 	var ret big.Int
 	setSize := len(inputSet)
 	fmt.Println("set size = ", setSize)
-	setWindowValue := SetWindowValue(inputSet)
+	setWindowValue := CoefficientValue(inputSet)
 	// fmt.Println("setWindowValue size = ", len(setWindowValue))
 	// fmt.Println("set window value 0 = ", setWindowValue[0].String())
 	// fmt.Println("set window value 1 = ", setWindowValue[1].String())
