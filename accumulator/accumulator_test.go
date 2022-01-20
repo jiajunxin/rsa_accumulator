@@ -10,23 +10,6 @@ import (
 
 const testString = "2021HKUST"
 
-func TestGcd(t *testing.T) {
-	var testObject AccumulatorSetup
-	testObject = *TrustedSetup()
-
-	var N big.Int
-	N.Mul(&testObject.P, &testObject.Q)
-
-	tmp := N.Cmp(&testObject.N)
-	if tmp != 0 {
-		t.Errorf("the N is not calculated correctly")
-	}
-	flag := isQR(&testObject.G, &testObject.P, &testObject.Q)
-	if flag == false {
-		t.Errorf("G is QR")
-	}
-}
-
 func TestDIHash(t *testing.T) {
 	// test two different ways of generating DI hash
 	// we need to check if A ?= B + C
@@ -51,80 +34,5 @@ func TestDIHash(t *testing.T) {
 	tmp := A.Cmp(&BCSum)
 	if tmp != 0 {
 		t.Errorf("two ways have different result")
-	}
-}
-
-func TestWindowMulThenSum(t *testing.T) {
-	var three = big.NewInt(3)
-	var four = big.NewInt(4)
-	var ten = big.NewInt(10)
-	var twentyfour = big.NewInt(24)
-	var thirtyfive = big.NewInt(35)
-	var fifty = big.NewInt(50)
-	inputSet := make([]big.Int, 4)
-	inputSet[0] = *one
-	inputSet[1] = *two
-	inputSet[2] = *three
-	inputSet[3] = *four
-
-	var temp big.Int
-	temp = *WindowMulThenSum(inputSet, 1)
-	if temp.Cmp(ten) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	temp = *WindowMulThenSum(inputSet, 2)
-	if temp.Cmp(thirtyfive) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	temp = *WindowMulThenSum(inputSet, 3)
-	if temp.Cmp(fifty) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	temp = *WindowMulThenSum(inputSet, 4)
-	if temp.Cmp(twentyfour) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-}
-
-func TestSumOfPolyCoefficient(t *testing.T) {
-	var three = big.NewInt(3)
-	var four = big.NewInt(4)
-	var ten = big.NewInt(10)
-	var twentyfour = big.NewInt(24)
-	var thirtyfive = big.NewInt(35)
-	var fifty = big.NewInt(50)
-	inputSet := make([]big.Int, 4)
-	inputSet[0] = *one
-	inputSet[1] = *two
-	inputSet[2] = *three
-	inputSet[3] = *four
-
-	var temp big.Int
-	var tempSum big.Int
-	tempSum.Set(zero)
-	temp = *WindowMulThenSum(inputSet, 1)
-	if temp.Cmp(ten) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	tempSum.Add(&tempSum, &temp)
-	temp = *WindowMulThenSum(inputSet, 2)
-	if temp.Cmp(thirtyfive) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	tempSum.Add(&tempSum, &temp)
-	temp = *WindowMulThenSum(inputSet, 3)
-	if temp.Cmp(fifty) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	tempSum.Add(&tempSum, &temp)
-	temp = *WindowMulThenSum(inputSet, 4)
-	if temp.Cmp(twentyfour) != 0 {
-		t.Errorf("WindowMulThenSum error, the sum = %s", temp.String())
-	}
-	tempSum.Add(&tempSum, &temp)
-	tempSum.Add(&tempSum, one)
-	if tempSum.Cmp(SetPlusOneProduct(inputSet)) != 0 {
-		t.Errorf("TestSumOfPolyCoefficient error, the tempSum = %s, SetPlusOneProduct = %s",
-			tempSum.String(), SetPlusOneProduct(inputSet).String())
 	}
 }

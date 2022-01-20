@@ -2,7 +2,6 @@ package accumulator
 
 import (
 	crand "crypto/rand"
-	"fmt"
 	"math/big"
 	"math/rand"
 
@@ -17,8 +16,6 @@ func init() {
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
 func TrustedSetup() *AccumulatorSetup {
 	var ret AccumulatorSetup
-	ret.P.SetString(P2048String, 10)
-	ret.Q.SetString(Q2048String, 10)
 	ret.N.SetString(N2048String, 10)
 	ret.G.SetString(G2048String, 10)
 	return &ret
@@ -46,68 +43,6 @@ func preCompute(preComputeSize int) []big.Int {
 		ret[i] = *Accumulate(&ret[i-1], dihash.Delta, &trustedSetup.N)
 	}
 	return ret
-}
-
-// AccumulateSetWirhPreCompute accumulates the input elements using DIHash with pre-compute
-func AccumulateSetWirhPreCompute(inputSet []Element, bases []big.Int) *big.Int {
-	trustedSetup := *TrustedSetup()
-	var ret big.Int
-	setSize := len(inputSet)
-	fmt.Println("set size = ", setSize)
-	setWindowValue := CoefficientValue(inputSet)
-	// fmt.Println("setWindowValue size = ", len(setWindowValue))
-	// fmt.Println("set window value 0 = ", setWindowValue[0].String())
-	// fmt.Println("set window value 1 = ", setWindowValue[1].String())
-	// fmt.Println("set window value 2 = ", setWindowValue[2].String())
-	// fmt.Println("test in AccumulateSetWirhPreCompute 0")
-	var temp big.Int
-	ret.Set(one)
-	for i := 0; i < setSize+1; i++ {
-		temp = *Accumulate(&bases[setSize-i], &setWindowValue[i], &trustedSetup.N)
-		//fmt.Println("temp = ", temp.String())
-		ret.Mul(&ret, &temp)
-		ret.Mod(&ret, &trustedSetup.N)
-	}
-	fmt.Println("test in AccumulateSetWirhPreCompute 1")
-
-	return &ret
-}
-
-// AccumulateSetWirhPreCompute accumulates the input elements using DIHash with pre-compute
-func AccumulateSetWithoutPreCompute(inputSet []Element) *big.Int {
-	trustedSetup := *TrustedSetup()
-	var ret big.Int
-	setSize := len(inputSet)
-	hashValues := make([]big.Int, setSize)
-	fmt.Println("setSize = ", setSize)
-	{
-		//sha256 values
-		a := SHA256ToInt(inputSet[0])
-		b := SHA256ToInt(inputSet[1])
-		var temp big.Int
-		temp.Add(a, b)
-		fmt.Println("a + b = ", temp.String())
-		temp.Mul(a, b)
-		fmt.Println("a * b = ", temp.String())
-	}
-
-	for i := 0; i < setSize; i++ {
-		hashValues[i] = *dihash.DIHash(inputSet[i])
-	}
-	fmt.Println("di hashValues 0 = ", hashValues[0].String())
-	fmt.Println("di hashValues 1 = ", hashValues[1].String())
-
-	var tempGenerator1, tempGenerator2 big.Int
-	tempGenerator1.Set(&trustedSetup.G)
-
-	for i := 0; i < setSize; i++ {
-		tempGenerator2 = *Accumulate(&tempGenerator1, &hashValues[i], &trustedSetup.N)
-		tempGenerator2.Mod(&tempGenerator2, &trustedSetup.N)
-		tempGenerator1.Set(&tempGenerator2)
-	}
-	ret.Set(&tempGenerator1)
-
-	return &ret
 }
 
 func getSafePrime() *big.Int {
