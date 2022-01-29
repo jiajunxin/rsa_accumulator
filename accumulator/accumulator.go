@@ -29,6 +29,25 @@ func GenRepersentatives(set []string, encodeType EncodeType) []big.Int {
 	}
 }
 
+// AccAndProve generates the accumulator with all the memberships precomputed
+func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
+	rep := GenRepersentatives(set, encodeType)
+	acc := accumulate(rep, &setup.G, &setup.N)
+
+	//use divide-and-conqure method to pre-compute the memberships
+	//Todo:
+
+}
+
+func accumulate(set []big.Int, g, N *big.Int) *big.Int {
+	var acc big.Int
+	acc.Set(g)
+	for _, v := range set {
+		acc.Exp(&acc, &v, N)
+	}
+	return &acc
+}
+
 func Accumulate(g, power, n *big.Int) *big.Int {
 	var ret big.Int
 	ret.Exp(g, power, n)
