@@ -36,3 +36,14 @@ func TestDIHash(t *testing.T) {
 		t.Errorf("two ways have different result")
 	}
 }
+
+func TestSetup(t *testing.T) {
+	setup := TrustedSetup()
+	var gcd big.Int
+	gcd.GCD(nil, nil, &setup.N, &setup.G)
+	if gcd.Cmp(one) != 0 {
+		// gcd != 1
+		//this condition should never happen
+		t.Errorf("g and N not co-prime! We win the RSA-2048 challenge!")
+	}
+}

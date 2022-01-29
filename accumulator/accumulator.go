@@ -61,7 +61,7 @@ func getSafePrime() *big.Int {
 }
 
 func getRanQR(p, q *big.Int) *big.Int {
-	rng := rand.New(rand.NewSource(crsNum))
+	rng := rand.New(rand.NewSource(123456))
 	var N big.Int
 	N.Mul(p, q)
 	var ranNum big.Int
