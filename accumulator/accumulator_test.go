@@ -13,8 +13,7 @@ const testString = "2021HKUST"
 func TestDIHash(t *testing.T) {
 	// test two different ways of generating DI hash
 	// we need to check if A ?= B + C
-	var testObject AccumulatorSetup
-	testObject = *TrustedSetup()
+	testObject := *TrustedSetup()
 
 	dihashValue := dihash.DIHash([]byte(testString))
 	A := Accumulate(&testObject.G, dihashValue, &testObject.N)
@@ -45,5 +44,9 @@ func TestSetup(t *testing.T) {
 		// gcd != 1
 		//this condition should never happen
 		t.Errorf("g and N not co-prime! We win the RSA-2048 challenge!")
+	}
+	len := Min2048.BitLen()
+	if len != 2048 {
+		t.Errorf("Min2048 is not 2048 bits")
 	}
 }

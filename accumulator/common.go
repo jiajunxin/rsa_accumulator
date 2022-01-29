@@ -1,8 +1,10 @@
 package accumulator
 
 import (
+	crand "crypto/rand"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"strconv"
 )
 
@@ -19,7 +21,10 @@ const G2048String = "36125180748779554123318199528005871686928236606042204413251
 var zero = big.NewInt(0)
 var one = big.NewInt(1)
 var two = big.NewInt(2)
-var Max2048 = big.NewInt(0)
+
+//Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
+//This can speed up the calculation
+var Min2048 = big.NewInt(0)
 
 type AccumulatorSetup struct {
 	N big.Int
@@ -73,4 +78,43 @@ func GetPseudoRandomElement(input int) *Element {
 	temp := strconv.Itoa(input)
 	ret = []byte(temp[:])
 	return &ret
+}
+
+func getSafePrime() *big.Int {
+	ranNum, _ := crand.Prime(crand.Reader, securityPara/2)
+	var temp big.Int
+	flag := false
+	for !flag {
+		temp.Mul(ranNum, two)
+		temp.Add(&temp, one)
+		flag = temp.ProbablyPrime(securityParaInBits / 2)
+		if !flag {
+			ranNum, _ = crand.Prime(crand.Reader, securityPara)
+		}
+	}
+	return &temp
+}
+
+func getRanQR(p, q *big.Int) *big.Int {
+	rng := rand.New(rand.NewSource(123456))
+	var N big.Int
+	N.Mul(p, q)
+	var ranNum big.Int
+	ranNum.Rand(rng, &N)
+
+	flag := false
+	for !flag {
+		flag = isQR(&ranNum, p, q)
+		if !flag {
+			ranNum.Rand(rng, &N)
+		}
+	}
+	return &ranNum
+}
+
+func isQR(input, p, q *big.Int) bool {
+	if big.Jacobi(input, p) == 1 && big.Jacobi(input, q) == 1 {
+		return true
+	}
+	return false
 }
