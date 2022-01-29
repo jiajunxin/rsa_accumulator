@@ -28,6 +28,13 @@ type AccumulatorSetup struct {
 
 type Element []byte
 
+type EncodeType int
+
+const (
+	HashToPrimeFromSha256 = iota
+	DIHashFromPoseidon
+)
+
 func GenerateG() {
 	buffer := make([]big.Int, 8)
 	buffer[0].Set(SHA256ToInt([]byte(N2048String))) //g1 should be 256 bit.
