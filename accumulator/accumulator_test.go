@@ -3,6 +3,8 @@ package accumulator
 import (
 	"crypto/sha256"
 	"math/big"
+	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/rsa_accumulator/dihash"
@@ -49,4 +51,68 @@ func TestSetup(t *testing.T) {
 	if len != 2048 {
 		t.Errorf("Min2048 is not 2048 bits")
 	}
+}
+
+func TestAccAndProve(t *testing.T) {
+	setup := TrustedSetup()
+
+	testSetSize := 16
+	set := GenTestSet(testSetSize)
+	acc, proofs := AccAndProve(set, HashToPrimeFromSha256, setup)
+	if len(set) != len(proofs) {
+		t.Errorf("proofs have different size as the input set")
+	}
+	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	acc2 := accumulate(rep, &setup.G, &setup.N)
+	acc3 := Accumulate(&proofs[5], &rep[5], &setup.N)
+	if acc.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+	if acc2.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+	// test another set size not a power of 2
+	testSetSize = 17
+	set = GenTestSet(testSetSize)
+	acc, proofs = AccAndProve(set, HashToPrimeFromSha256, setup)
+	if len(set) != len(proofs) {
+		t.Errorf("proofs have different size as the input set")
+	}
+	rep = GenRepersentatives(set, HashToPrimeFromSha256)
+	acc2 = accumulate(rep, &setup.G, &setup.N)
+	acc3 = Accumulate(&proofs[7], &rep[7], &setup.N)
+	if acc.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+	if acc2.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+	// test another set size not a power of 2
+	testSetSize = 254
+	set = GenTestSet(testSetSize)
+	acc, proofs = AccAndProve(set, HashToPrimeFromSha256, setup)
+	if len(set) != len(proofs) {
+		t.Errorf("proofs have different size as the input set")
+	}
+	rep = GenRepersentatives(set, HashToPrimeFromSha256)
+	acc2 = accumulate(rep, &setup.G, &setup.N)
+	acc3 = Accumulate(&proofs[253], &rep[253], &setup.N)
+	if acc.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+	if acc2.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+}
+
+func GenTestSet(num int) []string {
+	ret := make([]string, num)
+	for i := 0; i < num; i++ {
+		temp := rand.Intn(100000)
+		ret[i] = strconv.Itoa(temp)
+	}
+	return ret
 }

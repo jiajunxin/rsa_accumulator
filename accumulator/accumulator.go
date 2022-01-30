@@ -32,11 +32,27 @@ func GenRepersentatives(set []string, encodeType EncodeType) []big.Int {
 // AccAndProve generates the accumulator with all the memberships precomputed
 func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
 	rep := GenRepersentatives(set, encodeType)
-	acc := accumulate(rep, &setup.G, &setup.N)
 
-	//use divide-and-conqure method to pre-compute the memberships
-	//Todo:
+	proofs := ProveMembership(&setup.G, &setup.N, rep)
+	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+	acc := Accumulate(&proofs[0], &rep[0], &setup.N)
 
+	return acc, proofs
+}
+
+// ProveMembership uses divide-and-conqure method to pre-compute the all membership proofs in time O(nlogn)
+func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
+	if len(set) == 1 {
+		ret := make([]big.Int, 1)
+		ret[0] = *base
+		return ret
+	}
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	leftBase := *accumulate(set[len(set)/2:], base, N)
+	rightBase := *accumulate(set[0:len(set)/2], base, N)
+	proofs := ProveMembership(&leftBase, N, set[0:len(set)/2])
+	proofs = append(proofs, ProveMembership(&rightBase, N, set[len(set)/2:])...)
+	return proofs
 }
 
 func accumulate(set []big.Int, g, N *big.Int) *big.Int {
@@ -48,9 +64,9 @@ func accumulate(set []big.Int, g, N *big.Int) *big.Int {
 	return &acc
 }
 
-func Accumulate(g, power, n *big.Int) *big.Int {
+func Accumulate(g, power, N *big.Int) *big.Int {
 	var ret big.Int
-	ret.Exp(g, power, n)
+	ret.Exp(g, power, N)
 	return &ret
 }
 
