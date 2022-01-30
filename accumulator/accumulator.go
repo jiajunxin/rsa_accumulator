@@ -45,6 +45,12 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 		ret[0] = *base
 		return ret
 	}
+	if len(set) == 2 {
+		ret := make([]big.Int, 2)
+		ret[0] = *Accumulate(base, &set[1], N)
+		ret[1] = *Accumulate(base, &set[0], N)
+		return ret
+	}
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftBase := *accumulate(set[len(set)/2:], base, N)
 	rightBase := *accumulate(set[0:len(set)/2], base, N)

@@ -16,7 +16,7 @@ func BenchmarkHashToPrime(b *testing.B) {
 }
 
 func BenchmarkAccAndProve(b *testing.B) {
-	testSetSize := 10000
+	testSetSize := 1000
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	b.ResetTimer()

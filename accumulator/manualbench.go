@@ -14,7 +14,7 @@ func ManualBench(testSetSize int) {
 	_, _ = AccAndProve(set, HashToPrimeFromSha256, &setup)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running AccAndProve with set size %v\n Takes [%.3f] Seconds \n", testSetSize, duration.Seconds())
+	fmt.Printf("Running AccAndProve with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
 }
 
 // GenBenchSet generate one set where every element is identical
