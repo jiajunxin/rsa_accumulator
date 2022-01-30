@@ -111,7 +111,7 @@ func TestAccAndProve(t *testing.T) {
 func GenTestSet(num int) []string {
 	ret := make([]string, num)
 	for i := 0; i < num; i++ {
-		temp := rand.Intn(100000)
+		temp := rand.Intn(100000000)
 		ret[i] = strconv.Itoa(temp)
 	}
 	return ret

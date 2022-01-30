@@ -24,8 +24,7 @@ func BenchmarkDIHash(b *testing.B) {
 }
 
 func BenchmarkAccumulate256bits(b *testing.B) {
-	var testObject AccumulatorSetup
-	testObject = *TrustedSetup()
+	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 	prime256bits := HashToPrime(testBytes)
 	b.ResetTimer()
@@ -35,8 +34,7 @@ func BenchmarkAccumulate256bits(b *testing.B) {
 }
 
 func BenchmarkAccumulateDIHash(b *testing.B) {
-	var testObject AccumulatorSetup
-	testObject = *TrustedSetup()
+	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 	dihashResult := dihash.DIHash(testBytes)
 	b.ResetTimer()
@@ -46,13 +44,11 @@ func BenchmarkAccumulateDIHash(b *testing.B) {
 }
 
 func BenchmarkAccumulateDIHashWithPreCompute(b *testing.B) {
-	var testObject AccumulatorSetup
-	testObject = *TrustedSetup()
+	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 
 	B := Accumulate(&testObject.G, dihash.Delta, &testObject.N)
-	var tempInt big.Int
-	tempInt = *SHA256ToInt(testBytes)
+	tempInt := *SHA256ToInt(testBytes)
 	var BCSum big.Int
 
 	b.ResetTimer()
