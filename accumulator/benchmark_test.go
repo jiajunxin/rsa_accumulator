@@ -15,6 +15,16 @@ func BenchmarkHashToPrime(b *testing.B) {
 	}
 }
 
+func BenchmarkAccAndProve(b *testing.B) {
+	testSetSize := 10000
+	set := GenBenchSet(testSetSize)
+	setup := *TrustedSetup()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = AccAndProve(set, HashToPrimeFromSha256, &setup)
+	}
+}
+
 func BenchmarkDIHash(b *testing.B) {
 	testBytes := []byte(testString)
 	b.ResetTimer()
