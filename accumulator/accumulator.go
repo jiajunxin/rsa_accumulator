@@ -31,7 +31,18 @@ func GenRepersentatives(set []string, encodeType EncodeType) []big.Int {
 func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
-	proofs := ProveMembershipIterative(&setup.G, &setup.N, rep)
+	proofs := ProveMembership(&setup.G, &setup.N, rep)
+	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+	acc := Accumulate(&proofs[0], &rep[0], &setup.N)
+
+	return acc, proofs
+}
+
+// AccAndProveIter ...
+func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
+	rep := GenRepersentatives(set, encodeType)
+
+	proofs := ProveMembershipIter(&setup.G, &setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
 	acc := Accumulate(&proofs[0], &rep[0], &setup.N)
 
@@ -59,7 +70,8 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 	return proofs
 }
 
-func ProveMembershipIterative(base, N *big.Int, set []big.Int) []big.Int {
+// ProveMembershipIter ....
+func ProveMembershipIter(base, N *big.Int, set []big.Int) []big.Int {
 	var (
 		left           int
 		right          int = len(set)
