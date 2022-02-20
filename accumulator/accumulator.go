@@ -73,18 +73,17 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 // ProveMembershipIter ....
 func ProveMembershipIter(base, N *big.Int, set []big.Int) []big.Int {
 	var (
-		left           int
-		right          int = len(set)
-		intervals      [][2]int
-		newIntervals   [][2]int
-		intervalLen    int = 1
-		newIntervalLen int
-		proofs         []big.Int
-		newProofs      []big.Int
+		left         int
+		right        int = len(set)
+		intervals    [][2]int
+		newIntervals [][2]int
+		finishFlag   bool
+		proofs       []big.Int
+		newProofs    []big.Int
 	)
 	intervals = append(intervals, [2]int{left, right})
 	proofs = append(proofs, *base)
-	for intervalLen != newIntervalLen {
+	for {
 		for idx, interval := range intervals {
 			left, right = interval[0], interval[1]
 			if right-left <= 1 {
@@ -98,13 +97,16 @@ func ProveMembershipIter(base, N *big.Int, set []big.Int) []big.Int {
 			acc := proofs[idx]
 			newProofs = append(newProofs, *accumulate(set[mid:right], &acc, N))
 			newProofs = append(newProofs, *accumulate(set[left:mid], &acc, N))
+			finishFlag = true
 		}
-		intervalLen = len(intervals)
-		newIntervalLen = len(newIntervals)
 		intervals = newIntervals
 		newIntervals = nil
 		proofs = newProofs
 		newProofs = nil
+		if !finishFlag {
+			break
+		}
+		finishFlag = false
 	}
 	return proofs
 }
