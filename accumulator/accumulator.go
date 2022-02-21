@@ -70,15 +70,15 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 	return proofs
 }
 
-// ProofIterator is the struct for iterating
+// ProofIterator is the linked-list node for iterating proofs
 type proofIterator struct {
-	left  int
-	right int
+	left  int // left index of proofs
+	right int // right index of proofs
 	proof big.Int
 	next  *proofIterator
 }
 
-// ProveMembershipIter ...
+// ProveMembershipIter uses divide-and-conquer method to pre-compute the all membership proofs iteratively
 func ProveMembershipIter(base, N *big.Int, set []big.Int) []big.Int {
 	var (
 		dummy *proofIterator = &proofIterator{
