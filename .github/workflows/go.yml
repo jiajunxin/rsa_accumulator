@@ -1,0 +1,42 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v ./...
+    
+    - name: Run golangci-lint
+      # You may pin to the exact commit or the version.
+      # uses: golangci/golangci-lint-action@5c56cd6c9dc07901af25baab6f2b0d9f3b7c3018
+      uses: golangci/golangci-lint-action@v2.5.2
+      with:
+        # version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+        # golangci-lint working directory, default is project root
+        working-directory: ./...
+    
+    - name: go-mnd
+      # You may pin to the exact commit or the version.
+      # uses: tommy-muehle/go-mnd@16041ac3fe65b98fbbf4c3c9b88c346196211614
+      uses: tommy-muehle/go-mnd@v2.2.0
+      with:
+        # Arguments for go-mnd
+        args: ./...
