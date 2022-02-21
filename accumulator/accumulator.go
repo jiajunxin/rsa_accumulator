@@ -38,7 +38,7 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 	return acc, proofs
 }
 
-// AccAndProveIter ...
+// AccAndProveIter iteratively generates the accumulator with all the memberships precomputed
 func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
@@ -70,43 +70,68 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 	return proofs
 }
 
-// ProveMembershipIter ....
+// ProofIterator is the struct for iterating
+type proofIterator struct {
+	left  int
+	right int
+	proof big.Int
+	next  *proofIterator
+}
+
+// ProveMembershipIter ...
 func ProveMembershipIter(base, N *big.Int, set []big.Int) []big.Int {
 	var (
-		left         int
-		right        int = len(set)
-		intervals    [][2]int
-		newIntervals [][2]int
-		finishFlag   bool
-		proofs       []big.Int
-		newProofs    []big.Int
+		dummy *proofIterator = &proofIterator{
+			next: &proofIterator{
+				left:  0,
+				right: len(set),
+				proof: *base,
+				next:  nil,
+			},
+		}
+		prev       *proofIterator = dummy
+		iter       *proofIterator = dummy.next
+		finishFlag bool
 	)
-	intervals = append(intervals, [2]int{left, right})
-	proofs = append(proofs, *base)
 	for {
-		for idx, interval := range intervals {
-			left, right = interval[0], interval[1]
+		for iter != nil {
+			left := iter.left
+			right := iter.right
 			if right-left <= 1 {
-				newIntervals = append(newIntervals, [2]int{left, right})
-				newProofs = append(newProofs, proofs[idx])
+				iter = iter.next
+				prev = prev.next
 				continue
 			}
 			mid := right - (right-left)/2
-			newIntervals = append(newIntervals, [2]int{left, mid})
-			newIntervals = append(newIntervals, [2]int{mid, right})
-			acc := proofs[idx]
-			newProofs = append(newProofs, *accumulate(set[mid:right], &acc, N))
-			newProofs = append(newProofs, *accumulate(set[left:mid], &acc, N))
+			acc := iter.proof
+			secondNewProof := &proofIterator{
+				left:  mid,
+				right: right,
+				proof: *accumulate(set[left:mid], &acc, N),
+				next:  iter.next,
+			}
+			firstNewProof := &proofIterator{
+				left:  left,
+				right: mid,
+				proof: *accumulate(set[mid:right], &acc, N),
+				next:  secondNewProof,
+			}
+			prev.next = firstNewProof
+			iter = iter.next
+			prev = secondNewProof
 			finishFlag = true
 		}
-		intervals = newIntervals
-		newIntervals = nil
-		proofs = newProofs
-		newProofs = nil
 		if !finishFlag {
 			break
 		}
 		finishFlag = false
+		prev = dummy
+		iter = dummy.next
+	}
+	proofs := make([]big.Int, len(set))
+	for i := 0; i < len(set); i++ {
+		proofs[i] = dummy.next.proof
+		dummy = dummy.next
 	}
 	return proofs
 }
