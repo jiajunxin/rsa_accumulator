@@ -25,6 +25,28 @@ func BenchmarkAccAndProve(b *testing.B) {
 	}
 }
 
+func BenchmarkProveMembership(b *testing.B) {
+	setSize := 10000
+	set := GenBenchSet(setSize)
+	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	setup := *TrustedSetup()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ProveMembership(&setup.G, &setup.N, rep)
+	}
+}
+
+func BenchmarkProveMembershipIter(b *testing.B) {
+	setSize := 10000
+	set := GenBenchSet(setSize)
+	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	setup := *TrustedSetup()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ProveMembershipIter(&setup.G, &setup.N, rep)
+	}
+}
+
 func BenchmarkDIHash(b *testing.B) {
 	testBytes := []byte(testString)
 	b.ResetTimer()
