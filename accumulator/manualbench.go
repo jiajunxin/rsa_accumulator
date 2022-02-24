@@ -15,6 +15,16 @@ func ManualBench(testSetSize int) {
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProve with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
+	// startingTime = time.Now().UTC()
+	// _, _ = AccAndProveIter(set, HashToPrimeFromSha256, &setup)
+	// endingTime = time.Now().UTC()
+	// duration = endingTime.Sub(startingTime)
+	// fmt.Printf("Running AccAndProveIter with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
+	startingTime = time.Now().UTC()
+	_, _ = AccAndProveParallel(set, HashToPrimeFromSha256, &setup)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running AccAndProveParallel with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
 }
 
 // GenBenchSet generate one set where every element is identical

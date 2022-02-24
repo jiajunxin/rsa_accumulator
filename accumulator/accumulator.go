@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -38,6 +39,17 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 	return acc, proofs
 }
 
+// AccAndProveParallel generates the accumulator with all the memberships precomputed in parallel
+func AccAndProveParallel(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
+	rep := GenRepersentatives(set, encodeType)
+
+	proofs := ProveMembershipParallel(&setup.G, &setup.N, rep, 4)
+	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+	acc := Accumulate(&proofs[0], &rep[0], &setup.N)
+
+	return acc, proofs
+}
+
 // AccAndProveIter iteratively generates the accumulator with all the memberships precomputed
 func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
 	rep := GenRepersentatives(set, encodeType)
@@ -51,16 +63,11 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetu
 
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
 func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
-	if len(set) == 1 {
-		ret := make([]big.Int, 1)
-		ret[0] = *base
-		return ret
+	if len(set) == 0 {
+		fmt.Println("qqqqqqqqqqqqq")
 	}
-	if len(set) == 2 {
-		ret := make([]big.Int, 2)
-		ret[0] = *Accumulate(base, &set[1], N)
-		ret[1] = *Accumulate(base, &set[0], N)
-		return ret
+	if len(set) <= 2 {
+		return handleSmallSet(base, N, set)
 	}
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftBase := *accumulate(set[len(set)/2:], base, N)
@@ -68,6 +75,62 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 	proofs := ProveMembership(&leftBase, N, set[0:len(set)/2])
 	proofs = append(proofs, ProveMembership(&rightBase, N, set[len(set)/2:])...)
 	return proofs
+}
+
+// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+// It uses at most 2^limit * 2 Goroutines
+func ProveMembershipParallel(base, N *big.Int, set []big.Int, limit uint16) []big.Int {
+	if 0 == limit {
+		return ProveMembership(base, N, set)
+	}
+	limit--
+	if len(set) <= 2 {
+		return handleSmallSet(base, N, set)
+	}
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	leftBase, rightBase := calBaseParallel(base, N, set)
+	c3 := make(chan []big.Int)
+	c4 := make(chan []big.Int)
+	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c3)
+	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c4)
+	proofs1, proofs2 := <-c3, <-c4
+	proofs1 = append(proofs1, proofs2...)
+	return proofs1
+}
+
+// proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+func proveMembershipWithChan(base, N *big.Int, set []big.Int, limit uint16, c chan []big.Int) {
+	if 0 == limit {
+		c <- ProveMembership(base, N, set)
+	}
+	limit--
+
+	if len(set) <= 2 {
+		c <- handleSmallSet(base, N, set)
+	}
+
+	// c1 := make(chan *big.Int)
+	// c2 := make(chan *big.Int)
+	// go accumulateWithChan(set[len(set)/2:], base, N, c1)
+	// go accumulateWithChan(set[0:len(set)/2], base, N, c2)
+	leftBase, rightBase := calBaseParallel(base, N, set)
+	c3 := make(chan []big.Int)
+	c4 := make(chan []big.Int)
+	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c3)
+	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c4)
+	proofs1, proofs2 := <-c3, <-c4
+	proofs1 = append(proofs1, proofs2...)
+	c <- proofs1
+}
+
+func calBaseParallel(base, N *big.Int, set []big.Int) (*big.Int, *big.Int) {
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	c1 := make(chan *big.Int)
+	c2 := make(chan *big.Int)
+	go accumulateWithChan(set[len(set)/2:], base, N, c1)
+	go accumulateWithChan(set[0:len(set)/2], base, N, c2)
+	leftBase, rightBase := <-c1, <-c2
+	return leftBase, rightBase
 }
 
 // ProofIterator is the linked-list node for iterating proofs
@@ -143,6 +206,32 @@ func accumulate(set []big.Int, g, N *big.Int) *big.Int {
 		acc.Exp(&acc, &v, N)
 	}
 	return &acc
+}
+
+func accumulateWithChan(set []big.Int, g, N *big.Int, c chan *big.Int) {
+	var acc big.Int
+	acc.Set(g)
+	for _, v := range set {
+		acc.Exp(&acc, &v, N)
+	}
+	c <- &acc
+}
+
+func handleSmallSet(base, N *big.Int, set []big.Int) []big.Int {
+	if len(set) == 1 {
+		ret := make([]big.Int, 1)
+		ret[0] = *base
+		return ret
+	}
+	if len(set) == 2 {
+		ret := make([]big.Int, 2)
+		ret[0] = *Accumulate(base, &set[1], N)
+		ret[1] = *Accumulate(base, &set[0], N)
+		return ret
+	}
+	// Should never reach here
+	fmt.Println("Error in handleSmallSet, set size =", len(set))
+	return nil
 }
 
 func Accumulate(g, power, N *big.Int) *big.Int {
