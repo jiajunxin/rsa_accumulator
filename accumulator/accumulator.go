@@ -1,7 +1,6 @@
 package accumulator
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -87,11 +86,12 @@ func ProveMembershipIter(base, N *big.Int, set []*big.Int) []*big.Int {
 	var (
 		header *proofNode = &proofNode{
 			right: len(set),
-			proof: base,
+			proof: &big.Int{},
 		}
 		iter       *proofNode = header
 		finishFlag bool       = true
 	)
+	header.proof.Set(base)
 
 	for finishFlag {
 		finishFlag = false
@@ -112,7 +112,7 @@ func ProveMembershipIter(base, N *big.Int, set []*big.Int) []*big.Int {
 			}
 			iter.left = left
 			iter.right = mid
-			iter.proof = accumulateNew(iter.proof, N, set[mid:right])
+			iter.proof = accumulate(iter.proof, N, set[mid:right])
 			iter.next = newProofNode
 			iter = newProofNode.next
 			finishFlag = true
@@ -136,7 +136,6 @@ func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
 	for _, v := range set {
 		g.Exp(g, v, N)
 	}
-	fmt.Println(g)
 	return g
 }
 
@@ -146,6 +145,5 @@ func accumulateNew(g, N *big.Int, set []*big.Int) *big.Int {
 	for _, v := range set {
 		acc.Exp(acc, v, N)
 	}
-	fmt.Println(acc)
 	return acc
 }

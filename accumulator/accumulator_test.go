@@ -109,7 +109,7 @@ func TestAccAndProve(t *testing.T) {
 
 func genAccts(set []string, setup *AccumulatorSetup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
-	acc1 = accumulate(&setup.G, &setup.N, rep)
+	acc1 = accumulateNew(&setup.G, &setup.N, rep)
 	acc2 = AccumulateNew(proofs[idx], rep[idx], &setup.N)
 	return
 }
