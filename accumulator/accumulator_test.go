@@ -18,15 +18,15 @@ func TestDIHash(t *testing.T) {
 	testObject := *TrustedSetup()
 
 	dihashValue := dihash.DIHash([]byte(testString))
-	A := Accumulate(&testObject.G, dihashValue, &testObject.N)
+	A := AccumulateNew(&testObject.G, dihashValue, &testObject.N)
 
-	B := Accumulate(&testObject.G, dihash.Delta, &testObject.N)
+	B := AccumulateNew(&testObject.G, dihash.Delta, &testObject.N)
 	var tempInt big.Int
 	h := sha256.New()
 	h.Write([]byte(testString))
 	hashTemp := h.Sum(nil)
 	tempInt.SetBytes(hashTemp)
-	C := Accumulate(&testObject.G, &tempInt, &testObject.N)
+	C := AccumulateNew(&testObject.G, &tempInt, &testObject.N)
 
 	var BCSum big.Int
 	BCSum.Mul(B, C)
@@ -63,8 +63,8 @@ func TestAccAndProve(t *testing.T) {
 		t.Errorf("proofs have different size as the input set")
 	}
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
-	acc2 := accumulate(rep, &setup.G, &setup.N)
-	acc3 := Accumulate(&proofs[5], &rep[5], &setup.N)
+	acc2 := accumulateNew(&setup.G, &setup.N, rep)
+	acc3 := AccumulateNew(proofs[5], rep[5], &setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -80,8 +80,8 @@ func TestAccAndProve(t *testing.T) {
 		t.Errorf("proofs have different size as the input set")
 	}
 	rep = GenRepersentatives(set, HashToPrimeFromSha256)
-	acc2 = accumulate(rep, &setup.G, &setup.N)
-	acc3 = Accumulate(&proofs[7], &rep[7], &setup.N)
+	acc2 = accumulateNew(&setup.G, &setup.N, rep)
+	acc3 = AccumulateNew(proofs[7], rep[7], &setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -97,8 +97,8 @@ func TestAccAndProve(t *testing.T) {
 		t.Errorf("proofs have different size as the input set")
 	}
 	rep = GenRepersentatives(set, HashToPrimeFromSha256)
-	acc2 = accumulate(rep, &setup.G, &setup.N)
-	acc3 = Accumulate(&proofs[253], &rep[253], &setup.N)
+	acc2 = accumulateNew(&setup.G, &setup.N, rep)
+	acc3 = AccumulateNew(proofs[253], rep[253], &setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -109,8 +109,8 @@ func TestAccAndProve(t *testing.T) {
 
 func genAccts(set []string, setup *AccumulatorSetup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
-	acc1 = accumulate(rep, &setup.G, &setup.N)
-	acc2 = Accumulate(proofs[idx], &rep[idx], &setup.N)
+	acc1 = accumulate(&setup.G, &setup.N, rep)
+	acc2 = AccumulateNew(proofs[idx], rep[idx], &setup.N)
 	return
 }
 

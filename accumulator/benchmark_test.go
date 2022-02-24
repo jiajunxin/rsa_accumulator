@@ -55,23 +55,23 @@ func BenchmarkDIHash(b *testing.B) {
 	}
 }
 
-func BenchmarkAccumulate256bits(b *testing.B) {
+func BenchmarkAccumulateNew256bits(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 	prime256bits := HashToPrime(testBytes)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Accumulate(&testObject.G, prime256bits, &testObject.N)
+		AccumulateNew(&testObject.G, prime256bits, &testObject.N)
 	}
 }
 
-func BenchmarkAccumulateDIHash(b *testing.B) {
+func BenchmarkAccumulateNewDIHash(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 	dihashResult := dihash.DIHash(testBytes)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Accumulate(&testObject.G, dihashResult, &testObject.N)
+		AccumulateNew(&testObject.G, dihashResult, &testObject.N)
 	}
 }
 
@@ -79,13 +79,13 @@ func BenchmarkAccumulateDIHashWithPreCompute(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 
-	B := Accumulate(&testObject.G, dihash.Delta, &testObject.N)
+	B := AccumulateNew(&testObject.G, dihash.Delta, &testObject.N)
 	tempInt := *SHA256ToInt(testBytes)
 	var BCSum big.Int
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		C := Accumulate(&testObject.G, &tempInt, &testObject.N)
+		C := AccumulateNew(&testObject.G, &tempInt, &testObject.N)
 		BCSum.Mul(B, C)
 		BCSum.Mod(&BCSum, &testObject.N)
 	}

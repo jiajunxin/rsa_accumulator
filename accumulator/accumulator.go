@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -16,7 +17,7 @@ func TrustedSetup() *AccumulatorSetup {
 	return &ret
 }
 
-func GenRepersentatives(set []string, encodeType EncodeType) []big.Int {
+func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 	switch encodeType {
 	case HashToPrimeFromSha256:
 		return genRepWithHashToPrimeFromSHA256(set)
@@ -28,12 +29,12 @@ func GenRepersentatives(set []string, encodeType EncodeType) []big.Int {
 }
 
 // AccAndProve generates the accumulator with all the memberships precomputed
-func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
+func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembership(&setup.G, &setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	acc := Accumulate(&proofs[0], &rep[0], &setup.N)
+	acc := AccumulateNew(proofs[0], rep[0], &setup.N)
 
 	return acc, proofs
 }
@@ -44,27 +45,27 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetu
 
 	proofs := ProveMembershipIter(&setup.G, &setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	acc := Accumulate(proofs[0], &rep[0], &setup.N)
+	acc := AccumulateNew(proofs[0], rep[0], &setup.N)
 
 	return acc, proofs
 }
 
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
-func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
+func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	if len(set) == 1 {
-		ret := make([]big.Int, 1)
-		ret[0] = *base
+		ret := make([]*big.Int, 1)
+		ret[0] = base
 		return ret
 	}
 	if len(set) == 2 {
-		ret := make([]big.Int, 2)
-		ret[0] = *Accumulate(base, &set[1], N)
-		ret[1] = *Accumulate(base, &set[0], N)
+		ret := make([]*big.Int, 2)
+		ret[0] = AccumulateNew(base, set[1], N)
+		ret[1] = AccumulateNew(base, set[0], N)
 		return ret
 	}
 	// the left part of proof need to accumulate the right part of the set, vice versa.
-	leftBase := *accumulate(set[len(set)/2:], base, N)
-	rightBase := *accumulate(set[0:len(set)/2], base, N)
+	leftBase := *accumulateNew(base, N, set[len(set)/2:])
+	rightBase := *accumulateNew(base, N, set[0:len(set)/2])
 	proofs := ProveMembership(&leftBase, N, set[0:len(set)/2])
 	proofs = append(proofs, ProveMembership(&rightBase, N, set[len(set)/2:])...)
 	return proofs
@@ -79,70 +80,72 @@ type proofNode struct {
 }
 
 // ProveMembershipIter uses divide-and-conquer method to pre-compute the all membership proofs iteratively
-func ProveMembershipIter(base, N *big.Int, set []big.Int) []*big.Int {
+func ProveMembershipIter(base, N *big.Int, set []*big.Int) []*big.Int {
+	if len(set) <= 0 {
+		return nil
+	}
 	var (
-		dummyHead *proofNode = &proofNode{
-			next: &proofNode{
-				right: len(set),
-				proof: base,
-			},
+		header *proofNode = &proofNode{
+			right: len(set),
+			proof: base,
 		}
-		prev       *proofNode = dummyHead
-		iter       *proofNode = dummyHead.next
+		iter       *proofNode = header
 		finishFlag bool       = true
 	)
 
 	for finishFlag {
 		finishFlag = false
-		prev = dummyHead
-		iter = dummyHead.next
+		iter = header
 		for iter != nil {
 			left := iter.left
 			right := iter.right
 			if right-left <= 1 {
-				prev = iter
 				iter = iter.next
 				continue
 			}
 			mid := right - (right-left)/2
-			acc := iter.proof
-			secondProofNode := &proofNode{
+			newProofNode := &proofNode{
 				left:  mid,
 				right: right,
-				proof: accumulate(set[left:mid], acc, N),
+				proof: accumulateNew(iter.proof, N, set[left:mid]),
 				next:  iter.next,
 			}
-			firstProofNode := &proofNode{
-				left:  left,
-				right: mid,
-				proof: accumulate(set[mid:right], acc, N),
-				next:  secondProofNode,
-			}
-			prev.next = firstProofNode
-			iter = iter.next
-			prev = secondProofNode
+			iter.left = left
+			iter.right = mid
+			iter.proof = accumulateNew(iter.proof, N, set[mid:right])
+			iter.next = newProofNode
+			iter = newProofNode.next
 			finishFlag = true
 		}
 	}
 
 	proofs := make([]*big.Int, 0, len(set))
-	for iter = dummyHead.next; iter != nil; iter = iter.next {
+	for iter = header; iter != nil; iter = iter.next {
 		proofs = append(proofs, iter.proof)
 	}
 	return proofs
 }
 
-func accumulate(set []big.Int, g, N *big.Int) *big.Int {
-	var acc big.Int
-	acc.Set(g)
-	for _, v := range set {
-		acc.Exp(&acc, &v, N)
-	}
-	return &acc
+func AccumulateNew(g, power, N *big.Int) *big.Int {
+	ret := &big.Int{}
+	ret.Exp(g, power, N)
+	return ret
 }
 
-func Accumulate(g, power, N *big.Int) *big.Int {
-	var ret big.Int
-	ret.Exp(g, power, N)
-	return &ret
+func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
+	for _, v := range set {
+		g.Exp(g, v, N)
+	}
+	fmt.Println(g)
+	return g
+}
+
+func accumulateNew(g, N *big.Int, set []*big.Int) *big.Int {
+	acc := &big.Int{}
+	acc.Set(g)
+	for _, v := range set {
+		acc.Exp(acc, v, N)
+	}
+	fmt.Println(acc)
+	return acc
 }
