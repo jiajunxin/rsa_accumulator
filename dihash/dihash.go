@@ -47,7 +47,7 @@ func DIHash(input []byte) *big.Int {
 	h.Write(input)
 	hashTemp := h.Sum(nil)
 	temp.SetBytes(hashTemp)
-	fmt.Println("sha256 in DI hash = ", temp.String())
+	//fmt.Println("sha256 in DI hash = ", temp.String())
 	//_ = temp.SetBit(&temp, 0, 0)
 	_ = ret.Add(Delta, &temp)
 	return &ret
