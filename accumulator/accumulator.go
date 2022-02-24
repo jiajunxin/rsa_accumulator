@@ -39,12 +39,12 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 }
 
 // AccAndProveIter iteratively generates the accumulator with all the memberships precomputed
-func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []big.Int) {
+func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipIter(&setup.G, &setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	acc := Accumulate(&proofs[0], &rep[0], &setup.N)
+	acc := Accumulate(proofs[0], &rep[0], &setup.N)
 
 	return acc, proofs
 }
@@ -70,68 +70,64 @@ func ProveMembership(base, N *big.Int, set []big.Int) []big.Int {
 	return proofs
 }
 
-// ProofIterator is the linked-list node for iterating proofs
-type proofIterator struct {
+// ProofNode is the linked-list node for iterating proofs
+type proofNode struct {
 	left  int // left index of proofs
 	right int // right index of proofs
-	proof big.Int
-	next  *proofIterator
+	proof *big.Int
+	next  *proofNode
 }
 
 // ProveMembershipIter uses divide-and-conquer method to pre-compute the all membership proofs iteratively
-func ProveMembershipIter(base, N *big.Int, set []big.Int) []big.Int {
+func ProveMembershipIter(base, N *big.Int, set []big.Int) []*big.Int {
 	var (
-		dummy *proofIterator = &proofIterator{
-			next: &proofIterator{
-				left:  0,
+		dummyHead *proofNode = &proofNode{
+			next: &proofNode{
 				right: len(set),
-				proof: *base,
-				next:  nil,
+				proof: base,
 			},
 		}
-		prev       *proofIterator = dummy
-		iter       *proofIterator = dummy.next
-		finishFlag bool
+		prev       *proofNode = dummyHead
+		iter       *proofNode = dummyHead.next
+		finishFlag bool       = true
 	)
-	for {
+
+	for finishFlag {
+		finishFlag = false
+		prev = dummyHead
+		iter = dummyHead.next
 		for iter != nil {
 			left := iter.left
 			right := iter.right
 			if right-left <= 1 {
+				prev = iter
 				iter = iter.next
-				prev = prev.next
 				continue
 			}
 			mid := right - (right-left)/2
 			acc := iter.proof
-			secondNewProof := &proofIterator{
+			secondProofNode := &proofNode{
 				left:  mid,
 				right: right,
-				proof: *accumulate(set[left:mid], &acc, N),
+				proof: accumulate(set[left:mid], acc, N),
 				next:  iter.next,
 			}
-			firstNewProof := &proofIterator{
+			firstProofNode := &proofNode{
 				left:  left,
 				right: mid,
-				proof: *accumulate(set[mid:right], &acc, N),
-				next:  secondNewProof,
+				proof: accumulate(set[mid:right], acc, N),
+				next:  secondProofNode,
 			}
-			prev.next = firstNewProof
+			prev.next = firstProofNode
 			iter = iter.next
-			prev = secondNewProof
+			prev = secondProofNode
 			finishFlag = true
 		}
-		if !finishFlag {
-			break
-		}
-		finishFlag = false
-		prev = dummy
-		iter = dummy.next
 	}
-	proofs := make([]big.Int, len(set))
-	for i := 0; i < len(set); i++ {
-		proofs[i] = dummy.next.proof
-		dummy = dummy.next
+
+	proofs := make([]*big.Int, 0, len(set))
+	for iter = dummyHead.next; iter != nil; iter = iter.next {
+		proofs = append(proofs, iter.proof)
 	}
 	return proofs
 }
