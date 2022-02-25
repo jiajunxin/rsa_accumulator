@@ -96,24 +96,11 @@ func ProveMembershipIter(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 		finishFlag = false
 		iter = header
 		for iter != nil {
-			left := iter.left
-			right := iter.right
-			if right-left <= 1 {
+			if iter.right-iter.left <= 1 {
 				iter = iter.next
 				continue
 			}
-			mid := right - (right-left)/2
-			newProofNode := &proofNode{
-				left:  mid,
-				right: right,
-				proof: accumulateNew(iter.proof, N, set[left:mid]),
-				next:  iter.next,
-			}
-			iter.left = left
-			iter.right = mid
-			iter.proof = accumulate(iter.proof, N, set[mid:right])
-			iter.next = newProofNode
-			iter = newProofNode.next
+			iter = insertNewProofNode(iter, N, set)
 			finishFlag = true
 		}
 	}
@@ -123,6 +110,23 @@ func ProveMembershipIter(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 		proofs = append(proofs, iter.proof)
 	}
 	return proofs
+}
+
+func insertNewProofNode(iter *proofNode, N *big.Int, set []*big.Int) *proofNode {
+	left := iter.left
+	right := iter.right
+	mid := left + (right-left)/2
+	newProofNode := &proofNode{
+		left:  mid,
+		right: right,
+		proof: accumulateNew(iter.proof, N, set[left:mid]),
+		next:  iter.next,
+	}
+	iter.left = left
+	iter.right = mid
+	iter.proof = accumulate(iter.proof, N, set[mid:right])
+	iter.next = newProofNode
+	return newProofNode.next
 }
 
 func AccumulateNew(g, power, N *big.Int) *big.Int {

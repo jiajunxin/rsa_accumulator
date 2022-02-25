@@ -51,7 +51,7 @@ func TestAccAndProveParallel(t *testing.T) {
 			acc, proofs := AccAndProveParallel(tt.args.set, tt.args.encodeType, tt.args.setup)
 			acc1, acc2 := genAccts(tt.args.set, tt.args.setup, proofs, tt.idx)
 			if len(proofs) != tt.wantProofLen {
-				t.Errorf("AccAndProveIter() got proof len = %v, want %v", len(proofs), tt.wantProofLen)
+				t.Errorf("AccAndProveParallel() got proof len = %v, want %v", len(proofs), tt.wantProofLen)
 				return
 			}
 			if acc.Cmp(acc2) != 0 {

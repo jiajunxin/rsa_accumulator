@@ -10,6 +10,7 @@ const (
 	numWorkerPowerOfTwo = 3
 )
 
+// AccAndProveParallel concurrently generates the accumulator with all the memberships precomputed
 func AccAndProveParallel(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
@@ -20,7 +21,13 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Accumulator
 	return acc, proofs
 }
 
-// ProveMembershipIter uses divide-and-conquer method to pre-compute the all membership proofs iteratively
+type parallelReceiver struct {
+	left   int
+	right  int
+	proofs []*big.Int
+}
+
+// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs iteratively
 func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 	numWorkers := int(math.Pow(2, numWorkerPowerOfTwo))
 	if len(set) <= numWorkers*2 {
@@ -33,40 +40,21 @@ func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.In
 		}
 		iter *proofNode = header
 	)
-
 	for i := 0; i < numWorkerPowerOfTwo; i++ {
 		iter = header
 		for iter != nil {
-			left := iter.left
-			right := iter.right
-			mid := right - (right-left)/2
-			newProofNode := &proofNode{
-				left:  mid,
-				right: right,
-				proof: accumulateNew(iter.proof, N, set[left:mid]),
-				next:  iter.next,
-			}
-			iter.left = left
-			iter.right = mid
-			iter.proof = accumulate(iter.proof, N, set[mid:right])
-			iter.next = newProofNode
-			iter = newProofNode.next
+			iter = insertNewProofNode(iter, N, set)
 		}
 	}
 
-	type receiver struct {
-		left   int
-		right  int
-		proofs []*big.Int
-	}
-	receivers := make(chan receiver, numWorkers)
+	receivers := make(chan parallelReceiver, numWorkers)
 	wg := &sync.WaitGroup{}
+	wg.Add(numWorkers)
 	iter = header
 	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
 		go func(iter *proofNode) {
 			defer wg.Done()
-			receivers <- receiver{
+			receivers <- parallelReceiver{
 				left:   iter.left,
 				right:  iter.right,
 				proofs: proveMembershipIter(*iter.proof, N, set, iter.left, iter.right),
@@ -102,24 +90,11 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 		finishFlag = false
 		iter = header
 		for iter != nil {
-			left := iter.left
-			right := iter.right
-			if right-left <= 1 {
+			if iter.right-iter.left <= 1 {
 				iter = iter.next
 				continue
 			}
-			mid := right - (right-left)/2
-			newProofNode := &proofNode{
-				left:  mid,
-				right: right,
-				proof: accumulateNew(iter.proof, N, set[left:mid]),
-				next:  iter.next,
-			}
-			iter.left = left
-			iter.right = mid
-			iter.proof = accumulate(iter.proof, N, set[mid:right])
-			iter.next = newProofNode
-			iter = newProofNode.next
+			iter = insertNewProofNode(iter, N, set)
 			finishFlag = true
 		}
 	}
