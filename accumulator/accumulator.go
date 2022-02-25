@@ -42,7 +42,7 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
-	proofs := ProveMembershipIter(&setup.G, &setup.N, rep)
+	proofs := ProveMembershipIter(setup.G, &setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
 	acc := AccumulateNew(proofs[0], rep[0], &setup.N)
 
@@ -79,19 +79,18 @@ type proofNode struct {
 }
 
 // ProveMembershipIter uses divide-and-conquer method to pre-compute the all membership proofs iteratively
-func ProveMembershipIter(base, N *big.Int, set []*big.Int) []*big.Int {
+func ProveMembershipIter(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 	if len(set) <= 0 {
 		return nil
 	}
 	var (
 		header *proofNode = &proofNode{
 			right: len(set),
-			proof: &big.Int{},
+			proof: &base,
 		}
 		iter       *proofNode = header
 		finishFlag bool       = true
 	)
-	header.proof.Set(base)
 
 	for finishFlag {
 		finishFlag = false
@@ -142,8 +141,5 @@ func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
 func accumulateNew(g, N *big.Int, set []*big.Int) *big.Int {
 	acc := &big.Int{}
 	acc.Set(g)
-	for _, v := range set {
-		acc.Exp(acc, v, N)
-	}
-	return acc
+	return accumulate(acc, N, set)
 }

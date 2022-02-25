@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	defer profile.Start(profile.MemProfile).Stop()
+	defer profile.Start(profile.CPUProfile).Stop()
 	fmt.Println("test in main")
-	// accumulator.ManualBench(10000)
-	accumulator.ManualBenchIter(10000)
+	// accumulator.ManualBench(1000)
+	accumulator.ManualBenchIter(1000)
 }
