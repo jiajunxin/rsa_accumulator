@@ -64,7 +64,7 @@ func TestAccAndProve(t *testing.T) {
 	}
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
 	acc2 := accumulate(rep, &setup.G, &setup.N)
-	acc3 := Accumulate(&proofs[5], &rep[5], &setup.N)
+	acc3 := Accumulate(proofs[5], rep[5], &setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -81,7 +81,7 @@ func TestAccAndProve(t *testing.T) {
 	}
 	rep = GenRepersentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulate(rep, &setup.G, &setup.N)
-	acc3 = Accumulate(&proofs[7], &rep[7], &setup.N)
+	acc3 = Accumulate(proofs[7], rep[7], &setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -98,7 +98,7 @@ func TestAccAndProve(t *testing.T) {
 	}
 	rep = GenRepersentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulate(rep, &setup.G, &setup.N)
-	acc3 = Accumulate(&proofs[253], &rep[253], &setup.N)
+	acc3 = Accumulate(proofs[253], rep[253], &setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -107,10 +107,10 @@ func TestAccAndProve(t *testing.T) {
 	}
 }
 
-func genAccts(set []string, setup *AccumulatorSetup, proofs []big.Int, idx int) (acc1, acc2 *big.Int) {
+func genAccts(set []string, setup *AccumulatorSetup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
 	acc1 = accumulate(rep, &setup.G, &setup.N)
-	acc2 = Accumulate(&proofs[idx], &rep[idx], &setup.N)
+	acc2 = Accumulate(proofs[idx], rep[idx], &setup.N)
 	return
 }
 
