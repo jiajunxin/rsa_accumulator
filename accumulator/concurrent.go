@@ -8,7 +8,7 @@ import (
 )
 
 // AccAndProveParallel generates the accumulator with all the memberships precomputed in parallel
-func AccAndProveParallel(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipParallel(setup.G, setup.N, rep, 4)
@@ -18,9 +18,9 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Accumulator
 	return acc, proofs
 }
 
-// AccAndProveParallel concurrently generates the accumulator with all the memberships precomputed
+// AccAndProveIterParallel iteratively and concurrently generates the accumulator with all the memberships precomputed
 func AccAndProveIterParallel(set []string, encodeType EncodeType,
-	setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+	setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipIterParallel(*setup.G, setup.N, rep)
@@ -33,13 +33,14 @@ func AccAndProveIterParallel(set []string, encodeType EncodeType,
 // ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
 // It uses at most O(2^limit) Goroutines
 func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*big.Int {
-	if 0 == limit {
+	if limit == 0 {
 		return ProveMembership(base, N, set)
 	}
 	limit--
 	fmt.Println("limit = ", limit)
 	if len(set) == 0 {
 		fmt.Println("Errorwwwwwwwwwwwwwwwwwwww")
+		return nil
 	}
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
@@ -120,7 +121,7 @@ type parallelReceiver struct {
 	proofs []*big.Int
 }
 
-// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs
+// ProveMembershipIterParallel uses divide-and-conquer method to pre-compute the all membership proofs
 // iteratively and concurrently
 func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 	numWorkers, numWorkerPowerOfTwo := calNumWorkers()

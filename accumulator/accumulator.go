@@ -10,8 +10,8 @@ func init() {
 }
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
-func TrustedSetup() *AccumulatorSetup {
-	ret := &AccumulatorSetup{
+func TrustedSetup() *Setup {
+	ret := &Setup{
 		N: &big.Int{},
 		G: &big.Int{},
 	}
@@ -33,7 +33,7 @@ func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 }
 
 // AccAndProve generates the accumulator with all the memberships precomputed
-func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembership(setup.G, setup.N, rep)
@@ -44,7 +44,7 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 }
 
 // AccAndProveIter iteratively generates the accumulator with all the memberships precomputed
-func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipIter(*setup.G, setup.N, rep)

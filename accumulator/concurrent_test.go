@@ -7,7 +7,7 @@ func TestAccAndProveIterParallel(t *testing.T) {
 	type args struct {
 		set        []string
 		encodeType EncodeType
-		setup      *AccumulatorSetup
+		setup      *Setup
 	}
 	tests := []struct {
 		name         string

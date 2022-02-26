@@ -40,7 +40,7 @@ func getDIHash(rnd *rand.Rand) *big.Int {
 	return &ret
 }
 
-// GetDIHash returns the Delta + Sha256(input)
+// DIHash returns the Delta + Sha256(input)
 func DIHash(input []byte) *big.Int {
 	h := sha256.New()
 	var temp, ret big.Int

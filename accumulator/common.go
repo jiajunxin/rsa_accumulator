@@ -49,8 +49,8 @@ var (
 	Min2048 = big.NewInt(0)
 )
 
-// AccumulatorSetup is a basic struct for a hidden order group
-type AccumulatorSetup struct {
+// Setup is a basic struct for a hidden order group
+type Setup struct {
 	N *big.Int
 	G *big.Int //default generator in Z*_N
 }
