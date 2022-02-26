@@ -10,8 +10,8 @@ func init() {
 }
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
-func TrustedSetup() *AccumulatorSetup {
-	var ret AccumulatorSetup
+func TrustedSetup() *Setup {
+	var ret Setup
 	ret.N.SetString(N2048String, 10)
 	ret.G.SetString(G2048String, 10)
 	return &ret
@@ -30,7 +30,7 @@ func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 }
 
 // AccAndProve generates the accumulator with all the memberships precomputed
-func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembership(&setup.G, &setup.N, rep)
@@ -41,7 +41,7 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 }
 
 // AccAndProveParallel generates the accumulator with all the memberships precomputed in parallel
-func AccAndProveParallel(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipParallel(&setup.G, &setup.N, rep, 4)
@@ -52,7 +52,7 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Accumulator
 }
 
 // AccAndProveIter iteratively generates the accumulator with all the memberships precomputed
-func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipIter(&setup.G, &setup.N, rep)

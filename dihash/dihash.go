@@ -27,28 +27,13 @@ func init() {
 	//fmt.Println("the Max256 in bits = ", Max256.Text(2))
 }
 
-// getDIHash returns the Delta + Sha256(input) with the last bit 1
-func getDIHash(rnd *rand.Rand) *big.Int {
-	h := sha256.New()
-	var ranNum, temp, ret big.Int
-	ranNum.Rand(rnd, Max256)
-	h.Write(ranNum.Bytes())
-	hashTemp := h.Sum(nil)
-	temp.SetBytes(hashTemp)
-	//_ = temp.SetBit(&temp, 0, 0)
-	_ = ret.Add(Delta, &temp)
-	return &ret
-}
-
-// GetDIHash returns the Delta + Sha256(input)
+// DIHash returns the Delta + Sha256(input)
 func DIHash(input []byte) *big.Int {
 	h := sha256.New()
 	var temp, ret big.Int
 	h.Write(input)
 	hashTemp := h.Sum(nil)
 	temp.SetBytes(hashTemp)
-	//fmt.Println("sha256 in DI hash = ", temp.String())
-	//_ = temp.SetBit(&temp, 0, 0)
 	_ = ret.Add(Delta, &temp)
 	return &ret
 }
