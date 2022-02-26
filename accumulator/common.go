@@ -1,10 +1,8 @@
 package accumulator
 
 import (
-	crand "crypto/rand"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"strconv"
 )
 
@@ -40,9 +38,7 @@ const (
 )
 
 var (
-	// zero = big.NewInt(0)
 	one = big.NewInt(1)
-	two = big.NewInt(2)
 
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
@@ -55,8 +51,10 @@ type Setup struct {
 	G *big.Int //default generator in Z*_N
 }
 
+// Element should be able to be accumulated into RSA accumulator
 type Element []byte
 
+// EncodeType is the type of generating Element, should be consistent all the time
 type EncodeType int
 
 // GenerateG generates a generator for a hidden order group randomly
@@ -98,43 +96,4 @@ func GetPseudoRandomElement(input int) *Element {
 	temp := strconv.Itoa(input)
 	ret = []byte(temp[:])
 	return &ret
-}
-
-func getSafePrime() *big.Int {
-	ranNum, _ := crand.Prime(crand.Reader, securityPara/2)
-	var temp big.Int
-	flag := false
-	for !flag {
-		temp.Mul(ranNum, two)
-		temp.Add(&temp, one)
-		flag = temp.ProbablyPrime(securityParaInBits / 2)
-		if !flag {
-			ranNum, _ = crand.Prime(crand.Reader, securityPara)
-		}
-	}
-	return &temp
-}
-
-func getRanQR(p, q *big.Int) *big.Int {
-	rng := rand.New(rand.NewSource(123456))
-	var N big.Int
-	N.Mul(p, q)
-	var ranNum big.Int
-	ranNum.Rand(rng, &N)
-
-	flag := false
-	for !flag {
-		flag = isQR(&ranNum, p, q)
-		if !flag {
-			ranNum.Rand(rng, &N)
-		}
-	}
-	return &ranNum
-}
-
-func isQR(input, p, q *big.Int) bool {
-	if big.Jacobi(input, p) == 1 && big.Jacobi(input, q) == 1 {
-		return true
-	}
-	return false
 }

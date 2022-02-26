@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	_ = Min2048.Lsh(one, 2047)
+	_ = Min2048.Lsh(one, securityPara-1)
 }
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
@@ -56,9 +56,6 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.In
 
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
 func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
-	if len(set) == 0 {
-		fmt.Println("qqqqqqqqqqqqq")
-	}
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
 	}
@@ -143,7 +140,7 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 	}
 	// Should never reach here
 	fmt.Println("Error in handleSmallSet, set size =", len(set))
-	return nil
+	panic("Error in handleSmallSet, set size")
 }
 
 // AccumulateNew calculates g^{power} mod N
