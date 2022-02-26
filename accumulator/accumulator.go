@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	_ = Min2048.Lsh(one, 2047)
+	_ = Min2048.Lsh(one, securityPara-1)
 }
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
@@ -64,9 +64,6 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.In
 
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
 func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
-	if len(set) == 0 {
-		fmt.Println("qqqqqqqqqqqqq")
-	}
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
 	}
@@ -85,10 +82,6 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*
 		return ProveMembership(base, N, set)
 	}
 	limit--
-	fmt.Println("limit = ", limit)
-	if len(set) == 0 {
-		fmt.Println("Errorwwwwwwwwwwwwwwwwwwww")
-	}
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
 	}
@@ -116,10 +109,7 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit uint16, c c
 		return
 	}
 	limit--
-	fmt.Println("limit = ", limit)
-	if len(set) == 0 {
-		fmt.Println("wwwwwwwwwwwwwwwwwwww")
-	}
+
 	if len(set) <= 2 {
 		c <- handleSmallSet(base, N, set)
 		close(c)
@@ -130,11 +120,12 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit uint16, c c
 	// c2 := make(chan *big.Int)
 	// go accumulateWithChan(set[len(set)/2:], base, N, c1)
 	// go accumulateWithChan(set[0:len(set)/2], base, N, c2)
-	leftBase, rightBase := calBaseParallel(base, N, set)
+	leftBase := *accumulate(set[len(set)/2:], base, N)
+	rightBase := *accumulate(set[0:len(set)/2], base, N)
 	c3 := make(chan []*big.Int)
 	c4 := make(chan []*big.Int)
-	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c3)
-	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c4)
+	go proveMembershipWithChan(&leftBase, N, set[0:len(set)/2], limit, c3)
+	go proveMembershipWithChan(&rightBase, N, set[len(set)/2:], limit, c4)
 	proofs1 := <-c3
 	proofs2 := <-c4
 	proofs1 = append(proofs1, proofs2...)
@@ -251,7 +242,7 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 	}
 	// Should never reach here
 	fmt.Println("Error in handleSmallSet, set size =", len(set))
-	return nil
+	panic("Error in handleSmallSet, set size")
 }
 
 // Accumulate calculates g^{power} mod N

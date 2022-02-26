@@ -11,7 +11,7 @@ func ManualBench(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = AccAndProve(set, HashToPrimeFromSha256, &setup)
+	//_, _ = AccAndProve(set, HashToPrimeFromSha256, &setup)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProve with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
