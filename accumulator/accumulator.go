@@ -17,6 +17,7 @@ func TrustedSetup() *AccumulatorSetup {
 	return &ret
 }
 
+// GenRepersentatives generates different representatives that can be inputted into RSA accumulator
 func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 	switch encodeType {
 	case HashToPrimeFromSha256:
@@ -253,6 +254,7 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 	return nil
 }
 
+// Accumulate calculates g^{power} mod N
 func Accumulate(g, power, N *big.Int) *big.Int {
 	var ret big.Int
 	ret.Exp(g, power, N)
