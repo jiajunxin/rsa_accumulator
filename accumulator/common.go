@@ -55,8 +55,10 @@ type AccumulatorSetup struct {
 	G big.Int //default generator in Z*_N
 }
 
+// Element should be able to be accumulated into RSA accumulator
 type Element []byte
 
+// EncodeType is the type of generating Element, should be consistent all the time
 type EncodeType int
 
 // GenerateG generates a generator for a hidden order group randomly
