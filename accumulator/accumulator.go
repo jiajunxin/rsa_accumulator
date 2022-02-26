@@ -87,15 +87,13 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*
 	}
 
 	// the left part of proof need to accumulate the right part of the set, vice versa.
-	leftBase := *accumulate(set[len(set)/2:], base, N)
-	rightBase := *accumulate(set[0:len(set)/2], base, N)
-	//leftBase, rightBase := calBaseParallel(base, N, set)
-	c3 := make(chan []*big.Int)
-	c4 := make(chan []*big.Int)
-	go proveMembershipWithChan(&leftBase, N, set[0:len(set)/2], limit, c3)
-	go proveMembershipWithChan(&rightBase, N, set[len(set)/2:], limit, c4)
-	proofs1 := <-c3
-	proofs2 := <-c4
+	leftBase, rightBase := calBaseParallel(base, N, set)
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	proofs1 := <-c1
+	proofs2 := <-c2
 
 	proofs1 = append(proofs1, proofs2...)
 	return proofs1
@@ -116,18 +114,14 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit uint16, c c
 		return
 	}
 
-	// c1 := make(chan *big.Int)
-	// c2 := make(chan *big.Int)
-	// go accumulateWithChan(set[len(set)/2:], base, N, c1)
-	// go accumulateWithChan(set[0:len(set)/2], base, N, c2)
 	leftBase := *accumulate(set[len(set)/2:], base, N)
 	rightBase := *accumulate(set[0:len(set)/2], base, N)
-	c3 := make(chan []*big.Int)
-	c4 := make(chan []*big.Int)
-	go proveMembershipWithChan(&leftBase, N, set[0:len(set)/2], limit, c3)
-	go proveMembershipWithChan(&rightBase, N, set[len(set)/2:], limit, c4)
-	proofs1 := <-c3
-	proofs2 := <-c4
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	go proveMembershipWithChan(&leftBase, N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan(&rightBase, N, set[len(set)/2:], limit, c2)
+	proofs1 := <-c1
+	proofs2 := <-c2
 	proofs1 = append(proofs1, proofs2...)
 	c <- proofs1
 	close(c)
