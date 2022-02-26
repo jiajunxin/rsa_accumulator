@@ -32,7 +32,7 @@ func BenchmarkProveMembership(b *testing.B) {
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ProveMembership(&setup.G, &setup.N, rep)
+		ProveMembership(setup.G, setup.N, rep)
 	}
 }
 
@@ -43,7 +43,7 @@ func BenchmarkProveMembershipIter(b *testing.B) {
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ProveMembershipIter(setup.G, &setup.N, rep)
+		ProveMembershipIter(*setup.G, setup.N, rep)
 	}
 }
 
@@ -54,7 +54,7 @@ func BenchmarkProveMembershipParallel(b *testing.B) {
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ProveMembershipParallel(setup.G, &setup.N, rep)
+		ProveMembershipParallel(setup.G, setup.N, rep, 8)
 	}
 }
 
@@ -72,7 +72,7 @@ func BenchmarkAccumulateNew256bits(b *testing.B) {
 	prime256bits := HashToPrime(testBytes)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		AccumulateNew(&testObject.G, prime256bits, &testObject.N)
+		AccumulateNew(testObject.G, prime256bits, testObject.N)
 	}
 }
 
@@ -82,7 +82,7 @@ func BenchmarkAccumulateNewDIHash(b *testing.B) {
 	dihashResult := dihash.DIHash(testBytes)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		AccumulateNew(&testObject.G, dihashResult, &testObject.N)
+		AccumulateNew(testObject.G, dihashResult, testObject.N)
 	}
 }
 
@@ -90,14 +90,14 @@ func BenchmarkAccumulateDIHashWithPreCompute(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 
-	B := AccumulateNew(&testObject.G, dihash.Delta, &testObject.N)
+	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
 	tempInt := *SHA256ToInt(testBytes)
 	var BCSum big.Int
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		C := AccumulateNew(&testObject.G, &tempInt, &testObject.N)
+		C := AccumulateNew(testObject.G, &tempInt, testObject.N)
 		BCSum.Mul(B, C)
-		BCSum.Mod(&BCSum, &testObject.N)
+		BCSum.Mod(&BCSum, testObject.N)
 	}
 }

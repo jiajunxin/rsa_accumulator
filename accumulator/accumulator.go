@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -10,12 +11,16 @@ func init() {
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
 func TrustedSetup() *AccumulatorSetup {
-	var ret AccumulatorSetup
+	ret := &AccumulatorSetup{
+		N: &big.Int{},
+		G: &big.Int{},
+	}
 	ret.N.SetString(N2048String, 10)
 	ret.G.SetString(G2048String, 10)
-	return &ret
+	return ret
 }
 
+// GenRepersentatives generates different representatives that can be inputted into RSA accumulator
 func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 	switch encodeType {
 	case HashToPrimeFromSha256:
@@ -31,9 +36,9 @@ func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
-	proofs := ProveMembership(&setup.G, &setup.N, rep)
+	proofs := ProveMembership(setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	acc := AccumulateNew(proofs[0], rep[0], &setup.N)
+	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
 	return acc, proofs
 }
@@ -42,25 +47,20 @@ func AccAndProve(set []string, encodeType EncodeType, setup *AccumulatorSetup) (
 func AccAndProveIter(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
-	proofs := ProveMembershipIter(setup.G, &setup.N, rep)
+	proofs := ProveMembershipIter(*setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	acc := AccumulateNew(proofs[0], rep[0], &setup.N)
+	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
 	return acc, proofs
 }
 
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
 func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
-	if len(set) == 1 {
-		ret := make([]*big.Int, 1)
-		ret[0] = base
-		return ret
+	if len(set) == 0 {
+		fmt.Println("qqqqqqqqqqqqq")
 	}
-	if len(set) == 2 {
-		ret := make([]*big.Int, 2)
-		ret[0] = AccumulateNew(base, set[1], N)
-		ret[1] = AccumulateNew(base, set[0], N)
-		return ret
+	if len(set) <= 2 {
+		return handleSmallSet(base, N, set)
 	}
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftBase := *accumulateNew(base, N, set[len(set)/2:])
@@ -129,8 +129,27 @@ func insertNewProofNode(iter *proofNode, N *big.Int, set []*big.Int) *proofNode 
 	return newProofNode.next
 }
 
+func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
+	if len(set) == 1 {
+		ret := make([]*big.Int, 1)
+		ret[0] = base
+		return ret
+	}
+	if len(set) == 2 {
+		ret := make([]*big.Int, 2)
+		ret[0] = AccumulateNew(base, set[1], N)
+		ret[1] = AccumulateNew(base, set[0], N)
+		return ret
+	}
+	// Should never reach here
+	fmt.Println("Error in handleSmallSet, set size =", len(set))
+	return nil
+}
+
+// AccumulateNew calculates g^{power} mod N
 func AccumulateNew(g, power, N *big.Int) *big.Int {
 	ret := &big.Int{}
+	ret.Set(g)
 	ret.Exp(g, power, N)
 	return ret
 }

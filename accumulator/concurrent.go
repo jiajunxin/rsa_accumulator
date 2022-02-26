@@ -1,21 +1,117 @@
 package accumulator
 
 import (
+	"fmt"
 	"math/big"
 	"runtime"
 	"sync"
 )
 
+// AccAndProveParallel generates the accumulator with all the memberships precomputed in parallel
+func AccAndProveParallel(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+	rep := GenRepersentatives(set, encodeType)
+
+	proofs := ProveMembershipParallel(setup.G, setup.N, rep, 4)
+	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+	acc := AccumulateNew(proofs[0], rep[0], setup.N)
+
+	return acc, proofs
+}
+
 // AccAndProveParallel concurrently generates the accumulator with all the memberships precomputed
-func AccAndProveParallel(set []string, encodeType EncodeType,
+func AccAndProveIterParallel(set []string, encodeType EncodeType,
 	setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
-	proofs := ProveMembershipParallel(setup.G, &setup.N, rep)
+	proofs := ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	acc := AccumulateNew(proofs[0], rep[0], &setup.N)
+	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
 	return acc, proofs
+}
+
+// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+// It uses at most O(2^limit) Goroutines
+func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*big.Int {
+	if 0 == limit {
+		return ProveMembership(base, N, set)
+	}
+	limit--
+	fmt.Println("limit = ", limit)
+	if len(set) == 0 {
+		fmt.Println("Errorwwwwwwwwwwwwwwwwwwww")
+	}
+	if len(set) <= 2 {
+		return handleSmallSet(base, N, set)
+	}
+
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	leftBase := *accumulate(base, N, set[len(set)/2:])
+	rightBase := *accumulate(base, N, set[0:len(set)/2])
+	//leftBase, rightBase := calBaseParallel(base, N, set)
+	c3 := make(chan []*big.Int)
+	c4 := make(chan []*big.Int)
+	go proveMembershipWithChan(&leftBase, N, set[0:len(set)/2], limit, c3)
+	go proveMembershipWithChan(&rightBase, N, set[len(set)/2:], limit, c4)
+	proofs1 := <-c3
+	proofs2 := <-c4
+
+	proofs1 = append(proofs1, proofs2...)
+	return proofs1
+}
+
+// proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit uint16, c chan []*big.Int) {
+	if limit == 0 {
+		c <- ProveMembership(base, N, set)
+		close(c)
+		return
+	}
+	limit--
+	fmt.Println("limit = ", limit)
+	if len(set) == 0 {
+		fmt.Println("wwwwwwwwwwwwwwwwwwww")
+	}
+	if len(set) <= 2 {
+		c <- handleSmallSet(base, N, set)
+		close(c)
+		return
+	}
+
+	// c1 := make(chan *big.Int)
+	// c2 := make(chan *big.Int)
+	// go accumulateWithChan(set[len(set)/2:], base, N, c1)
+	// go accumulateWithChan(set[0:len(set)/2], base, N, c2)
+	leftBase, rightBase := calBaseParallel(base, N, set)
+	c3 := make(chan []*big.Int)
+	c4 := make(chan []*big.Int)
+	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c3)
+	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c4)
+	proofs1 := <-c3
+	proofs2 := <-c4
+	proofs1 = append(proofs1, proofs2...)
+	c <- proofs1
+	close(c)
+}
+
+func calBaseParallel(base, N *big.Int, set []*big.Int) (*big.Int, *big.Int) {
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	c1 := make(chan *big.Int)
+	c2 := make(chan *big.Int)
+	go accumulateWithChan(set[len(set)/2:], base, N, c1)
+	go accumulateWithChan(set[0:len(set)/2], base, N, c2)
+	leftBase, rightBase := <-c1, <-c2
+	return leftBase, rightBase
+}
+
+func accumulateWithChan(set []*big.Int, g, N *big.Int, c chan *big.Int) {
+	var acc big.Int
+	acc.Set(g)
+	for _, v := range set {
+		acc.Exp(&acc, v, N)
+	}
+	c <- &acc
+	close(c)
 }
 
 type parallelReceiver struct {
@@ -26,7 +122,7 @@ type parallelReceiver struct {
 
 // ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs
 // iteratively and concurrently
-func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
+func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 	numWorkers, numWorkerPowerOfTwo := calNumWorkers()
 	if len(set) <= numWorkers*2 {
 		return ProveMembershipIter(base, N, set)

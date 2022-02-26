@@ -15,22 +15,22 @@ const testString = "2021HKUST"
 func TestDIHash(t *testing.T) {
 	// test two different ways of generating DI hash
 	// we need to check if A ?= B + C
-	testObject := *TrustedSetup()
+	testObject := TrustedSetup()
 
 	dihashValue := dihash.DIHash([]byte(testString))
-	A := AccumulateNew(&testObject.G, dihashValue, &testObject.N)
+	A := AccumulateNew(testObject.G, dihashValue, testObject.N)
 
-	B := AccumulateNew(&testObject.G, dihash.Delta, &testObject.N)
+	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
 	var tempInt big.Int
 	h := sha256.New()
 	h.Write([]byte(testString))
 	hashTemp := h.Sum(nil)
 	tempInt.SetBytes(hashTemp)
-	C := AccumulateNew(&testObject.G, &tempInt, &testObject.N)
+	C := AccumulateNew(testObject.G, &tempInt, testObject.N)
 
 	var BCSum big.Int
 	BCSum.Mul(B, C)
-	BCSum.Mod(&BCSum, &testObject.N)
+	BCSum.Mod(&BCSum, testObject.N)
 
 	tmp := A.Cmp(&BCSum)
 	if tmp != 0 {
@@ -41,7 +41,7 @@ func TestDIHash(t *testing.T) {
 func TestSetup(t *testing.T) {
 	setup := TrustedSetup()
 	var gcd big.Int
-	gcd.GCD(nil, nil, &setup.N, &setup.G)
+	gcd.GCD(nil, nil, setup.N, setup.G)
 	if gcd.Cmp(one) != 0 {
 		// gcd != 1
 		//this condition should never happen
@@ -63,8 +63,8 @@ func TestAccAndProve(t *testing.T) {
 		t.Errorf("proofs have different size as the input set")
 	}
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
-	acc2 := accumulateNew(&setup.G, &setup.N, rep)
-	acc3 := AccumulateNew(proofs[5], rep[5], &setup.N)
+	acc2 := accumulateNew(setup.G, setup.N, rep)
+	acc3 := AccumulateNew(proofs[5], rep[5], setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -80,8 +80,8 @@ func TestAccAndProve(t *testing.T) {
 		t.Errorf("proofs have different size as the input set")
 	}
 	rep = GenRepersentatives(set, HashToPrimeFromSha256)
-	acc2 = accumulateNew(&setup.G, &setup.N, rep)
-	acc3 = AccumulateNew(proofs[7], rep[7], &setup.N)
+	acc2 = accumulateNew(setup.G, setup.N, rep)
+	acc3 = AccumulateNew(proofs[7], rep[7], setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -97,8 +97,8 @@ func TestAccAndProve(t *testing.T) {
 		t.Errorf("proofs have different size as the input set")
 	}
 	rep = GenRepersentatives(set, HashToPrimeFromSha256)
-	acc2 = accumulateNew(&setup.G, &setup.N, rep)
-	acc3 = AccumulateNew(proofs[253], rep[253], &setup.N)
+	acc2 = accumulateNew(setup.G, setup.N, rep)
+	acc3 = AccumulateNew(proofs[253], rep[253], setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
@@ -109,8 +109,8 @@ func TestAccAndProve(t *testing.T) {
 
 func genAccts(set []string, setup *AccumulatorSetup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
 	rep := GenRepersentatives(set, HashToPrimeFromSha256)
-	acc1 = accumulateNew(&setup.G, &setup.N, rep)
-	acc2 = AccumulateNew(proofs[idx], rep[idx], &setup.N)
+	acc1 = accumulateNew(setup.G, setup.N, rep)
+	acc2 = AccumulateNew(proofs[idx], rep[idx], setup.N)
 	return
 }
 

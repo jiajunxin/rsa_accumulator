@@ -5,6 +5,7 @@ import (
 	"math/big"
 )
 
+// HashToPrime takes the input into Sha256 and take the hash output to input repeatedly until we hit a prime number
 func HashToPrime(input []byte) *big.Int {
 	var ret big.Int
 	h := sha256.New()
@@ -24,6 +25,7 @@ func HashToPrime(input []byte) *big.Int {
 	return &ret
 }
 
+// SHA256ToInt calculates the input with Sha256 and change it to big.Int
 func SHA256ToInt(input []byte) *big.Int {
 	var ret big.Int
 	h := sha256.New()

@@ -11,7 +11,6 @@ import (
 const (
 	securityPara       = 2048
 	securityParaInBits = 128
-	PreComputeSize     = 200
 
 	// N2048String is the 2048 bit RSA challenge from
 	// https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048
@@ -34,8 +33,9 @@ const (
 				   34168394550593789701037409424194604360826335364378164151740097340256950679028613
 				   09122781712179279787649475651300600345042772613903033967878379857249999473018461
 				   052103366618611873817620719707699275384636400658849792`
-
+	// HashToPrimeFromSha256 is a prime number generatted from Sha256
 	HashToPrimeFromSha256 = iota
+	// DIHashFromPoseidon is a division intractable Hash output
 	DIHashFromPoseidon
 )
 
@@ -49,15 +49,17 @@ var (
 	Min2048 = big.NewInt(0)
 )
 
+// AccumulatorSetup is a basic struct for a hidden order group
 type AccumulatorSetup struct {
-	N big.Int
-	G big.Int //default generator in Z*_N
+	N *big.Int
+	G *big.Int //default generator in Z*_N
 }
 
 type Element []byte
 
 type EncodeType int
 
+// GenerateG generates a generator for a hidden order group randomly
 func GenerateG() {
 	buffer := make([]big.Int, 8)
 	buffer[0].Set(SHA256ToInt([]byte(N2048String))) //g1 should be 256 bit.

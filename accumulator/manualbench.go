@@ -40,6 +40,17 @@ func ManualBenchParallel(testSetSize int) {
 		testSetSize, duration.Seconds())
 }
 
+func ManualBenchIterParallel(testSetSize int) {
+	set := GenBenchSet(testSetSize)
+	setup := *TrustedSetup()
+	startingTime := time.Now().UTC()
+	_, _ = AccAndProveIterParallel(set, HashToPrimeFromSha256, &setup)
+	endingTime := time.Now().UTC()
+	var duration time.Duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running AccAndProveIterParallel with set size %v\nTakes [%.3f] Seconds \n",
+		testSetSize, duration.Seconds())
+}
+
 // GenBenchSet generate one set where every element is identical
 func GenBenchSet(num int) []string {
 	ret := make([]string, num)
