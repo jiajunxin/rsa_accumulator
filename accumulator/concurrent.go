@@ -1,13 +1,9 @@
 package accumulator
 
 import (
-	"math"
 	"math/big"
+	"runtime"
 	"sync"
-)
-
-const (
-	numWorkerPowerOfTwo = 2
 )
 
 // AccAndProveParallel concurrently generates the accumulator with all the memberships precomputed
@@ -31,7 +27,7 @@ type parallelReceiver struct {
 // ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs
 // iteratively and concurrently
 func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
-	numWorkers := int(math.Pow(2, numWorkerPowerOfTwo))
+	numWorkers, numWorkerPowerOfTwo := calNumWorkers()
 	if len(set) <= numWorkers*2 {
 		return ProveMembershipIter(base, N, set)
 	}
@@ -72,6 +68,17 @@ func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.In
 		copy(proofs[receiver.left:receiver.right], receiver.proofs)
 	}
 	return proofs
+}
+
+func calNumWorkers() (int, int) {
+	numWorkersPowerOfTwo := 0
+	numWorkers := 1
+	numCPUs := runtime.NumCPU()
+	for numWorkers < numCPUs {
+		numWorkersPowerOfTwo++
+		numWorkers *= 2
+	}
+	return numWorkers / 2, numWorkersPowerOfTwo - 1
 }
 
 func insertNewProofNodeParallel(iter *proofNode, N *big.Int, set []*big.Int) *proofNode {
