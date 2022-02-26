@@ -2,7 +2,7 @@ package accumulator
 
 import "testing"
 
-func TestAccAndProveParallel(t *testing.T) {
+func TestAccAndProveIterParallel(t *testing.T) {
 
 	type args struct {
 		set        []string
@@ -48,7 +48,7 @@ func TestAccAndProveParallel(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			acc, proofs := AccAndProveParallel(tt.args.set, tt.args.encodeType, tt.args.setup)
+			acc, proofs := AccAndProveIterParallel(tt.args.set, tt.args.encodeType, tt.args.setup)
 			acc1, acc2 := genAccts(tt.args.set, tt.args.setup, proofs, tt.idx)
 			if len(proofs) != tt.wantProofLen {
 				t.Errorf("AccAndProveParallel() got proof len = %v, want %v", len(proofs), tt.wantProofLen)

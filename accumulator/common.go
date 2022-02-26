@@ -40,9 +40,9 @@ const (
 )
 
 var (
-	zero = big.NewInt(0)
-	one  = big.NewInt(1)
-	two  = big.NewInt(2)
+	// zero = big.NewInt(0)
+	one = big.NewInt(1)
+	two = big.NewInt(2)
 
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
