@@ -7,11 +7,12 @@ import (
 )
 
 const (
-	numWorkerPowerOfTwo = 3
+	numWorkerPowerOfTwo = 2
 )
 
 // AccAndProveParallel concurrently generates the accumulator with all the memberships precomputed
-func AccAndProveParallel(set []string, encodeType EncodeType, setup *AccumulatorSetup) (*big.Int, []*big.Int) {
+func AccAndProveParallel(set []string, encodeType EncodeType,
+	setup *AccumulatorSetup) (*big.Int, []*big.Int) {
 	rep := GenRepersentatives(set, encodeType)
 
 	proofs := ProveMembershipParallel(setup.G, &setup.N, rep)
@@ -27,7 +28,8 @@ type parallelReceiver struct {
 	proofs []*big.Int
 }
 
-// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs iteratively
+// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs
+// iteratively and concurrently
 func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 	numWorkers := int(math.Pow(2, numWorkerPowerOfTwo))
 	if len(set) <= numWorkers*2 {
@@ -43,7 +45,7 @@ func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.In
 	for i := 0; i < numWorkerPowerOfTwo; i++ {
 		iter = header
 		for iter != nil {
-			iter = insertNewProofNode(iter, N, set)
+			iter = insertNewProofNodeParallel(iter, N, set)
 		}
 	}
 
@@ -72,6 +74,31 @@ func ProveMembershipParallel(base big.Int, N *big.Int, set []*big.Int) []*big.In
 	return proofs
 }
 
+func insertNewProofNodeParallel(iter *proofNode, N *big.Int, set []*big.Int) *proofNode {
+	left := iter.left
+	right := iter.right
+	mid := left + (right-left)/2
+	newProofNodeChan := make(chan *big.Int)
+	iterChan := make(chan *big.Int)
+	go func() {
+		newProofNodeChan <- accumulateNew(iter.proof, N, set[left:mid])
+	}()
+	go func() {
+		iterChan <- accumulateNew(iter.proof, N, set[mid:right])
+	}()
+	newProofNode := &proofNode{
+		left:  mid,
+		right: right,
+		proof: <-newProofNodeChan,
+		next:  iter.next,
+	}
+	iter.left = left
+	iter.right = mid
+	iter.proof = <-iterChan
+	iter.next = newProofNode
+	return newProofNode.next
+}
+
 func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right int) []*big.Int {
 	if len(set) <= 0 {
 		return nil
@@ -94,7 +121,7 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 				iter = iter.next
 				continue
 			}
-			iter = insertNewProofNode(iter, N, set)
+			iter = insertNewProofNodeParallel(iter, N, set)
 			finishFlag = true
 		}
 	}
