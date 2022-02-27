@@ -41,5 +41,4 @@ jobs:
         uses: actions/checkout@v2
       - name: Run go-mnd
         uses: tommy-muehle/go-mnd@master
-        with:
-          args: -ignored-numbers=2,10,256  
+        run: mnd -ignored-numbers=2,10,256 ./...
