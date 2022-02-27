@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Checkout Source
         uses: actions/checkout@v2
-      - name: Run go-mnd -ignored-numbers=2,10,256
+      - name: Run go-mnd
         uses: tommy-muehle/go-mnd@master
         with:
-          args: ./...    
+          args: -ignored-numbers=2,10,256  
