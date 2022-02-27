@@ -2,3 +2,4 @@
 .idea/
 rsa_accumulator
 rsa_accumulator.exe
+*.pprof

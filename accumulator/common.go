@@ -47,8 +47,8 @@ var (
 
 // Setup is a basic struct for a hidden order group
 type Setup struct {
-	N big.Int
-	G big.Int //default generator in Z*_N
+	N *big.Int
+	G *big.Int //default generator in Z*_N
 }
 
 // Element should be able to be accumulated into RSA accumulator
