@@ -18,6 +18,7 @@ func ManualBench(testSetSize int) {
 		testSetSize, duration.Seconds())
 }
 
+// ManualBenchIter is used for manul benchmark. Because the running time can be long, the golang benchmark may not work
 func ManualBenchIter(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
@@ -29,6 +30,7 @@ func ManualBenchIter(testSetSize int) {
 		testSetSize, duration.Seconds())
 }
 
+// ManualBenchParallel is used for manul benchmark. Because the running time can be long, the golang benchmark may not work
 func ManualBenchParallel(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
@@ -40,6 +42,7 @@ func ManualBenchParallel(testSetSize int) {
 		testSetSize, duration.Seconds())
 }
 
+// ManualBenchIterParallel is used for manul benchmark. Because the running time can be long, the golang benchmark may not work
 func ManualBenchIterParallel(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
