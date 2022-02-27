@@ -3,6 +3,7 @@ package accumulator
 import (
 	"fmt"
 	"math/big"
+	"time"
 )
 
 func init() {
@@ -34,7 +35,12 @@ func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 
 // AccAndProve generates the accumulator with all the memberships precomputed
 func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
+	startingTime := time.Now().UTC()
 	rep := GenRepersentatives(set, encodeType)
+	endingTime := time.Now().UTC()
+	var duration time.Duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+		duration.Seconds())
 
 	proofs := ProveMembership(setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation

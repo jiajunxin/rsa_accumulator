@@ -5,11 +5,17 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
+	"time"
 )
 
 // AccAndProveParallel generates the accumulator with all the memberships precomputed in parallel
 func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
+	startingTime := time.Now().UTC()
 	rep := GenRepersentatives(set, encodeType)
+	endingTime := time.Now().UTC()
+	var duration time.Duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+		duration.Seconds())
 
 	proofs := ProveMembershipParallel(setup.G, setup.N, rep, 4)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
@@ -37,11 +43,7 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*
 		return ProveMembership(base, N, set)
 	}
 	limit--
-	fmt.Println("limit = ", limit)
-	if len(set) == 0 {
-		fmt.Println("Errorwwwwwwwwwwwwwwwwwwww")
-		return nil
-	}
+
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
 	}
