@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// AccAndProveParallel generates the accumulator with all the memberships precomputed in parallel
+// AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
 func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
 	rep := GenRepersentatives(set, encodeType)
@@ -16,8 +16,8 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*bi
 	var duration time.Duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
-
-	proofs := ProveMembershipParallel(setup.G, setup.N, rep, 4)
+	_, numWorkersPowerOfTwo := calNumWorkers()
+	proofs := ProveMembershipParallel(setup.G, setup.N, rep, numWorkersPowerOfTwo)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
 	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
@@ -38,7 +38,7 @@ func AccAndProveIterParallel(set []string, encodeType EncodeType,
 
 // ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
 // It uses at most O(2^limit) Goroutines
-func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*big.Int {
+func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big.Int {
 	if limit == 0 {
 		return ProveMembership(base, N, set)
 	}
@@ -49,49 +49,40 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit uint16) []*
 	}
 
 	// the left part of proof need to accumulate the right part of the set, vice versa.
-	leftBase := *accumulate(base, N, set[len(set)/2:])
-	rightBase := *accumulate(base, N, set[0:len(set)/2])
-	//leftBase, rightBase := calBaseParallel(base, N, set)
-	c3 := make(chan []*big.Int)
-	c4 := make(chan []*big.Int)
-	go proveMembershipWithChan(&leftBase, N, set[0:len(set)/2], limit, c3)
-	go proveMembershipWithChan(&rightBase, N, set[len(set)/2:], limit, c4)
-	proofs1 := <-c3
-	proofs2 := <-c4
+	leftBase, rightBase := calBaseParallel(base, N, set)
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	proofs1 := <-c1
+	proofs2 := <-c2
 
 	proofs1 = append(proofs1, proofs2...)
 	return proofs1
 }
 
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
-func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit uint16, c chan []*big.Int) {
+func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan []*big.Int) {
 	if limit == 0 {
 		c <- ProveMembership(base, N, set)
 		close(c)
 		return
 	}
 	limit--
-	fmt.Println("limit = ", limit)
-	if len(set) == 0 {
-		fmt.Println("wwwwwwwwwwwwwwwwwwww")
-	}
 	if len(set) <= 2 {
 		c <- handleSmallSet(base, N, set)
 		close(c)
 		return
 	}
 
-	// c1 := make(chan *big.Int)
-	// c2 := make(chan *big.Int)
-	// go accumulateWithChan(set[len(set)/2:], base, N, c1)
-	// go accumulateWithChan(set[0:len(set)/2], base, N, c2)
+	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftBase, rightBase := calBaseParallel(base, N, set)
-	c3 := make(chan []*big.Int)
-	c4 := make(chan []*big.Int)
-	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c3)
-	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c4)
-	proofs1 := <-c3
-	proofs2 := <-c4
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	proofs1 := <-c1
+	proofs2 := <-c2
 	proofs1 = append(proofs1, proofs2...)
 	c <- proofs1
 	close(c)
