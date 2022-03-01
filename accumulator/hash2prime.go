@@ -14,7 +14,7 @@ func HashToPrime(input []byte) *big.Int {
 	ret.SetBytes(hashTemp)
 	flag := false
 	for !flag {
-		flag = ret.ProbablyPrime(securityParaInBits / 2)
+		flag = ret.ProbablyPrime(securityParaHashToPrime)
 		if !flag {
 			h.Reset()
 			h.Write(hashTemp)
