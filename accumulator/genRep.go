@@ -2,6 +2,8 @@ package accumulator
 
 import (
 	"math/big"
+
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 func genRepWithHashToPrimeFromSHA256(set []string) []*big.Int {
@@ -17,7 +19,11 @@ func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 	//Todo: generate DI from Poseidon Hash
 	for i := range set {
 		ret[i] = Min2048
-		//Todo ret[i] = ret[i] + PoseidonHash(v)
+		temp, err := poseidon.HashBytes([]byte(set[i]))
+		if err != nil {
+			panic(err)
+		}
+		ret[i].Add(ret[i], temp)
 	}
 	return ret
 }
