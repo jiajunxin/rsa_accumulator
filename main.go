@@ -8,8 +8,9 @@ import (
 
 func main() {
 	// defer profile.Start(profile.TraceProfile).Stop()
-	fmt.Println("test in main")
-	// accumulator.ManualBench(1000)
-	accumulator.ManualBenchParallel(1000000)
-	accumulator.ManualBenchIterParallel(1000000)
+	testSize := 10000
+	fmt.Printf("test in main, test size: %d\n", testSize)
+	accumulator.ManualBench(testSize)
+	accumulator.ManualBenchParallel(testSize)
+	accumulator.ManualBenchIterParallel(testSize)
 }

@@ -118,7 +118,7 @@ type parallelReceiver struct {
 // ProveMembershipIterParallel uses divide-and-conquer method to pre-compute the all membership proofs
 // iteratively and concurrently
 func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
-	numWorkers, numWorkerPowerOfTwo := calNumWorkers()
+	numWorkers, numWorkerPowerOfTwo := 8, 3 //calNumWorkers()
 	if len(set) <= numWorkers*2 {
 		return ProveMembershipIter(base, N, set)
 	}
@@ -165,10 +165,11 @@ func calNumWorkers() (int, int) {
 	numWorkersPowerOfTwo := 0
 	numWorkers := 1
 	numCPUs := runtime.NumCPU()
-	for numWorkers < numCPUs {
+	for numWorkers <= numCPUs {
 		numWorkersPowerOfTwo++
 		numWorkers *= 2
 	}
+	fmt.Printf("CPU Number: %d, Number of Workers: %d\n", numCPUs, numWorkers/2)
 	return numWorkers / 2, numWorkersPowerOfTwo - 1
 }
 
