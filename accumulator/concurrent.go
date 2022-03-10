@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"runtime"
@@ -171,25 +172,9 @@ func calNumWorkers() (int, int) {
 	return numWorkers / 2, numWorkersPowerOfTwo - 1
 }
 
-func insertNewProofNodeParallel(iter *proofNode, N *big.Int, set []*big.Int) *proofNode {
-	left := iter.left
-	right := iter.right
-	mid := left + (right-left)/2
-	iterChan := make(chan *big.Int)
-	go func() {
-		iterChan <- accumulateNew(iter.proof, N, set[mid:right])
-	}()
-	newProofNode := &proofNode{
-		left:  mid,
-		right: right,
-		proof: accumulateNew(iter.proof, N, set[left:mid]),
-		next:  iter.next,
-	}
-	iter.left = left
-	iter.right = mid
-	iter.proof = <-iterChan
-	iter.next = newProofNode
-	return newProofNode.next
+type sendParam struct {
+	left  int
+	right int
 }
 
 func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right int) []*big.Int {
@@ -206,6 +191,20 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 		finishFlag bool       = true
 	)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sendChan := make(chan sendParam, 5)
+	iterChan := make(chan *big.Int)
+	go func() {
+		for {
+			select {
+			case send := <-sendChan:
+				iterChan <- accumulateNew(iter.proof, N, set[send.left:send.right])
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	for finishFlag {
 		finishFlag = false
 		iter = header
@@ -214,7 +213,7 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 				iter = iter.next
 				continue
 			}
-			iter = insertNewProofNodeParallel(iter, N, set)
+			iter = insertNewProofNodeParallelWithChan(iter, N, set, sendChan, iterChan)
 			finishFlag = true
 		}
 	}
@@ -252,4 +251,23 @@ func initMembershipProofs(base, N *big.Int, set []*big.Int,
 		go initMembershipProofs(proof2, N, set, left, mid,
 			numWorkerPowerOfTwo, depth+1, indexes[:idxMid], initChans)
 	}()
+}
+
+func insertNewProofNodeParallelWithChan(iter *proofNode, N *big.Int, set []*big.Int,
+	sendChan chan<- sendParam, iterChan <-chan *big.Int) *proofNode {
+	left := iter.left
+	right := iter.right
+	mid := left + (right-left)/2
+	sendChan <- sendParam{left: mid, right: right}
+	newProofNode := &proofNode{
+		left:  mid,
+		right: right,
+		proof: accumulateNew(iter.proof, N, set[left:mid]),
+		next:  iter.next,
+	}
+	iter.left = left
+	iter.right = mid
+	iter.proof = <-iterChan
+	iter.next = newProofNode
+	return newProofNode.next
 }
