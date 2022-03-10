@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/profile"
-
 	"github.com/rsa_accumulator/accumulator"
 )
 
