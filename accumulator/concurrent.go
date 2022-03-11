@@ -124,6 +124,7 @@ func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*bi
 	initNodeChan := make(chan *proofNode, numWorkers)
 	go initMembershipProofs(&base, N, set, 0, len(set),
 		numWorkerPowerOfTwo, 0, initNodeChan)
+
 	receivers := make(chan parallelReceiver, numWorkers)
 	var cnt int
 	for node := range initNodeChan {
