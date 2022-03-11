@@ -3,14 +3,25 @@ package main
 import (
 	"fmt"
 
-	"github.com/pkg/profile"
 	"github.com/rsa_accumulator/accumulator"
 )
 
 func main() {
-	defer profile.Start(profile.TraceProfile).Stop()
-	fmt.Println("test in main")
-	accumulator.ManualBench(1000)
-	accumulator.ManualBenchParallel(1000)
-	accumulator.ManualBenchIterParallel(1000)
+	fmt.Println("start test in main")
+	testSizes := []int{1000, 10000, 1000000}
+	for _, size := range testSizes {
+		fmt.Printf("test size: %d\n", size)
+		accumulator.ManualBench(size)
+		accumulator.ManualBenchParallel(size)
+		accumulator.ManualBenchIterParallel(size)
+		fmt.Println()
+	}
+	// {
+	// 	set := accumulator.GenBenchSet(1000)
+	// 	setup := *accumulator.TrustedSetup()
+	// 	rep := accumulator.GenRepersentatives(set, accumulator.DIHashFromPoseidon)
+	// 	defer profile.Start(profile.TraceProfile).Stop()
+	// 	accumulator.ProveMembershipIterParallel(*setup.G, setup.N, rep)
+	// }
+	fmt.Println("end test in main")
 }

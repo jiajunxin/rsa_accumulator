@@ -1,10 +1,10 @@
 package accumulator
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"runtime"
-	"sync"
 	"time"
 )
 
@@ -121,75 +121,61 @@ func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*bi
 	if len(set) <= numWorkers*2 {
 		return ProveMembershipIter(base, N, set)
 	}
-	initChans := make([]chan *proofNode, numWorkers)
-	indexes := make([]int, numWorkers)
-	for i := 0; i < numWorkers; i++ {
-		initChans[i] = make(chan *proofNode)
-		indexes[i] = i
-	}
-	initMembershipProofs(&base, N, set, 0, len(set),
-		numWorkerPowerOfTwo, 0, indexes, initChans)
-	header := <-initChans[0]
-	iter := header
-	for i := 1; i < numWorkers; i++ {
-		iter.next = <-initChans[i]
-		iter = iter.next
-	}
-	receivers := make(chan parallelReceiver, numWorkers)
-	wg := &sync.WaitGroup{}
-	wg.Add(numWorkers)
-	iter = header
-	for i := 0; i < numWorkers; i++ {
-		go func(iter *proofNode) {
-			defer wg.Done()
-			receivers <- parallelReceiver{
-				left:   iter.left,
-				right:  iter.right,
-				proofs: proveMembershipIter(*iter.proof, N, set, iter.left, iter.right),
-			}
-		}(iter)
-		iter = iter.next
-	}
-	wg.Wait()
-	close(receivers)
+	initNodeChan := make(chan *proofNode, numWorkers)
+	go initMembershipProofs(&base, N, set, 0, len(set),
+		numWorkerPowerOfTwo, 0, initNodeChan)
 
-	proofs := make([]*big.Int, len(set))
-	for receiver := range receivers {
-		copy(proofs[receiver.left:receiver.right], receiver.proofs)
+	receivers := make(chan parallelReceiver, numWorkers)
+	var cnt int
+	for node := range initNodeChan {
+		go func(node *proofNode) {
+			receivers <- parallelReceiver{
+				left:   node.left,
+				right:  node.right,
+				proofs: proveMembershipIter(*node.proof, N, set, node.left, node.right),
+			}
+		}(node)
+		cnt++
+		if cnt == numWorkers {
+			close(initNodeChan)
+		}
 	}
-	return proofs
+
+	proofChan := make(chan []*big.Int)
+	go func() {
+		var cnt int
+		proofs := make([]*big.Int, len(set))
+		for r := range receivers {
+			copy(proofs[r.left:r.right], r.proofs)
+			cnt++
+			if cnt != numWorkers {
+				continue
+			}
+			close(receivers)
+			proofChan <- proofs
+			close(proofChan)
+			return
+		}
+	}()
+
+	return <-proofChan
 }
 
 func calNumWorkers() (int, int) {
 	numWorkersPowerOfTwo := 0
 	numWorkers := 1
 	numCPUs := runtime.NumCPU()
-	for numWorkers < numCPUs {
+	for numWorkers <= numCPUs {
 		numWorkersPowerOfTwo++
 		numWorkers *= 2
 	}
+	fmt.Printf("CPU Number: %d, Number of Workers: %d\n", numCPUs, numWorkers/2)
 	return numWorkers / 2, numWorkersPowerOfTwo - 1
 }
 
-func insertNewProofNodeParallel(iter *proofNode, N *big.Int, set []*big.Int) *proofNode {
-	left := iter.left
-	right := iter.right
-	mid := left + (right-left)/2
-	iterChan := make(chan *big.Int)
-	go func() {
-		iterChan <- accumulateNew(iter.proof, N, set[mid:right])
-	}()
-	newProofNode := &proofNode{
-		left:  mid,
-		right: right,
-		proof: accumulateNew(iter.proof, N, set[left:mid]),
-		next:  iter.next,
-	}
-	iter.left = left
-	iter.right = mid
-	iter.proof = <-iterChan
-	iter.next = newProofNode
-	return newProofNode.next
+type sendParam struct {
+	left  int
+	right int
 }
 
 func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right int) []*big.Int {
@@ -206,6 +192,20 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 		finishFlag bool       = true
 	)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sendChan := make(chan sendParam)
+	iterChan := make(chan *big.Int)
+	go func() {
+		for {
+			select {
+			case send := <-sendChan:
+				iterChan <- accumulateNew(iter.proof, N, set[send.left:send.right])
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	for finishFlag {
 		finishFlag = false
 		iter = header
@@ -214,7 +214,7 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 				iter = iter.next
 				continue
 			}
-			iter = insertNewProofNodeParallel(iter, N, set)
+			iter = insertNewProofNodeWithChan(iter, N, set, sendChan, iterChan)
 			finishFlag = true
 		}
 	}
@@ -227,29 +227,46 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 }
 
 func initMembershipProofs(base, N *big.Int, set []*big.Int,
-	left, right, numWorkerPowerOfTwo, depth int, indexes []int, initChans []chan *proofNode) {
-	if depth > numWorkerPowerOfTwo {
+	left, right, powerOfTwo, depth int, initNodeChan chan *proofNode) {
+	if depth > powerOfTwo {
 		return
 	}
-	if depth == numWorkerPowerOfTwo {
-		initChans[indexes[0]] <- &proofNode{
+	if depth == powerOfTwo {
+		initNodeChan <- &proofNode{
 			left:  left,
 			right: right,
 			proof: base,
 		}
-		close(initChans[indexes[0]])
 		return
 	}
 	mid := left + (right-left)/2
-	idxMid := len(indexes) / 2
 	go func() {
 		proof1 := accumulateNew(base, N, set[left:mid])
 		go initMembershipProofs(proof1, N, set, mid, right,
-			numWorkerPowerOfTwo, depth+1, indexes[idxMid:], initChans)
+			powerOfTwo, depth+1, initNodeChan)
 	}()
 	go func() {
 		proof2 := accumulateNew(base, N, set[mid:right])
 		go initMembershipProofs(proof2, N, set, left, mid,
-			numWorkerPowerOfTwo, depth+1, indexes[:idxMid], initChans)
+			powerOfTwo, depth+1, initNodeChan)
 	}()
+}
+
+func insertNewProofNodeWithChan(iter *proofNode, N *big.Int, set []*big.Int,
+	sendChan chan<- sendParam, iterChan <-chan *big.Int) *proofNode {
+	left := iter.left
+	right := iter.right
+	mid := left + (right-left)/2
+	sendChan <- sendParam{left: mid, right: right}
+	newProofNode := &proofNode{
+		left:  mid,
+		right: right,
+		proof: accumulateNew(iter.proof, N, set[left:mid]),
+		next:  iter.next,
+	}
+	iter.left = left
+	iter.right = mid
+	iter.proof = <-iterChan
+	iter.next = newProofNode
+	return newProofNode.next
 }
