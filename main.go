@@ -47,11 +47,10 @@ func GenSortedListSet(inputList []*big.Int) []*big.Int {
 }
 
 func CalSetProd(inputSet []*big.Int) *big.Int {
-	set := GenSortedListSet(inputSet)
-	setsize := len(set)
+	setsize := len(inputSet)
 	prod := big.NewInt(1)
 	for i := 0; i < setsize; i++ {
-		prod.Mul(prod, set[i])
+		prod.Mul(prod, inputSet[i])
 	}
 	return prod
 }
@@ -86,21 +85,25 @@ func main() {
 
 	fmt.Println("Accumulator_mid = ", AccMid.String())
 
-	quotient := prod1.Div(prod1, prod2)
-	AccTest := accumulator.AccumulateNew(AccMid, quotient, setup.N)
+	r1 := big.NewInt(1)
+	q1, r1 := prod1.DivMod(prod1, prod2, r1)
+	//fmt.Println("q1 = ", q1.String())
+	fmt.Println("r1 = ", r1.String())
+
+	AccTest := accumulator.AccumulateNew(AccMid, q1, setup.N)
 	fmt.Println("Accumulator_test = ", AccTest.String())
 
 	l1 := accumulator.HashToPrime(append(AccOld.Bytes(), AccMid.Bytes()...))
-	fmt.Println("primeChallenge = ", l1)
+	fmt.Println("primeChallenge = ", l1.String())
 
 	// prod1 is the product of all the hash result of sortedList0_1
 
 	// calculate Q s.t. q1*l1 + r1 = prod1
-	r1 := big.NewInt(1)
-	q1, r1 := prod1.DivMod(prod1, l1, r1)
-	Q1 := accumulator.AccumulateNew(setup.G, q1, setup.N)
-	fmt.Println("Q1 = ", Q1)
-	fmt.Println("r1 = ", r1)
+	// r1 := big.NewInt(1)
+	// q1, r1 := prod1.DivMod(prod1, l1, r1)
+	// Q1 := accumulator.AccumulateNew(setup.G, q1, setup.N)
+	// fmt.Println("Q1 = ", Q1)
+	// fmt.Println("r1 = ", r1)
 
 	// rem1 := big.NewInt(1)
 	// tempDIHash := big.NewInt(1)
