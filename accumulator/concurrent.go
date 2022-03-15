@@ -27,8 +27,12 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*bi
 // AccAndProveIterParallel iteratively and concurrently generates the accumulator with all the memberships precomputed
 func AccAndProveIterParallel(set []string, encodeType EncodeType,
 	setup *Setup) (*big.Int, []*big.Int) {
+	startingTime := time.Now().UTC()
 	rep := GenRepersentatives(set, encodeType)
-
+	endingTime := time.Now().UTC()
+	var duration time.Duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+		duration.Seconds())
 	proofs := ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
 	acc := AccumulateNew(proofs[0], rep[0], setup.N)
