@@ -14,7 +14,7 @@ func GenSortedListSet(inputList []*big.Int) []*big.Int {
 	min := big.NewInt(0)
 	// we set max to 0x7FFFFFFF instead of 0xFFFFFFFF to suit the xjSNARK, it seems there is some problem in there
 	max := big.NewInt(0x7FFFFFFF)
-	// generate product of the input sorted list
+
 	poseidonHashResult := make([]*big.Int, setsize+1)
 	tempHashInput := make([]*big.Int, 2)
 	tempHashInput[0] = min
@@ -46,6 +46,27 @@ func GenSortedListSet(inputList []*big.Int) []*big.Int {
 	return poseidonHashResult
 }
 
+// genDelListSet is simply used for testing.
+// We will generate a inputList which do not include min and max and it is a subset of SortedListSet
+func genDelListSet(inputList []*big.Int) []*big.Int {
+	var err error
+	setsize := len(inputList)
+
+	poseidonHashResult := make([]*big.Int, setsize-1)
+	tempHashInput := make([]*big.Int, 2)
+
+	for i := 0; i < setsize-1; i++ {
+		tempHashInput[0] = inputList[i]
+		tempHashInput[1] = inputList[i+1]
+		poseidonHashResult[i], err = poseidon.Hash(tempHashInput)
+		if err != nil {
+			// not expecting error from a Hash function
+			panic(err)
+		}
+	}
+	return poseidonHashResult
+}
+
 func CalSetProd(inputSet []*big.Int) *big.Int {
 	setsize := len(inputSet)
 	prod := big.NewInt(1)
@@ -57,44 +78,61 @@ func CalSetProd(inputSet []*big.Int) *big.Int {
 
 func main() {
 	fmt.Println("start test in main")
-	setsize := 16
+	setup := accumulator.TrustedSetup()
+	oldSetSize := 10000
+	delSetSize := 16
 
 	// generate Accumulator_old
-	oldSetsize := 10000
-	sortedList0 := make([]*big.Int, oldSetsize)
-	for i := 0; i < oldSetsize; i++ {
-		sortedList0[i] = big.NewInt(int64(i))
+	oldSortedList := make([]*big.Int, oldSetSize)
+	// i start from 1 to avoid 0 as input. 0 is already reserved for min value.
+	for i := 0; i < oldSetSize; i++ {
+		oldSortedList[i] = big.NewInt(int64(1 + i*2))
 	}
-	sortedListSet1 := GenSortedListSet(sortedList0)
-	fmt.Println("sortedListSet1.len = ", len(sortedListSet1))
+	oldSortedListSet := GenSortedListSet(oldSortedList)
+	fmt.Println("sortedListSet1.len = ", len(oldSortedListSet))
 	// get the product of the set
-	prod1 := CalSetProd(sortedListSet1)
-
-	setup := accumulator.TrustedSetup()
-	AccOld := accumulator.AccumulateNew(setup.G, prod1, setup.N)
+	prodOldSet := CalSetProd(oldSortedListSet)
+	AccOld := accumulator.AccumulateNew(setup.G, prodOldSet, setup.N)
 
 	fmt.Println("Accumulator_old = ", AccOld.String())
 	// Generate test set
-	// Suppopse we want to remove the first setsize elements from sortedListSet1
 	// Note that sortedList1 do not have to be continuous, we use this set just for example.
-	sortedListSet2 := sortedListSet1[setsize:]
-	fmt.Println("sortedListSet2.len = ", len(sortedListSet2))
-	prod2 := CalSetProd(sortedListSet2)
-
-	AccMid := accumulator.AccumulateNew(setup.G, prod2, setup.N)
-
-	fmt.Println("Accumulator_mid = ", AccMid.String())
+	delList := make([]*big.Int, delSetSize)
+	// i start from 1 to avoid 0 as input. 0 is already reserved for min value.
+	for i := 0; i < delSetSize; i++ {
+		delList[i] = big.NewInt(int64(1 + i*2))
+	}
+	// delListSet should be a subset of oldSortedListSet
+	delListSet := genDelListSet(delList)
+	prodDelSet := CalSetProd(delListSet)
+	var prodMidSet big.Int
+	prodMidSet.Div(prodOldSet, prodDelSet)
 
 	r1 := big.NewInt(1)
-	q1, r1 := prod1.DivMod(prod1, prod2, r1)
-	//fmt.Println("q1 = ", q1.String())
-	fmt.Println("r1 = ", r1.String())
+	//quotient = prod1.Div(prod1, prod2)
+	_, r1 = prodOldSet.DivMod(prodOldSet, prodDelSet, r1)
+	fmt.Println("r1 = ", r1)
 
-	AccTest := accumulator.AccumulateNew(AccMid, q1, setup.N)
-	fmt.Println("Accumulator_test = ", AccTest.String())
+	AccMid := accumulator.AccumulateNew(setup.G, &prodMidSet, setup.N)
 
+	AccTest := accumulator.AccumulateNew(&prodMidSet, prodDelSet, setup.N)
+	fmt.Println("Accumulator_mid = ", AccMid.String())
+	fmt.Println("AccTest = ", AccTest.String())
 	l1 := accumulator.HashToPrime(append(AccOld.Bytes(), AccMid.Bytes()...))
 	fmt.Println("primeChallenge = ", l1.String())
+
+	// r1 := big.NewInt(1)
+	// quotient = prod1.Div(prod1, prod2)
+	// q1, r1 := quotient.DivMod(quotient, l1, r1)
+	// Q1 := accumulator.AccumulateNew(AccMid, q1, setup.N)
+	// fmt.Println("Q1 = ", Q1.String())
+	// fmt.Println("r1 = ", r1.String())
+
+	// AccTest1 := accumulator.AccumulateNew(Q1, l1, setup.N)
+	// AccTest2 := accumulator.AccumulateNew(AccMid, r1, setup.N)
+	// AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
+	// AccTest3.Mod(AccTest3, setup.N)
+	// fmt.Println("Accumulator_test = ", AccTest3.String())
 
 	// prod1 is the product of all the hash result of sortedList0_1
 
