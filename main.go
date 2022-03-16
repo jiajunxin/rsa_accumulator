@@ -107,52 +107,26 @@ func main() {
 	prodDelSet := CalSetProd(delListSet)
 	var prodMidSet big.Int
 	prodMidSet.Div(prodOldSet, prodDelSet)
-
-	r1 := big.NewInt(1)
-	//quotient = prod1.Div(prod1, prod2)
-	_, r1 = prodOldSet.DivMod(prodOldSet, prodDelSet, r1)
-	fmt.Println("r1 = ", r1)
-
 	AccMid := accumulator.AccumulateNew(setup.G, &prodMidSet, setup.N)
-
-	AccTest := accumulator.AccumulateNew(&prodMidSet, prodDelSet, setup.N)
 	fmt.Println("Accumulator_mid = ", AccMid.String())
-	fmt.Println("AccTest = ", AccTest.String())
+
+	// AccTest := accumulator.AccumulateNew(&prodMidSet, prodDelSet, setup.N)
+	// fmt.Println("AccTest = ", AccTest.String()) //AccTest should be the same as the AccOld
+
 	l1 := accumulator.HashToPrime(append(AccOld.Bytes(), AccMid.Bytes()...))
 	fmt.Println("primeChallenge = ", l1.String())
 
-	// r1 := big.NewInt(1)
-	// quotient = prod1.Div(prod1, prod2)
-	// q1, r1 := quotient.DivMod(quotient, l1, r1)
-	// Q1 := accumulator.AccumulateNew(AccMid, q1, setup.N)
-	// fmt.Println("Q1 = ", Q1.String())
+	r1 := big.NewInt(1)
+	q1 := big.NewInt(1)
+	q1, r1 = q1.DivMod(prodDelSet, l1, r1)
+	Q1 := accumulator.AccumulateNew(AccMid, q1, setup.N)
+	fmt.Println("Q1 = ", Q1.String())
 	// fmt.Println("r1 = ", r1.String())
 
-	// AccTest1 := accumulator.AccumulateNew(Q1, l1, setup.N)
-	// AccTest2 := accumulator.AccumulateNew(AccMid, r1, setup.N)
-	// AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
-	// AccTest3.Mod(AccTest3, setup.N)
-	// fmt.Println("Accumulator_test = ", AccTest3.String())
-
-	// prod1 is the product of all the hash result of sortedList0_1
-
-	// calculate Q s.t. q1*l1 + r1 = prod1
-	// r1 := big.NewInt(1)
-	// q1, r1 := prod1.DivMod(prod1, l1, r1)
-	// Q1 := accumulator.AccumulateNew(setup.G, q1, setup.N)
-	// fmt.Println("Q1 = ", Q1)
-	// fmt.Println("r1 = ", r1)
-
-	// rem1 := big.NewInt(1)
-	// tempDIHash := big.NewInt(1)
-	// tempMod := big.NewInt(1)
-	// tempPrint := big.NewInt(1)
-	// for i := 0; i < setsize+1; i++ {
-	// 	tempDIHash.Add(accumulator.Min2048, poseidonHashResult[i])
-	// 	tempPrint.Set(tempDIHash)
-	// 	tempMod = tempMod.Mod(tempDIHash, l1)
-	// 	rem1.Mul(rem1, tempMod)
-	// 	rem1.Mod(rem1, l1)
-	// }
+	AccTest1 := accumulator.AccumulateNew(Q1, l1, setup.N)
+	AccTest2 := accumulator.AccumulateNew(AccMid, r1, setup.N)
+	AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
+	AccTest3.Mod(AccTest3, setup.N)
+	fmt.Println("Accumulator_test = ", AccTest3.String()) //AccTest3 should be the same as the AccOld
 
 }
