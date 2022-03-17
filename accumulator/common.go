@@ -10,7 +10,7 @@ const (
 	securityPara = 2048
 	// Note that the securityParaHashToPrime is running securityParaHashToPrime rounds of Miller-Robin test
 	// together with one time Baillie-PSW test. Totally heuristic value for now.
-	securityParaHashToPrime = 10
+	securityParaHashToPrime = 40
 
 	// N2048String is the 2048 bit RSA challenge from
 	// https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048
