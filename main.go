@@ -73,12 +73,32 @@ func CalSetProd(inputSet []*big.Int) *big.Int {
 	return prod
 }
 
+// PoKE is an implementation of the PoKE algorithm in "Batching Techniques for Accumulators with Applications to IOPs and Stateless Blockchains"
+func PoKE(base, exp, newAcc, N *big.Int) {
+	l := accumulator.HashToPrime(append(newAcc.Bytes(), base.Bytes()...))
+	fmt.Println("primeChallenge = ", l.String())
+	remainder := big.NewInt(1)
+	quotient := big.NewInt(1)
+	quotient, remainder = quotient.DivMod(exp, l, remainder)
+	Q := accumulator.AccumulateNew(base, quotient, N)
+	fmt.Println("Q = ", Q.String())
+	fmt.Println("r = ", remainder.String())
+	// AccTest1 := accumulator.AccumulateNew(Q1, l1, setup.N)
+	// fmt.Println("Accumulator_test1 = ", AccTest1.String())
+	// AccTest2 := accumulator.AccumulateNew(AccMid, r1, setup.N)
+	// fmt.Println("Accumulator_test2 = ", AccTest2.String())
+	// AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
+	// AccTest3.Mod(AccTest3, setup.N)
+	// fmt.Println("Accumulator_test3 = ", AccTest3.String()) //AccTest3 should be the same as the AccOld
+
+}
+
 func main() {
 	fmt.Println("start test in main")
 	setup := accumulator.TrustedSetup()
 	oldSetSize := 10000
 	delSetSize := 16
-	//	addSetSize := 32
+	addSetSize := 2 * delSetSize
 
 	// generate Accumulator_old
 	oldSortedList := make([]*big.Int, oldSetSize)
@@ -107,55 +127,24 @@ func main() {
 	prodMidSet.Div(prodOldSet, prodDelSet)
 	AccMid := accumulator.AccumulateNew(setup.G, &prodMidSet, setup.N)
 	fmt.Println("Accumulator_mid = ", AccMid.String())
+	fmt.Println("PoKE1 ")
+	PoKE(AccMid, prodDelSet, AccOld, setup.N)
 
-	// AccTest := accumulator.AccumulateNew(AccMid, prodDelSet, setup.N)
-	// fmt.Println("AccTest = ", AccTest.String()) //AccTest should be the same as the AccOld
-
-	l1 := accumulator.HashToPrime(append(AccOld.Bytes(), AccMid.Bytes()...))
-	fmt.Println("primeChallenge = ", l1.String())
-
-	//～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～
-	var rTemp big.Int
-	rTemp.SetString("1", 10)
-	var rTemp2 big.Int
-	for i := 0; i < len(delListSet); i++ {
-		rTemp2.Mod(delListSet[i], l1)
-		fmt.Println("rTemp2 = ", rTemp2.String())
-		rTemp.Mul(&rTemp, &rTemp2)
-		fmt.Println("rTemp * rTemp2 = ", rTemp.String())
-		rTemp.Mod(&rTemp, l1)
-		fmt.Println("rTemp = ", rTemp.String())
+	// Generate add set
+	// Note that add do not have to be continuous, we use this set just for example.
+	// Delete set have to be covered by the add set
+	addList := make([]*big.Int, addSetSize)
+	// addList start from 1 to avoid 0 as input. 0 is already reserved for min value.
+	for i := 0; i < addSetSize; i++ {
+		addList[i] = big.NewInt(int64(1 + i))
 	}
-
-	//fmt.Println("rTemp = ", rTemp.String())
-	//～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～
-
-	var temp big.Int
-	temp.SetString("16158503035655503650357438344334975980222051334857742016065172713762327569433945446598600705761456731844358980460949009747059779575245460547544076193224141560315438683650498045875098875194826053398028819192033784138396109321309878080919047169238085235290822926018152521443787945770532904303776199561965192760957166694834171210342487393282284747428088017663161029038902829665513096354230157075129296432088558362971801859230928678799175576150822952201848806616643615613562842355410104862578550863465661734839271290328348967522998634176499319122440250970673193049291436530055113939486576928778008576099804946423629969146", 10)
-	temp.Mod(&temp, l1)
-	fmt.Println("temp = ", temp.String())
-	r1 := big.NewInt(1)
-	q1 := big.NewInt(1)
-	q1, r1 = q1.DivMod(prodDelSet, l1, r1)
-	Q1 := accumulator.AccumulateNew(AccMid, q1, setup.N)
-	fmt.Println("Q1 = ", Q1.String())
-	fmt.Println("r1 = ", r1.String())
-
-	// AccTest1 := accumulator.AccumulateNew(Q1, l1, setup.N)
-	// AccTest2 := accumulator.AccumulateNew(AccMid, r1, setup.N)
-	// AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
-	// AccTest3.Mod(AccTest3, setup.N)
-	// fmt.Println("Accumulator_test = ", AccTest3.String()) //AccTest3 should be the same as the AccOld
-
-	// Generate delete set
-	// Note that delList do not have to be continuous, we use this set just for example.
-	// addList := make([]*big.Int, addSetSize)
-	// // addList start from 1 to avoid 0 as input. 0 is already reserved for min value.
-	// for i := 0; i < addSetSize; i++ {
-	// 	addList[i] = big.NewInt(int64(1 + i))
-	// }
-	// // delList should be a subset of addList
-	// addListSet := genUpdateListSet(addList)
-	// prodAddSet := CalSetProd(addListSet)
-
+	// delList should be a subset of addList
+	addListSet := genUpdateListSet(addList)
+	prodAddSet := CalSetProd(addListSet)
+	var prodNewSet big.Int
+	prodNewSet.Mul(&prodMidSet, prodAddSet)
+	AccNew := accumulator.AccumulateNew(AccMid, prodAddSet, setup.N)
+	fmt.Println("Accumulator_New = ", AccNew.String())
+	fmt.Println("PoKE1 ")
+	PoKE(AccMid, &prodMidSet, AccNew, setup.N)
 }
