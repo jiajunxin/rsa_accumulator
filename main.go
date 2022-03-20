@@ -83,14 +83,13 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 	Q := accumulator.AccumulateNew(base, quotient, N)
 	fmt.Println("Q = ", Q.String())
 	fmt.Println("r = ", remainder.String())
-	// AccTest1 := accumulator.AccumulateNew(Q1, l1, setup.N)
-	// fmt.Println("Accumulator_test1 = ", AccTest1.String())
-	// AccTest2 := accumulator.AccumulateNew(AccMid, r1, setup.N)
-	// fmt.Println("Accumulator_test2 = ", AccTest2.String())
+	AccTest1 := accumulator.AccumulateNew(Q, l, N)
+	fmt.Println("Q^l = ", AccTest1.String())
+	AccTest2 := accumulator.AccumulateNew(base, remainder, N)
+	fmt.Println("g^r = ", AccTest2.String())
 	// AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
 	// AccTest3.Mod(AccTest3, setup.N)
 	// fmt.Println("Accumulator_test3 = ", AccTest3.String()) //AccTest3 should be the same as the AccOld
-
 }
 
 func main() {
@@ -141,10 +140,23 @@ func main() {
 	// delList should be a subset of addList
 	addListSet := genUpdateListSet(addList)
 	prodAddSet := CalSetProd(addListSet)
-	var prodNewSet big.Int
-	prodNewSet.Mul(&prodMidSet, prodAddSet)
+	// var prodNewSet big.Int
+	// prodNewSet.Mul(&prodMidSet, prodAddSet)
 	AccNew := accumulator.AccumulateNew(AccMid, prodAddSet, setup.N)
 	fmt.Println("Accumulator_New = ", AccNew.String())
-	fmt.Println("PoKE1 ")
-	PoKE(AccMid, &prodMidSet, AccNew, setup.N)
+	fmt.Println("PoKE2 ")
+	PoKE(AccMid, prodAddSet, AccNew, setup.N)
+
+	// l := accumulator.HashToPrime(append(AccNew.Bytes(), AccMid.Bytes()...))
+	// r := big.NewInt(1)
+	// for i, v := range addListSet {
+	// 	var temp big.Int
+	// 	temp.Mod(v, l)
+	// 	//fmt.Println("the", i, "th element mod l = ", temp.String())
+	// 	var temp2 big.Int
+	// 	temp2.Mul(r, &temp)
+	// 	fmt.Println("the", i, "th element = ", temp2.String())
+	// 	r.Mod(&temp2, l)
+	// 	fmt.Println("the", i, "th r-element = ", r.String())
+	// }
 }
