@@ -96,7 +96,7 @@ func main() {
 	fmt.Println("start test in main")
 	setup := accumulator.TrustedSetup()
 	oldSetSize := 10000
-	delSetSize := 16
+	delSetSize := 1000
 	addSetSize := 2 * delSetSize
 
 	// generate Accumulator_old
