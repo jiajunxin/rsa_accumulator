@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	securityPara       = 2048
-	securityParaInBits = 128
+	securityPara       = 100
+	securityParaInBits = 5
 
 	// N2048String is the 2048 bit RSA challenge from
 	// https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048
@@ -100,6 +100,18 @@ func GetPseudoRandomElement(input int) *Element {
 	temp := strconv.Itoa(input)
 	ret = []byte(temp[:])
 	return &ret
+}
+
+// GenTestGroup outputs a test hidden order group
+func GenTestGroup() {
+	var p, q, N, g big.Int
+	p = *getSafePrime()
+	q = *getSafePrime()
+	N.Mul(&p, &q)
+	g = *getRanQR(&p, &q)
+	fmt.Println("N = ", N.String())
+	fmt.Println("g = ", g.String())
+
 }
 
 func getSafePrime() *big.Int {
