@@ -11,7 +11,7 @@ func ManualBench(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = AccAndProve(set, HashToPrimeFromSha256, &setup)
+	_, _ = AccAndProve(set, DIHashFromPoseidon, &setup)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProve with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
@@ -21,10 +21,16 @@ func ManualBench(testSetSize int) {
 	// duration = endingTime.Sub(startingTime)
 	// fmt.Printf("Running AccAndProveIter with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
 	startingTime = time.Now().UTC()
-	_, _ = AccAndProveParallel(set, HashToPrimeFromSha256, &setup)
+	_, _ = AccAndProveParallel(set, DIHashFromPoseidon, &setup)
 	endingTime = time.Now().UTC()
 	duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProveParallel with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
+	set = GenBenchSet(testSetSize)
+	startingTime = time.Now().UTC()
+	_, _ = AccAndProveParallel2(set, DIHashFromPoseidon, &setup)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running AccAndProveParallel2 with set size %v\nTakes [%.3f] Seconds \n", testSetSize, duration.Seconds())
 }
 
 // GenBenchSet generate one set where every element is identical

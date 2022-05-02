@@ -8,5 +8,5 @@ import (
 
 func main() {
 	fmt.Println("test in main")
-	accumulator.GenTestGroup()
+	accumulator.ManualBench(10000)
 }
