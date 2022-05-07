@@ -1,13 +1,15 @@
 package accumulator
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"strconv"
 )
 
 const (
-	securityPara = 2048
+	securityPara      = 2048
+	randomizerSetSize = 256
 	// Note that the securityParaHashToPrime is running securityParaHashToPrime rounds of Miller-Robin test
 	// together with one time Baillie-PSW test. Totally heuristic value for now.
 	securityParaHashToPrime = 10
@@ -98,4 +100,17 @@ func GetPseudoRandomElement(input int) *Element {
 	temp := strconv.Itoa(input)
 	ret = []byte(temp[:])
 	return &ret
+}
+
+// flipCoin outputs 1/0 with equal probability
+func flipCoin() bool {
+	//Int returns a uniform random value in [0, max)
+	result, err := rand.Int(rand.Reader, big.NewInt(100))
+	if err != nil {
+		panic(err)
+	}
+	if result.Int64() < 50 {
+		return true
+	}
+	return false
 }

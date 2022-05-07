@@ -8,12 +8,11 @@ import (
 
 func main() {
 	fmt.Println("start test in main")
-	testSizes := []int{1000, 10000, 1000000}
+	testSizes := []int{1000}
 	for _, size := range testSizes {
 		fmt.Printf("test size: %d\n", size)
-		accumulator.ManualBench(size)
-		accumulator.ManualBenchParallel(size)
-		accumulator.ManualBenchIterParallel(size)
+		//accumulator.ManualBench(size)
+		accumulator.ManualBenchZKAcc(size)
 		fmt.Println()
 	}
 	// {

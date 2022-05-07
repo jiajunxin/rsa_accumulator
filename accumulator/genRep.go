@@ -16,7 +16,6 @@ func genRepWithHashToPrimeFromSHA256(set []string) []*big.Int {
 
 func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 	ret := make([]*big.Int, len(set))
-	//Todo: generate DI from Poseidon Hash
 	for i := range set {
 		ret[i] = Min2048
 		temp, err := poseidon.HashBytes([]byte(set[i]))
