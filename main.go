@@ -8,5 +8,5 @@ import (
 
 func main() {
 	fmt.Println("test in main")
-	accumulator.ManualBench(10000)
+	accumulator.ManualBench(100000)
 }
