@@ -39,3 +39,13 @@ func ZKAccumulate(set []string, encodeType EncodeType, setup *Setup) (*big.Int, 
 
 	return acc, proofs
 }
+
+// ZKAccExp generates one accumulator which is zero-knowledge
+func ZKAccExp(base, exponent, modulus *big.Int) (*big.Int, *big.Int) {
+	r := GenRandomizer()
+	newBase := AccumulateNew(base, r, modulus)
+
+	acc := AccumulateNew(newBase, exponent, modulus)
+
+	return acc, r
+}
