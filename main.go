@@ -26,10 +26,10 @@ func main() {
 	// 	accumulator.ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// }
 
-	res, err := proof.Lagrange(big.NewInt(8))
+	res, err := proof.Lagrange(big.NewInt(128))
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(res)
+	res.Print()
 	//fmt.Println("end test in main")
 }

@@ -6,6 +6,17 @@ import (
 	"math/big"
 )
 
+const (
+	calPrintLmt = 10000000
+)
+
+var (
+	bigInt0 *big.Int = big.NewInt(0)
+	bigInt1 *big.Int = big.NewInt(1)
+	bigInt2 *big.Int = big.NewInt(2)
+	bigInt5 *big.Int = big.NewInt(5)
+)
+
 // LagrangeRepresentation is the Lagrange representation of a positive integer
 // w <- Lagrange(mu), mu = w = w1^2 + w2^2 + w3^2 + w4^2
 type LagrangeRepresentation struct {
@@ -13,6 +24,15 @@ type LagrangeRepresentation struct {
 	w2 *big.Int
 	w3 *big.Int
 	w4 *big.Int
+}
+
+func (r *LagrangeRepresentation) Print() {
+	fmt.Printf("Lagrange Four Square: {%d %d %d %d}\n",
+		r.w1.Int64(),
+		r.w2.Int64(),
+		r.w3.Int64(),
+		r.w4.Int64(),
+	)
 }
 
 // Lagrange calculates the Lagrange representation of a positive integer
@@ -31,7 +51,7 @@ func Lagrange(mu *big.Int) (LagrangeRepresentation, error) {
 		muCopy.Rsh(muCopy, 1)
 	}
 	k = muCopy.BitLen() - 1
-	fmt.Printf("mu: %d, t: %d, k: %d\n", mu, t, k)
+	fmt.Printf("mu: %d, t: %d, k: %d\n", muCopy, t, k)
 
 	// if t = 1
 	if t == 1 {
@@ -46,23 +66,24 @@ func Lagrange(mu *big.Int) (LagrangeRepresentation, error) {
 	if t%2 == 1 {
 		fmt.Println("t is odd but not 1")
 		w1, w2, w3, w4, err := calW1W2W3W4(mu)
+		fmt.Println(w1.Int64(), w2.Int64(), w3.Int64(), w4.Int64())
 		if err != nil {
 			return LagrangeRepresentation{}, err
 		}
 		s := new(big.Int).SetInt64(2)
 		s.Exp(s, new(big.Int).SetInt64(int64((t-1)/2)), nil)
-		w1.Mul(s, w1)
-		w2.Mul(s, w2)
-		w3.Mul(s, w3)
-		w4.Mul(s, w4)
+		// w1.Mul(s, w1)
+		// w2.Mul(s, w2)
+		// w3.Mul(s, w3)
+		// w4.Mul(s, w4)
 		return LagrangeRepresentation{w1, w2, w3, w4}, nil
 	}
 	// if t is even
-	w1, w2, w3, w4, err := calW1W2W3W4(mu)
+	muCopy.SetInt64(int64(2 * (2*k + 1)))
+	w1, w2, w3, w4, err := calW1W2W3W4(muCopy)
 	if err != nil {
 		return LagrangeRepresentation{}, err
 	}
-	bigInt2 := new(big.Int).SetInt64(2)
 	w1Mod2 := new(big.Int).Mod(w1, bigInt2)
 	if w1Mod2.Cmp(new(big.Int).Mod(w2, bigInt2)) != 0 {
 		if w1Mod2.Cmp(new(big.Int).Mod(w3, bigInt2)) == 0 {
@@ -73,15 +94,34 @@ func Lagrange(mu *big.Int) (LagrangeRepresentation, error) {
 	}
 	s := new(big.Int).SetInt64(2)
 	s.Exp(s, new(big.Int).SetInt64(int64(t/2-1)), nil)
-	w1.Mul(s, w1)
-	w2.Mul(s, w2)
-	w3.Mul(s, w3)
-	w4.Mul(s, w4)
+	newW1 := new(big.Int).Add(w1, w2)
+	newW2 := new(big.Int).Sub(w1, w2)
+	newW3 := new(big.Int).Add(w3, w4)
+	newW4 := new(big.Int).Sub(w3, w4)
+	w1.Mul(s, newW1)
+	w2.Mul(s, newW2)
+	w3.Mul(s, newW3)
+	w4.Mul(s, newW4)
 	return LagrangeRepresentation{w1, w2, w3, w4}, nil
 }
 
 func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
 	fmt.Println("calPW1W2")
+	// if mu is zero
+	if mu.Cmp(bigInt0) == 0 {
+		p := new(big.Int).Set(bigInt0)
+		w1 := new(big.Int).Set(bigInt0)
+		w2 := new(big.Int).Set(bigInt0)
+		return p, w1, w2, nil
+	}
+	// if mu is 1
+	if mu.Cmp(bigInt1) == 0 {
+		p := new(big.Int).Set(bigInt0)
+		w1 := new(big.Int).Set(bigInt1)
+		w2 := new(big.Int).Set(bigInt0)
+		return p, w1, w2, nil
+	}
+
 	// choose random w1, w2 such that exactly one of w1, w2 is even
 	w1Lmt := new(big.Int)
 	w1Lmt.Sqrt(mu)
@@ -107,6 +147,7 @@ func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
 	p.Sub(p, w2Sq)
 
 	fmt.Printf("p: %d\n", p.Int64())
+
 	return p, w1, w2, nil
 }
 
@@ -122,10 +163,20 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
+		// if p is negative
+		if p.Cmp(bigInt0) == -1 {
+			continue
+		}
 		// if p is zero
-		if p.Cmp(big.NewInt(0)) == 0 {
+		if p.Cmp(bigInt0) == 0 {
 			w3 = new(big.Int)
 			w4 = new(big.Int)
+			return w1, w2, w3, w4, nil
+		}
+		// if p is 1
+		if p.Cmp(bigInt1) == 0 {
+			w3 = new(big.Int).Set(bigInt1)
+			w4 = new(big.Int).Set(bigInt0)
 			return w1, w2, w3, w4, nil
 		}
 
@@ -133,37 +184,33 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 		// find a solution u to the equation u^2 = -1 (mod p)
 		mul := new(big.Int).Set(p)
 		mul.Sub(mul, big.NewInt(1))
-		// multiply mul by p until mul is the square of u
-		//u, flg := isPerfectSquare(mul)
-		//var cnt int
-		//for !flg {
-		//	mul.Mul(mul, p)
-		//	fmt.Println(mul.Int64())
-		//	u, flg = isPerfectSquare(mul)
-		//	cnt++
-		//	if cnt > 100 {
-		//		return nil, nil, nil, nil, errors.New("cannot find u")
-		//	}
-		//}
-
-		// brute force approach
 		targetMod := new(big.Int).Mod(big.NewInt(-1), p)
 		u := new(big.Int).Set(targetMod)
-		//uSq := new(big.Int).Mul(u, u)
-		bigInt2 := big.NewInt(2)
 		currMod := new(big.Int).Exp(u, bigInt2, p)
 		fmt.Printf("targetMod: %d\n", targetMod.Int64())
-		//cnt := 0
+		doubleMU := big.NewInt(2)
+		doubleMU.Mul(doubleMU, u)
+		uLmt := new(big.Int).Exp(doubleMU, bigInt2, nil)
+		var (
+			cnt    int
+			lmtFlg bool
+		)
 		for currMod.Cmp(targetMod) != 0 {
 			u.Add(u, big.NewInt(1))
-			//uSq.Mul(u, u)
 			currMod.Exp(u, bigInt2, p)
-			fmt.Printf("u: %d, mod: %d\n", u.Int64(), currMod.Int64())
-			//cnt++
-			//if cnt > 100 {
-			//	return nil, nil, nil, nil, errors.New("cannot find u")
-			//}
+			if u.Cmp(uLmt) == 1 {
+				lmtFlg = true
+				break
+			}
+			cnt++
+			if cnt%calPrintLmt == 0 {
+				fmt.Printf("u: %d, mod: %d\n", u.Int64(), currMod.Int64())
+			}
 		}
+		if lmtFlg {
+			continue
+		}
+		fmt.Printf("u: %d, mod: %d\n", u.Int64(), currMod.Int64())
 		fmt.Printf("u: %d\n", u.Int64())
 
 		fmt.Printf("mul: %d\n", mul.Int64())
@@ -175,8 +222,8 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 			sqrtP.Sub(sqrtP, big.NewInt(1))
 		}
 
-		dividend := new(big.Int).Set(p)
-		divisor := new(big.Int).Set(u)
+		dividend := new(big.Int).Set(u)
+		divisor := new(big.Int).Set(p)
 		w3, err = euclideanStep(dividend, divisor)
 		if err != nil {
 			return nil, nil, nil, nil, err
@@ -198,10 +245,10 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 		w3Sq := new(big.Int).Mul(w3, w3)
 		w4Sq := new(big.Int).Mul(w4, w4)
 		if p.Cmp(new(big.Int).Add(w3Sq, w4Sq)) == 0 {
-			break
+			continue
 		}
 	}
-	return w1, w2, w3, w4, nil
+	// return w1, w2, w3, w4, nil
 }
 
 func isPerfectSquare(n *big.Int) (*big.Int, bool) {
@@ -211,7 +258,7 @@ func isPerfectSquare(n *big.Int) (*big.Int, bool) {
 
 func euclideanStep(a, b *big.Int) (*big.Int, error) {
 	if a.Cmp(b) == -1 {
-		return nil, fmt.Errorf("invalid input for Euclidean algorithm, a: %d < b %d", a.Int64(), b.Int64())
+		a, b = b, a
 	}
 	q := new(big.Int).Mod(b, a)
 	return q, nil
