@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/rsa_accumulator/proof"
+
 	"math/big"
+
+	"github.com/rsa_accumulator/proof"
 )
 
 func main() {
@@ -24,6 +26,10 @@ func main() {
 	// 	accumulator.ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// }
 
-	proof.Lagrange(big.NewInt(8))
-	fmt.Println("end test in main")
+	res, err := proof.Lagrange(big.NewInt(8))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(res)
+	//fmt.Println("end test in main")
 }
