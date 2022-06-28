@@ -26,7 +26,7 @@ func main() {
 	// 	accumulator.ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// }
 
-	res, err := proof.Lagrange(big.NewInt(128))
+	res, err := proof.LagrangeFourSquares(big.NewInt(9216))
 	if err != nil {
 		panic(err)
 	}
