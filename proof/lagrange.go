@@ -3,19 +3,15 @@ package proof
 import (
 	"crypto/rand"
 	"fmt"
+	"log"
 	"math/big"
 )
 
-const (
-	calPrintLmt = 10000000
-)
-
 var (
-	bigInt0 = big.NewInt(0)
-	bigInt1 = big.NewInt(1)
-	bigInt2 = big.NewInt(2)
-	bigInt4 = big.NewInt(4)
-	//bigInt5 = big.NewInt(5)
+	bigInt0        = big.NewInt(0)
+	bigInt1        = big.NewInt(1)
+	bigInt2        = big.NewInt(2)
+	uRetryExponent = big.NewInt(3)
 )
 
 // FourSquare is the LagrangeFourSquares representation of a positive integer
@@ -25,6 +21,23 @@ type FourSquare struct {
 	W2 *big.Int
 	W3 *big.Int
 	W4 *big.Int
+}
+
+// NewFourSquare creates a new FourSquare
+func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) FourSquare {
+	if w1.Sign() == -1 {
+		w1.Neg(w1)
+	}
+	if w2.Sign() == -1 {
+		w2.Neg(w2)
+	}
+	if w3.Sign() == -1 {
+		w3.Neg(w3)
+	}
+	if w4.Sign() == -1 {
+		w4.Neg(w4)
+	}
+	return FourSquare{w1, w2, w3, w4}
 }
 
 // Mul multiplies all the square numbers by n
@@ -37,7 +50,7 @@ func (f *FourSquare) Mul(n *big.Int) {
 
 // Print prints all the square numbers
 func (f *FourSquare) Print() {
-	fmt.Printf("LagrangeFourSquares Four Square: {%d %d %d %d}\n",
+	fmt.Printf("Lagrange Four Square: {%d %d %d %d}\n",
 		f.W1.Int64(),
 		f.W2.Int64(),
 		f.W3.Int64(),
@@ -58,9 +71,8 @@ func LagrangeFourSquares(mu *big.Int) (FourSquare, error) {
 		// right shift
 		muCopy.Rsh(muCopy, 1)
 	}
-	muCopy.Lsh(muCopy, 1)
-
-	fmt.Printf("mu: %d, t: %d\n", mu, t)
+	//muCopy.Lsh(muCopy, 1)
+	fmt.Println(muCopy.Int64())
 
 	// if t = 1
 	if t == 1 {
@@ -73,24 +85,25 @@ func LagrangeFourSquares(mu *big.Int) (FourSquare, error) {
 
 	// if t is odd but not 1
 	if t%2 == 1 {
-		fmt.Println("t is odd but not 1")
+		muCopy.Mul(muCopy, bigInt2)
 		w1, w2, w3, w4, err := calW1W2W3W4(muCopy)
-		fmt.Println(w1.Int64(), w2.Int64(), w3.Int64(), w4.Int64())
 		if err != nil {
 			return FourSquare{}, err
 		}
 		s := new(big.Int).SetInt64(2)
 		s.Exp(s, new(big.Int).SetInt64(int64((t-1)/2)), nil)
-		fs := FourSquare{w1, w2, w3, w4}
+		fs := NewFourSquare(w1, w2, w3, w4)
 		fs.Mul(s)
 		return fs, nil
 	}
 
 	// if t is even
+	fmt.Println(muCopy.Int64())
 	muCopy.Sub(muCopy, bigInt1)
 	muCopy.Div(muCopy, bigInt2)
 	k := int(muCopy.Int64())
 	muCopy.SetInt64(int64(2 * (2*k + 1)))
+	fmt.Printf("mu: %d, t: %d, k: %d\n", mu.Int64(), t, k)
 	w1, w2, w3, w4, err := calW1W2W3W4(muCopy)
 	if err != nil {
 		return FourSquare{}, err
@@ -105,18 +118,17 @@ func LagrangeFourSquares(mu *big.Int) (FourSquare, error) {
 	}
 	s := new(big.Int).SetInt64(2)
 	s.Exp(s, new(big.Int).SetInt64(int64(t/2-1)), nil)
-	fs := FourSquare{
-		W1: new(big.Int).Add(w1, w2),
-		W2: new(big.Int).Sub(w1, w2),
-		W3: new(big.Int).Add(w3, w4),
-		W4: new(big.Int).Sub(w3, w4),
-	}
+	fs := NewFourSquare(
+		new(big.Int).Add(w1, w2),
+		new(big.Int).Sub(w1, w2),
+		new(big.Int).Add(w3, w4),
+		new(big.Int).Sub(w3, w4),
+	)
 	fs.Mul(s)
 	return fs, nil
 }
 
 func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
-	fmt.Println("calPW1W2")
 	// if mu is 0
 	if mu.Cmp(bigInt0) == 0 {
 		p := new(big.Int).Set(bigInt0)
@@ -145,7 +157,7 @@ func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
 	w2Lmt := new(big.Int).Set(w1Sq)
 	w2Lmt.Sub(mu, w1Lmt)
 	w2Lmt.Sqrt(w2Lmt)
-	w2Lmt.Add(w2Lmt, big.NewInt(1))
+	w2Lmt.Add(w2Lmt, bigInt1)
 	// randomly choose W2 within [0, sqrt(mu - W1^2)]
 	w2, err := rand.Int(rand.Reader, w2Lmt)
 	if err != nil {
@@ -156,13 +168,10 @@ func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
 	p := new(big.Int).Sub(mu, w1Sq)
 	p.Sub(p, w2Sq)
 
-	fmt.Printf("p: %d\n", p.Int64())
-
 	return p, w1, w2, nil
 }
 
 func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
-	fmt.Println("calW1W2W3W4")
 	var (
 		p, w1, w2, w3, w4 *big.Int
 		err               error
@@ -197,39 +206,29 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 		targetMod := new(big.Int).Mod(big.NewInt(-1), p)
 		u := new(big.Int).Set(targetMod)
 		currMod := new(big.Int).Exp(u, bigInt2, p)
-		fmt.Printf("targetMod: %d\n", targetMod.Int64())
 		doubleMU := big.NewInt(2)
 		doubleMU.Mul(doubleMU, u)
-		uLmt := new(big.Int).Exp(doubleMU, bigInt4, nil)
-		var (
-			cnt    int
-			lmtFlg bool
-		)
+		uLmt := new(big.Int).Exp(doubleMU, uRetryExponent, nil)
+		var lmtFlg bool
 		for currMod.Cmp(targetMod) != 0 {
-			u.Add(u, big.NewInt(1))
+			u.Add(u, bigInt1)
 			currMod.Exp(u, bigInt2, p)
 			if u.Cmp(uLmt) == 1 {
 				lmtFlg = true
 				break
 			}
-			cnt++
-			if cnt%calPrintLmt == 0 {
-				fmt.Printf("u: %d, mod: %d\n", u.Int64(), currMod.Int64())
-			}
 		}
 		if lmtFlg {
+			log.Println("retrying finding q")
 			continue
 		}
-		fmt.Printf("u: %d, mod: %d\n", u.Int64(), currMod.Int64())
-		fmt.Printf("u: %d\n", u.Int64())
 
-		fmt.Printf("mul: %d\n", mul.Int64())
 		// apply Euclidean algorithm to (u, p), and take the first two remainders that are less than sqrt(p)
 		floatP := new(big.Float).SetInt(p)
 		floatSqrtP := new(big.Float).Sqrt(floatP)
 		sqrtP := new(big.Int).Sqrt(p)
 		if floatSqrtP.IsInt() {
-			sqrtP.Sub(sqrtP, big.NewInt(1))
+			sqrtP.Sub(sqrtP, bigInt1)
 		}
 
 		dividend := new(big.Int).Set(u)
