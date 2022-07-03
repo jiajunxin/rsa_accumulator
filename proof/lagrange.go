@@ -73,7 +73,7 @@ func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) FourSquar
 	if w4.Sign() == -1 {
 		w4.Neg(w4)
 	}
-	// sort the four big integers
+	// sort the four big integers in descending order
 	if w1.Cmp(w2) == -1 {
 		w1, w2 = w2, w1
 	}
