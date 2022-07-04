@@ -94,6 +94,15 @@ func TestGaussianInt_Div(t *testing.T) {
 			wantReminder: NewGaussianInt(big.NewInt(0), big.NewInt(-1)),
 			wantQuotient: NewGaussianInt(big.NewInt(2), big.NewInt(3)),
 		},
+		{
+			name: "test_(2,1)_(1,0)",
+			args: args{
+				a: NewGaussianInt(big.NewInt(2), big.NewInt(1)),
+				b: NewGaussianInt(big.NewInt(1), big.NewInt(0)),
+			},
+			wantReminder: NewGaussianInt(big.NewInt(0), big.NewInt(0)),
+			wantQuotient: NewGaussianInt(big.NewInt(2), big.NewInt(1)),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,6 +113,62 @@ func TestGaussianInt_Div(t *testing.T) {
 			}
 			if quotient.R.Cmp(tt.wantQuotient.R) != 0 || quotient.I.Cmp(tt.wantQuotient.I) != 0 {
 				t.Errorf("Div() = %v, want quotient %v", quotient, tt.wantQuotient)
+			}
+		})
+	}
+}
+
+func TestGaussianInt_String(t *testing.T) {
+	type fields struct {
+		R *big.Int
+		I *big.Int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "test_1+i",
+			fields: fields{
+				R: big.NewInt(1),
+				I: big.NewInt(1),
+			},
+			want: "1+i",
+		},
+		{
+			name: "test_1-i",
+			fields: fields{
+				R: big.NewInt(1),
+				I: big.NewInt(-1),
+			},
+			want: "1-i",
+		},
+		{
+			name: "test_-1+i",
+			fields: fields{
+				R: big.NewInt(-1),
+				I: big.NewInt(1),
+			},
+			want: "-1+i",
+		},
+		{
+			name: "test_-1-i",
+			fields: fields{
+				R: big.NewInt(-1),
+				I: big.NewInt(-1),
+			},
+			want: "-1-i",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &GaussianInt{
+				R: tt.fields.R,
+				I: tt.fields.I,
+			}
+			if got := g.String(); got != tt.want {
+				t.Errorf("String() = %v, want %v", got, tt.want)
 			}
 		})
 	}
