@@ -75,14 +75,14 @@ func (g *GaussianInt) Copy() *GaussianInt {
 // the remainder is stored in the Gaussian integer that calls the method
 // the quotient is returned as a new Gaussian integer
 func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
-	conjB := new(GaussianInt).Conj(b)
-	numerator := new(GaussianInt).Prod(a, conjB)
-	denominator := new(GaussianInt).Prod(b, conjB)
+	bConj := new(GaussianInt).Conj(b)
+	numerator := new(GaussianInt).Prod(a, bConj)
+	denominator := new(GaussianInt).Prod(b, bConj)
 	deInt := denominator.R
+	deFloat := new(big.Float).SetInt(deInt)
 
 	nuRealFloat := new(big.Float).SetInt(numerator.R)
 	nuImagFloat := new(big.Float).SetInt(numerator.I)
-	deFloat := new(big.Float).SetInt(deInt)
 	realScalar := new(big.Float).Quo(nuRealFloat, deFloat)
 	imagScalar := new(big.Float).Quo(nuImagFloat, deFloat)
 
