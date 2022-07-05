@@ -16,6 +16,51 @@ type HurwitzInt struct {
 	dblK *big.Int // k part doubled
 }
 
+// String returns the string representation of the integral quaternion
+func (h *HurwitzInt) String() string {
+	if h.dblR.Sign() == 0 && h.dblI.Sign() == 0 && h.dblJ.Sign() == 0 && h.dblK.Sign() == 0 {
+		return "0"
+	}
+	res := ""
+	if h.dblR.Sign() != 0 {
+		res += new(big.Int).Div(h.dblR, big2).String()
+		if h.dblR.Bit(0) == 1 {
+			res += ".5"
+		}
+	}
+	if h.dblI.Sign() != 0 {
+		if h.dblR.Sign() == 1 {
+			res += "+"
+		}
+		res += new(big.Int).Div(h.dblI, big2).String()
+		if h.dblI.Bit(0) == 1 {
+			res += ".5"
+		}
+		res += "i"
+	}
+	if h.dblJ.Sign() != 0 {
+		if h.dblJ.Sign() == 1 {
+			res += "+"
+		}
+		res += new(big.Int).Div(h.dblJ, big2).String()
+		if h.dblJ.Bit(0) == 1 {
+			res += ".5"
+		}
+		res += "j"
+	}
+	if h.dblK.Sign() != 0 {
+		if h.dblK.Sign() == 1 {
+			res += "+"
+		}
+		res += new(big.Int).Div(h.dblK, big2).String()
+		if h.dblK.Bit(0) == 1 {
+			res += ".5"
+		}
+		res += "k"
+	}
+	return res
+}
+
 // NewHurwitzInt declares a new integral quaternion with the real, i, j, and k parts
 // If isDouble is true, the arguments r, i, j, k are twice the original scalars
 func NewHurwitzInt(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
@@ -33,6 +78,15 @@ func NewHurwitzInt(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
 		dblJ: new(big.Int).Mul(j, big2),
 		dblK: new(big.Int).Mul(k, big2),
 	}
+}
+
+// Set sets the Hurwitz integer to the given Hurwitz integer
+func (h *HurwitzInt) Set(a *HurwitzInt) *HurwitzInt {
+	h.dblR = a.dblR
+	h.dblI = a.dblI
+	h.dblJ = a.dblJ
+	h.dblK = a.dblK
+	return h
 }
 
 // SetFloat set scalars of a Hurwitz integer by big float variables
@@ -175,47 +229,31 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 	return quotient
 }
 
-// String returns the string representation of the integral quaternion
-func (h *HurwitzInt) String() string {
-	if h.dblR.Sign() == 0 && h.dblI.Sign() == 0 && h.dblJ.Sign() == 0 && h.dblK.Sign() == 0 {
-		return "0"
+// GCRD calculates the greatest common right-divisor of two Hurwitz integers using Euclidean algorithm
+// The GCD is unique only up to multiplication by a unit (multiplication on the left in the case
+// of a GCRD, and on the right in the case of a GCLD)
+// the result is stored in the Hurwitz integer that calls the method and returned
+func (h *HurwitzInt) GCRD(a, b *HurwitzInt) *HurwitzInt {
+	a = a.Copy()
+	b = b.Copy()
+	remainder := new(HurwitzInt)
+	for {
+		remainder.Div(a, b)
+		if remainder.IsZero() {
+			h.Update(b.dblR, b.dblI, b.dblJ, b.dblK, true)
+			return b
+		}
+		a.Update(b.dblR, b.dblI, b.dblJ, b.dblK, true)
+		b.Update(remainder.dblR, remainder.dblI, remainder.dblJ, remainder.dblK, true)
 	}
-	res := ""
-	if h.dblR.Sign() != 0 {
-		res += new(big.Int).Div(h.dblR, big2).String()
-		if h.dblR.Bit(0) == 1 {
-			res += ".5"
-		}
-	}
-	if h.dblI.Sign() != 0 {
-		if h.dblR.Sign() == 1 {
-			res += "+"
-		}
-		res += new(big.Int).Div(h.dblI, big2).String()
-		if h.dblI.Bit(0) == 1 {
-			res += ".5"
-		}
-		res += "i"
-	}
-	if h.dblJ.Sign() != 0 {
-		if h.dblJ.Sign() == 1 {
-			res += "+"
-		}
-		res += new(big.Int).Div(h.dblJ, big2).String()
-		if h.dblJ.Bit(0) == 1 {
-			res += ".5"
-		}
-		res += "j"
-	}
-	if h.dblK.Sign() != 0 {
-		if h.dblK.Sign() == 1 {
-			res += "+"
-		}
-		res += new(big.Int).Div(h.dblK, big2).String()
-		if h.dblK.Bit(0) == 1 {
-			res += ".5"
-		}
-		res += "k"
-	}
-	return res
+}
+
+// IsZero returns true if the Hurwitz integer is zero
+func (h *HurwitzInt) IsZero() bool {
+	return h.dblR.Sign() == 0 && h.dblI.Sign() == 0 && h.dblJ.Sign() == 0 && h.dblK.Sign() == 0
+}
+
+// CmpNorm compares the norm of two Hurwitz integers
+func (h *HurwitzInt) CmpNorm(a *HurwitzInt) int {
+	return h.Norm().Cmp(a.Norm())
 }

@@ -11,12 +11,44 @@ type GaussianInt struct {
 	I *big.Int // imaginary part
 }
 
+// String returns the string representation of the Gaussian integer
+func (g *GaussianInt) String() string {
+	res := ""
+	if g.R.Sign() != 0 {
+		res += g.R.String()
+	}
+	gISign := g.I.Sign()
+	if gISign == 0 {
+		if res == "" {
+			return "0"
+		}
+		return res
+	}
+	if gISign == 1 {
+		res += "+"
+	}
+	if g.I.Cmp(bigNeg1) == 0 {
+		res += "-"
+	} else if g.I.Cmp(big1) != 0 {
+		res += g.I.String()
+	}
+	res += "i"
+	return res
+}
+
 // NewGaussianInt declares a new Gaussian integer with the real part and imaginary part
 func NewGaussianInt(r *big.Int, i *big.Int) *GaussianInt {
 	return &GaussianInt{
 		R: r,
 		I: i,
 	}
+}
+
+// Set sets the Gaussian integer to the given Gaussian integer
+func (g *GaussianInt) Set(a *GaussianInt) *GaussianInt {
+	g.R = new(big.Int).Set(a.R)
+	g.I = new(big.Int).Set(a.I)
+	return g
 }
 
 // Update updates the Gaussian integer with the given real and imaginary parts
@@ -103,31 +135,6 @@ func (g *GaussianInt) CmpNorm(a *GaussianInt) int {
 	return g.Norm().Cmp(a.Norm())
 }
 
-// String returns the string representation of the Gaussian integer
-func (g *GaussianInt) String() string {
-	res := ""
-	if g.R.Sign() != 0 {
-		res += g.R.String()
-	}
-	gISign := g.I.Sign()
-	if gISign == 0 {
-		if res == "" {
-			return "0"
-		}
-		return res
-	}
-	if gISign == 1 {
-		res += "+"
-	}
-	if g.I.Cmp(bigNeg1) == 0 {
-		res += "-"
-	} else if g.I.Cmp(big1) != 0 {
-		res += g.I.String()
-	}
-	res += "i"
-	return res
-}
-
 // GCD calculates the greatest common divisor of two Gaussian integers using Euclidean algorithm
 // the result is stored in the Gaussian integer that calls the method and returned
 func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
@@ -143,15 +150,4 @@ func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
 		a.Update(b.R, b.I)
 		b.Update(remainder.R, remainder.I)
 	}
-}
-
-func roundFloat(f *big.Float) *big.Int {
-	delta := big.NewFloat(roundingDelta)
-	if f.Sign() < 0 {
-		delta.Neg(delta)
-	}
-	f.Add(f, delta)
-	res := new(big.Int)
-	f.Int(res)
-	return res
 }
