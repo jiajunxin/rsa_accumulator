@@ -7,17 +7,17 @@ import (
 )
 
 var (
-	big10Pow20 big.Int
-	big10Pow32 big.Int
+	big2Pow20 big.Int
+	big2Pow32 big.Int
 )
 
 func setup() {
 	var ok bool
-	if _, ok = big10Pow20.SetString("100000000000000000000", 10); !ok {
-		panic("failed to set big10Pow20")
+	if _, ok = big2Pow20.SetString("1048576", 10); !ok {
+		panic("failed to set big2Pow20")
 	}
-	if _, ok = big10Pow32.SetString("100000000000000000000000000000000", 10); !ok {
-		panic("failed to set big10Pow32")
+	if _, ok = big2Pow32.SetString("4294967296", 10); !ok {
+		panic("failed to set big2Pow32")
 	}
 }
 
@@ -72,25 +72,25 @@ func Test_preCompute(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "test_1000",
+			name: "test_8",
 			args: args{
-				n: big.NewInt(1000),
+				n: big.NewInt(8),
 			},
 			want:    big.NewInt(6),
 			wantErr: false,
 		},
 		{
-			name: "test_10^20",
+			name: "test_2^20",
 			args: args{
-				n: &big10Pow20,
+				n: &big2Pow20,
 			},
 			want:    big.NewInt(9699690),
 			wantErr: false,
 		},
 		{
-			name: "test_10^32",
+			name: "test_2^32",
 			args: args{
-				n: &big10Pow32,
+				n: &big2Pow32,
 			},
 			want:    big.NewInt(200560490130),
 			wantErr: false,
