@@ -50,8 +50,8 @@ func init() {
 	}
 }
 
-// FourSquare is the LagrangeFourSquares representation of a positive integer
-// w <- LagrangeFourSquares(mu), mu = w = W1^2 + W2^2 + W3^2 + W4^2
+// FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
+// w <- LagrangeFourSquareLipmaa(mu), mu = w = W1^2 + W2^2 + W3^2 + W4^2
 type FourSquare struct {
 	W1 *big.Int
 	W2 *big.Int
@@ -111,9 +111,9 @@ func (f *FourSquare) Div(n *big.Int) {
 	f.W4.Div(f.W4, n)
 }
 
-// Print prints all the square numbers
-func (f *FourSquare) Print() {
-	fmt.Printf("Lagrange Four Square: {%d %d %d %d}\n",
+// String stringnifies the FourSquare object
+func (f *FourSquare) String() string {
+	return fmt.Sprintf("{%d %d %d %d}",
 		f.W1.Int64(),
 		f.W2.Int64(),
 		f.W3.Int64(),
@@ -121,10 +121,10 @@ func (f *FourSquare) Print() {
 	)
 }
 
-// LagrangeFourSquares calculates the LagrangeFourSquares representation of a positive integer
+// LagrangeFourSquareLipmaa calculates the LagrangeFourSquareLipmaa representation of a positive integer
 // Paper: On Diophantine Complexity and Statistical Zero-Knowledge Arguments
 // Link: https://eprint.iacr.org/2003/105
-func LagrangeFourSquares(mu *big.Int) (FourSquare, error) {
+func LagrangeFourSquareLipmaa(mu *big.Int) (FourSquare, error) {
 	// write mu in the form mu = 2^t(2k + 1)
 	var t int
 	// copy mu for modification
@@ -201,6 +201,11 @@ func LagrangeFourSquares(mu *big.Int) (FourSquare, error) {
 		fs.Mul(s)
 	}
 	return fs, nil
+}
+
+// preComputation determines the primes not exceeding log(mu) and compute their product
+func preComputation(mu *big.Int) *big.Int {
+	panic("not implemented")
 }
 
 func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
@@ -332,17 +337,4 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 			continue
 		}
 	}
-}
-
-func isPerfectSquare(n *big.Int) (*big.Int, bool) {
-	sqrt := new(big.Int).Sqrt(n)
-	return sqrt, new(big.Int).Mul(sqrt, sqrt).Cmp(n) == 0
-}
-
-func euclideanStep(a, b *big.Int) (*big.Int, error) {
-	if a.Cmp(b) == -1 {
-		a, b = b, a
-	}
-	q := new(big.Int).Mod(b, a)
-	return q, nil
 }
