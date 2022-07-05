@@ -39,8 +39,8 @@ func (g *GaussianInt) String() string {
 // NewGaussianInt declares a new Gaussian integer with the real part and imaginary part
 func NewGaussianInt(r *big.Int, i *big.Int) *GaussianInt {
 	return &GaussianInt{
-		R: r,
-		I: i,
+		R: new(big.Int).Set(r),
+		I: new(big.Int).Set(i),
 	}
 }
 
@@ -121,7 +121,7 @@ func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
 	rsInt := roundFloat(realScalar)
 	isInt := roundFloat(imagScalar)
 	quotient := NewGaussianInt(rsInt, isInt)
-	g.Sub(a, new(GaussianInt).Prod(b, quotient))
+	g.Sub(a, new(GaussianInt).Prod(quotient, b))
 	return quotient
 }
 

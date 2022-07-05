@@ -107,6 +107,16 @@ func (h *HurwitzInt) Val() (r, i, j, k *big.Float) {
 	return
 }
 
+// ValInt reveals value of a Hurwitz integer in integer
+func (h *HurwitzInt) ValInt() (r, i, j, k *big.Int) {
+	rF, iF, jF, kF := h.Val()
+	r = roundFloat(rF)
+	i = roundFloat(iF)
+	j = roundFloat(jF)
+	k = roundFloat(kF)
+	return
+}
+
 // Update updates the integral quaternion with the given real, i, j, and k parts
 func (h *HurwitzInt) Update(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
 	if isDouble {
@@ -169,6 +179,8 @@ func (h *HurwitzInt) Copy() *HurwitzInt {
 // the product (a1 + b1j + c1k + d1)(a2 + b2j + c2k + d2) is determined by the products of the
 // basis elements and the distributive law
 func (h *HurwitzInt) Prod(a, b *HurwitzInt) *HurwitzInt {
+	a = a.Copy()
+	b = b.Copy()
 	opt := new(big.Int)
 	// 1 part
 	h.dblR = new(big.Int).Mul(a.dblR, b.dblR)
@@ -205,6 +217,8 @@ func (h *HurwitzInt) Prod(a, b *HurwitzInt) *HurwitzInt {
 // the remainder is stored in the Hurwitz integer that calls the method
 // the quotient is returned as a new Hurwitz integer
 func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
+	a = a.Copy()
+	b = b.Copy()
 	bConj := new(HurwitzInt).Conj(b)
 	numerator := new(HurwitzInt).Prod(a, bConj)
 	denominator := new(HurwitzInt).Prod(b, bConj)
@@ -225,7 +239,7 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 	jsInt := roundFloat(jScalar)
 	ksInt := roundFloat(kScalar)
 	quotient := NewHurwitzInt(rsInt, isInt, jsInt, ksInt, false)
-	h.Sub(a, new(HurwitzInt).Prod(b, quotient))
+	h.Sub(a, new(HurwitzInt).Prod(quotient, b))
 	return quotient
 }
 
@@ -236,6 +250,9 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 func (h *HurwitzInt) GCRD(a, b *HurwitzInt) *HurwitzInt {
 	a = a.Copy()
 	b = b.Copy()
+	if a.Norm().Cmp(b.Norm()) < 0 {
+		a, b = b, a
+	}
 	remainder := new(HurwitzInt)
 	for {
 		remainder.Div(a, b)

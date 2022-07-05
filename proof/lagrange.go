@@ -5,50 +5,33 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-)
 
-const (
-	sampleNumStr = "45464895645678978465413212365489546548784654564897845465489789465465489789456489"
-	sampleW1Str  = "4260804524846439387547571783021414945183"
-	sampleW2Str  = "2423047549256568912368399713894482466250"
-	sampleW3Str  = "740160211633772556567698218563796854930"
-	sampleW4Str  = "4570715904744361883582975943368513738160"
+	"github.com/rsa_accumulator/complex"
 )
 
 var (
-	bigInt0        = big.NewInt(0)
-	bigInt1        = big.NewInt(1)
-	bigInt2        = big.NewInt(2)
 	uRetryExponent = big.NewInt(3)
-	// SampleNum is the sample number for four square sums
-	SampleNum = new(big.Int)
-	// SampleW1 is the first sample number of four square
-	SampleW1 = new(big.Int)
-	// SampleW2 is the second sample number of four square
-	SampleW2 = new(big.Int)
-	// SampleW3 is the third sample number of four square
-	SampleW3 = new(big.Int)
-	// SampleW4 is the fourth sample number of four square
-	SampleW4 = new(big.Int)
+	// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
+	hGCRD0 = complex.NewHurwitzInt(big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), false)
+	// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
+	hGCRD1 = complex.NewHurwitzInt(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(0), false)
+	// 2's precomputed Hurwitz GCRD: 1, 1, 0, 0
+	hGCRD2 = complex.NewHurwitzInt(big.NewInt(1), big.NewInt(1), big.NewInt(0), big.NewInt(0), false)
+	// 3's precomputed Hurwitz GCRD: 1, 1, 1, 0
+	hGCRD3 = complex.NewHurwitzInt(big.NewInt(1), big.NewInt(1), big.NewInt(1), big.NewInt(0), false)
+	// 4's precomputed Hurwitz GCRD: 2, 0, 0, 0
+	hGCRD4 = complex.NewHurwitzInt(big.NewInt(2), big.NewInt(0), big.NewInt(0), big.NewInt(0), false)
+	// 5's precomputed Hurwitz GCRD: 2, 1, 0, 0
+	hGCRD5 = complex.NewHurwitzInt(big.NewInt(2), big.NewInt(1), big.NewInt(0), big.NewInt(0), false)
+	// 6's precomputed Hurwitz GCRD: 2, 1, 1, 0
+	hGCRD6 = complex.NewHurwitzInt(big.NewInt(2), big.NewInt(1), big.NewInt(1), big.NewInt(0), false)
+	// 7's precomputed Hurwitz GCRD: 2, 1, 1, 1
+	hGCRD7 = complex.NewHurwitzInt(big.NewInt(2), big.NewInt(1), big.NewInt(1), big.NewInt(1), false)
+	// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
+	hGCRD8 = complex.NewHurwitzInt(big.NewInt(2), big.NewInt(2), big.NewInt(0), big.NewInt(0), false)
+	// precomputed Hurwitz GCRDs for small integers
+	precomputedHurwitzGCRDs = []*complex.HurwitzInt{hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8}
 )
-
-func init() {
-	if _, ok := SampleNum.SetString(sampleNumStr, 10); !ok {
-		log.Fatalf("could not load sample num: %s", sampleNumStr)
-	}
-	if _, ok := SampleW1.SetString(sampleW1Str, 10); !ok {
-		log.Fatalf("could not load sample w1: %s", sampleW1Str)
-	}
-	if _, ok := SampleW2.SetString(sampleW2Str, 10); !ok {
-		log.Fatalf("could not load sample w2: %s", sampleW2Str)
-	}
-	if _, ok := SampleW3.SetString(sampleW3Str, 10); !ok {
-		log.Fatalf("could not load sample w3: %s", sampleW3Str)
-	}
-	if _, ok := SampleW4.SetString(sampleW4Str, 10); !ok {
-		log.Fatalf("could not load sample w4: %s", sampleW4Str)
-	}
-}
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
 // w <- LagrangeFourSquareLipmaa(mu), mu = w = W1^2 + W2^2 + W3^2 + W4^2
@@ -60,19 +43,11 @@ type FourSquare struct {
 }
 
 // NewFourSquare creates a new FourSquare
-func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) FourSquare {
-	if w1.Sign() == -1 {
-		w1.Neg(w1)
-	}
-	if w2.Sign() == -1 {
-		w2.Neg(w2)
-	}
-	if w3.Sign() == -1 {
-		w3.Neg(w3)
-	}
-	if w4.Sign() == -1 {
-		w4.Neg(w4)
-	}
+func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) *FourSquare {
+	w1.Abs(w1)
+	w2.Abs(w2)
+	w3.Abs(w3)
+	w4.Abs(w4)
 	// sort the four big integers in descending order
 	if w1.Cmp(w2) == -1 {
 		w1, w2 = w2, w1
@@ -92,7 +67,7 @@ func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) FourSquar
 	if w3.Cmp(w4) == -1 {
 		w3, w4 = w4, w3
 	}
-	return FourSquare{w1, w2, w3, w4}
+	return &FourSquare{w1, w2, w3, w4}
 }
 
 // Mul multiplies all the square numbers by n
@@ -113,18 +88,18 @@ func (f *FourSquare) Div(n *big.Int) {
 
 // String stringnifies the FourSquare object
 func (f *FourSquare) String() string {
-	return fmt.Sprintf("{%d %d %d %d}",
-		f.W1.Int64(),
-		f.W2.Int64(),
-		f.W3.Int64(),
-		f.W4.Int64(),
+	return fmt.Sprintf("{%s %s %s %s}",
+		f.W1.String(),
+		f.W2.String(),
+		f.W3.String(),
+		f.W4.String(),
 	)
 }
 
-// LagrangeFourSquareLipmaa calculates the LagrangeFourSquareLipmaa representation of a positive integer
+// LagrangeFourSquareLipmaa calculates the Lagrange four square representation of a positive integer
 // Paper: On Diophantine Complexity and Statistical Zero-Knowledge Arguments
 // Link: https://eprint.iacr.org/2003/105
-func LagrangeFourSquareLipmaa(mu *big.Int) (FourSquare, error) {
+func LagrangeFourSquareLipmaa(mu *big.Int) (*FourSquare, error) {
 	// write mu in the form mu = 2^t(2k + 1)
 	var t int
 	// copy mu for modification
@@ -141,7 +116,7 @@ func LagrangeFourSquareLipmaa(mu *big.Int) (FourSquare, error) {
 	if t == 1 {
 		w1, w2, w3, w4, err := calW1W2W3W4(mu)
 		if err != nil {
-			return FourSquare{}, err
+			return nil, err
 		}
 		fs := NewFourSquare(w1, w2, w3, w4)
 		return fs, nil
@@ -149,10 +124,10 @@ func LagrangeFourSquareLipmaa(mu *big.Int) (FourSquare, error) {
 
 	// if t is odd but not 1
 	if t%2 == 1 {
-		muCopy.Mul(muCopy, bigInt2)
+		muCopy.Mul(muCopy, big2)
 		w1, w2, w3, w4, err := calW1W2W3W4(muCopy)
 		if err != nil {
-			return FourSquare{}, err
+			return nil, err
 		}
 		s := new(big.Int).SetInt64(2)
 		s.Exp(s, new(big.Int).SetInt64(int64((t-1)/2)), nil)
@@ -163,18 +138,18 @@ func LagrangeFourSquareLipmaa(mu *big.Int) (FourSquare, error) {
 
 	// if t is even
 	fmt.Println(muCopy.Int64())
-	muCopy.Sub(muCopy, bigInt1)
-	muCopy.Div(muCopy, bigInt2)
+	muCopy.Sub(muCopy, big1)
+	muCopy.Div(muCopy, big2)
 	k := int(muCopy.Int64())
 	muCopy.SetInt64(int64(2 * (2*k + 1)))
 	fmt.Printf("mu: %d, t: %d, k: %d\n", mu.Int64(), t, k)
 	w1, w2, w3, w4, err := calW1W2W3W4(muCopy)
 	if err != nil {
-		return FourSquare{}, err
+		return nil, err
 	}
-	w1Mod2 := new(big.Int).Mod(w1, bigInt2)
-	if w1Mod2.Cmp(new(big.Int).Mod(w2, bigInt2)) != 0 {
-		if w1Mod2.Cmp(new(big.Int).Mod(w3, bigInt2)) == 0 {
+	w1Mod2 := new(big.Int).Mod(w1, big2)
+	if w1Mod2.Cmp(new(big.Int).Mod(w2, big2)) != 0 {
+		if w1Mod2.Cmp(new(big.Int).Mod(w3, big2)) == 0 {
 			w2, w3 = w3, w2
 		} else {
 			w2, w4 = w4, w2
@@ -203,24 +178,19 @@ func LagrangeFourSquareLipmaa(mu *big.Int) (FourSquare, error) {
 	return fs, nil
 }
 
-// preComputation determines the primes not exceeding log(mu) and compute their product
-func preComputation(mu *big.Int) *big.Int {
-	panic("not implemented")
-}
-
 func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
 	// if mu is 0
-	if mu.Cmp(bigInt0) == 0 {
-		p := new(big.Int).Set(bigInt0)
-		w1 := new(big.Int).Set(bigInt0)
-		w2 := new(big.Int).Set(bigInt0)
+	if mu.Cmp(big0) == 0 {
+		p := new(big.Int).Set(big0)
+		w1 := new(big.Int).Set(big0)
+		w2 := new(big.Int).Set(big0)
 		return p, w1, w2, nil
 	}
 	// if mu is 1
-	if mu.Cmp(bigInt1) == 0 {
-		p := new(big.Int).Set(bigInt0)
-		w1 := new(big.Int).Set(bigInt1)
-		w2 := new(big.Int).Set(bigInt0)
+	if mu.Cmp(big1) == 0 {
+		p := new(big.Int).Set(big0)
+		w1 := new(big.Int).Set(big1)
+		w2 := new(big.Int).Set(big0)
 		return p, w1, w2, nil
 	}
 
@@ -237,7 +207,7 @@ func calPW1W2(mu *big.Int) (*big.Int, *big.Int, *big.Int, error) {
 	w2Lmt := new(big.Int).Set(w1Sq)
 	w2Lmt.Sub(mu, w1Lmt)
 	w2Lmt.Sqrt(w2Lmt)
-	w2Lmt.Add(w2Lmt, bigInt1)
+	w2Lmt.Add(w2Lmt, big1)
 	// randomly choose W2 within [0, sqrt(mu - W1^2)]
 	w2, err := rand.Int(rand.Reader, w2Lmt)
 	if err != nil {
@@ -263,19 +233,19 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 			return nil, nil, nil, nil, err
 		}
 		// if p is negative
-		if p.Cmp(bigInt0) == -1 {
+		if p.Cmp(big0) == -1 {
 			continue
 		}
 		// if p is 0
-		if p.Cmp(bigInt0) == 0 {
+		if p.Cmp(big0) == 0 {
 			w3 = new(big.Int)
 			w4 = new(big.Int)
 			return w1, w2, w3, w4, nil
 		}
 		// if p is 1
-		if p.Cmp(bigInt1) == 0 {
-			w3 = new(big.Int).Set(bigInt1)
-			w4 = new(big.Int).Set(bigInt0)
+		if p.Cmp(big1) == 0 {
+			w3 = new(big.Int).Set(big1)
+			w4 = new(big.Int).Set(big0)
 			return w1, w2, w3, w4, nil
 		}
 
@@ -285,14 +255,14 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 		mul.Sub(mul, big.NewInt(1))
 		targetMod := new(big.Int).Mod(big.NewInt(-1), p)
 		u := new(big.Int).Set(targetMod)
-		currMod := new(big.Int).Exp(u, bigInt2, p)
+		currMod := new(big.Int).Exp(u, big2, p)
 		doubleMU := big.NewInt(2)
 		doubleMU.Mul(doubleMU, u)
 		uLmt := new(big.Int).Exp(doubleMU, uRetryExponent, nil)
 		var lmtFlg bool
 		for currMod.Cmp(targetMod) != 0 {
-			u.Add(u, bigInt1)
-			currMod.Exp(u, bigInt2, p)
+			u.Add(u, big1)
+			currMod.Exp(u, big2, p)
 			if u.Cmp(uLmt) == 1 {
 				lmtFlg = true
 				break
@@ -308,7 +278,7 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 		floatSqrtP := new(big.Float).Sqrt(floatP)
 		sqrtP := new(big.Int).Sqrt(p)
 		if floatSqrtP.IsInt() {
-			sqrtP.Sub(sqrtP, bigInt1)
+			sqrtP.Sub(sqrtP, big1)
 		}
 
 		dividend := new(big.Int).Set(u)
@@ -337,4 +307,152 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 			continue
 		}
 	}
+}
+
+// LagrangeFourSquaresPollack calculates the Lagrange four squares representation of a positive integer
+// Paper: Finding the Four Squares in Lagrange’s Theorem
+// Link: http://pollack.uga.edu/finding4squares.pdf (page 6)
+// The input should be an odd positive integer no less than 9
+func LagrangeFourSquaresPollack(n *big.Int) (*FourSquare, error) {
+	n = new(big.Int).Set(n)
+	// n = 2^e * n', n' is odd
+	e := big.NewInt(0)
+	for n.Bit(0) == 0 {
+		n.Rsh(n, 1)
+		e.Add(e, big1)
+	}
+	var hurwitzGCRD *complex.HurwitzInt
+
+	if n.Cmp(big8) <= 0 {
+		hurwitzGCRD = precomputedHurwitzGCRDs[n.Int64()]
+	} else {
+		primeProd, err := preCompute(n)
+		if err != nil {
+			return nil, err
+		}
+		for {
+			s, p, err := randomTrails(n, primeProd)
+			if err != nil {
+				return nil, err
+			}
+			hurwitzGCRD, err = denouement(n, s, p)
+			if err != nil {
+				return nil, err
+			}
+			w1, w2, w3, w4 := hurwitzGCRD.ValInt()
+			if Verify(n, w1, w2, w3, w4) {
+				break
+			}
+		}
+	}
+
+	// if X'^2 + Y'^2 + Z'^2 + W'^2 = n'
+	// then X^2 + Y^2 + Z^2 + W^2 = n for X, Y, Z, W defined by
+	// (1 + i)^e * (X' + Y'i + Z'j + W'k) = (X + Yi + Zj + Wk)
+	// Hurwitz integer: i + i
+	hurwitz1PlusI := complex.NewHurwitzInt(big.NewInt(1), big.NewInt(1), big.NewInt(0), big.NewInt(0), false)
+	hurwitzProd := complex.NewHurwitzInt(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(0), false)
+	for e.Sign() > 0 {
+		hurwitzProd.Prod(hurwitzProd, hurwitz1PlusI)
+		e.Sub(e, big1)
+	}
+	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
+	w1, w2, w3, w4 := hurwitzProd.ValInt()
+	fs := NewFourSquare(w1, w2, w3, w4)
+	return fs, nil
+}
+
+// preCompute determine the primes not exceeding log n and compute their product
+func preCompute(n *big.Int) (*big.Int, error) {
+	logN := log2(n)
+	var (
+		primes    []*big.Int
+		primeProd = big.NewInt(1)
+		idx       = big.NewInt(2)
+	)
+	for idx.Cmp(logN) < 1 {
+		isPrime := true
+		for _, prime := range primes {
+			mod := new(big.Int).Mod(idx, prime)
+			if mod.Sign() == 0 {
+				isPrime = false
+				break
+			}
+		}
+		if isPrime {
+			newPrime := new(big.Int).Set(idx)
+			primes = append(primes, newPrime)
+			primeProd.Mul(primeProd, newPrime)
+		}
+		idx.Add(idx, big1)
+	}
+	return primeProd, nil
+}
+
+func randomTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
+	nPow5 := new(big.Int).Exp(n, big5, nil)
+	preP := new(big.Int).Set(primeProd)
+	preP.Mul(preP, n)
+	for {
+		var (
+			k   = big.NewInt(0)
+			u   = big.NewInt(0)
+			err error
+		)
+		// choose an odd number k < n^5 at random, keep generating k until k is odd
+		for new(big.Int).Mod(k, big2).Sign() == 0 {
+			if k, err = rand.Int(rand.Reader, nPow5); err != nil {
+				return nil, nil, err
+			}
+		}
+		// p = {Product of primes} * n * k - 1
+		p := new(big.Int).Set(preP)
+		p.Mul(p, k)
+		p.Sub(p, big1)
+		pMinus1 := new(big.Int).Set(p)
+		pMinus1.Sub(pMinus1, big1)
+		// choose u from [1, p - 1]
+		if u, err = rand.Int(rand.Reader, pMinus1); err != nil {
+			return nil, nil, err
+		}
+		u.Add(u, big1)
+		// compute s = u^((p - 1) / 4) mod p
+		powU := new(big.Int).Set(pMinus1)
+		powU.Div(powU, big4)
+		s := new(big.Int).Exp(u, powU, p)
+		targetMod := new(big.Int).Mod(bigNeg1, p)
+		// test if s^2 = -1 (mod p)
+		// if so, continue to the next step, otherwise, repeat this step
+		if new(big.Int).Exp(s, big2, p).Cmp(targetMod) == 0 {
+			return s, p, nil
+		}
+	}
+}
+
+func denouement(n, s, p *big.Int) (*complex.HurwitzInt, error) {
+	// compute A + Bi := gcd(s + i, p)
+	// Gaussian integer: s + i
+	gaussianInt := complex.NewGaussianInt(s, big1)
+	// Gaussian integer: p
+	gaussianP := complex.NewGaussianInt(p, big0)
+	gcd := new(complex.GaussianInt)
+	gcd.GCD(gaussianInt, gaussianP)
+	// compute gcrd(A + Bi + j, n), normalized to have integer component
+	// Hurwitz integer: A + Bi + j
+	hurwitzInt := complex.NewHurwitzInt(gcd.R, gcd.I, big1, big0, false)
+	// Hurwitz integer: n
+	hurwitzN := complex.NewHurwitzInt(n, big0, big0, big0, false)
+	gcrd := new(complex.HurwitzInt)
+	gcrd.GCRD(hurwitzInt, hurwitzN)
+
+	return gcrd, nil
+}
+
+// Verify checks if the four-square sum is equal to the original integer
+func Verify(target, w1, w2, w3, w4 *big.Int) bool {
+	sum := new(big.Int).Mul(w1, w1)
+	sum.Add(sum, new(big.Int).Mul(w2, w2))
+	sum.Add(sum, new(big.Int).Mul(w3, w3))
+	sum.Add(sum, new(big.Int).Mul(w4, w4))
+	return sum.Cmp(target) == 0
 }
