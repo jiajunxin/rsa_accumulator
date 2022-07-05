@@ -4,19 +4,14 @@ import (
 	"math/big"
 )
 
-var (
-	bigInt1    = big.NewInt(1)
-	bigIntNeg1 = big.NewInt(-1)
-)
-
-// GaussianInt implements Gaussian Integer
-// In number theory, a Gaussian Integer is a complex number whose real and imaginary parts are both integers
+// GaussianInt implements Gaussian integer
+// In number theory, a Gaussian integer is a complex number whose real and imaginary parts are both integers
 type GaussianInt struct {
 	R *big.Int // real part
 	I *big.Int // imaginary part
 }
 
-// NewGaussianInt declares a new Gaussian Integer with the real part and imaginary part
+// NewGaussianInt declares a new Gaussian integer with the real part and imaginary part
 func NewGaussianInt(r *big.Int, i *big.Int) *GaussianInt {
 	return &GaussianInt{
 		R: r,
@@ -24,27 +19,27 @@ func NewGaussianInt(r *big.Int, i *big.Int) *GaussianInt {
 	}
 }
 
-// Update updates the Gaussian Integer with the given real and imaginary parts
+// Update updates the Gaussian integer with the given real and imaginary parts
 func (g *GaussianInt) Update(r, i *big.Int) {
 	g.R = r
 	g.I = i
 }
 
-// Add adds two Gaussian Integers
+// Add adds two Gaussian integers
 func (g *GaussianInt) Add(a, b *GaussianInt) *GaussianInt {
 	g.R = new(big.Int).Add(a.R, b.R)
 	g.I = new(big.Int).Add(a.I, b.I)
 	return g
 }
 
-// Sub subtracts two Gaussian Integers
+// Sub subtracts two Gaussian integers
 func (g *GaussianInt) Sub(a, b *GaussianInt) *GaussianInt {
 	g.R = new(big.Int).Sub(a.R, b.R)
 	g.I = new(big.Int).Sub(a.I, b.I)
 	return g
 }
 
-// Prod returns the products of two Gaussian Integers
+// Prod returns the products of two Gaussian integers
 func (g *GaussianInt) Prod(a, b *GaussianInt) *GaussianInt {
 	g.R = new(big.Int).Mul(a.R, b.R)
 	imgMul := new(big.Int).Mul(a.I, b.I)
@@ -54,21 +49,21 @@ func (g *GaussianInt) Prod(a, b *GaussianInt) *GaussianInt {
 	return g
 }
 
-// Conj obtains the conjugate of the original Gaussian Integer
+// Conj obtains the conjugate of the original Gaussian integer
 func (g *GaussianInt) Conj(origin *GaussianInt) *GaussianInt {
 	img := new(big.Int).Neg(origin.I)
 	g.Update(origin.R, img)
 	return g
 }
 
-// Norm obtains the norm of the Gaussian Integer
+// Norm obtains the norm of the Gaussian integer
 func (g *GaussianInt) Norm() *big.Int {
 	norm := new(big.Int).Mul(g.R, g.R)
 	norm.Add(norm, new(big.Int).Mul(g.I, g.I))
 	return norm
 }
 
-// Copy copies the Gaussian Integer
+// Copy copies the Gaussian integer
 func (g *GaussianInt) Copy() *GaussianInt {
 	return NewGaussianInt(
 		new(big.Int).Set(g.R),
@@ -76,9 +71,9 @@ func (g *GaussianInt) Copy() *GaussianInt {
 	)
 }
 
-// Div performs Euclidean division of two Gaussian Integers, i.e. a/b
-// the remainder is stored in the Gaussian Integer that calls the method
-// the quotient is returned as a new Gaussian Integer
+// Div performs Euclidean division of two Gaussian integers, i.e. a/b
+// the remainder is stored in the Gaussian integer that calls the method
+// the quotient is returned as a new Gaussian integer
 func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
 	conjB := new(GaussianInt).Conj(b)
 	numerator := new(GaussianInt).Prod(a, conjB)
@@ -98,43 +93,43 @@ func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
 	return quotient
 }
 
-// IsZero returns true if the Gaussian Integer is zero
+// IsZero returns true if the Gaussian integer is zero
 func (g *GaussianInt) IsZero() bool {
 	return g.R.Sign() == 0 && g.I.Sign() == 0
 }
 
-// CmpNorm compares the norm of two Gaussian Integers
+// CmpNorm compares the norm of two Gaussian integers
 func (g *GaussianInt) CmpNorm(a *GaussianInt) int {
 	return g.Norm().Cmp(a.Norm())
 }
 
-// String returns the string representation of the Gaussian Integer
+// String returns the string representation of the Gaussian integer
 func (g *GaussianInt) String() string {
-	str := ""
+	res := ""
 	if g.R.Sign() != 0 {
-		str += g.R.String()
+		res += g.R.String()
 	}
 	gISign := g.I.Sign()
 	if gISign == 0 {
-		if str == "" {
+		if res == "" {
 			return "0"
 		}
-		return str
+		return res
 	}
 	if gISign == 1 {
-		str += "+"
+		res += "+"
 	}
-	if g.I.Cmp(bigIntNeg1) == 0 {
-		str += "-"
-	} else if g.I.Cmp(bigInt1) != 0 {
-		str += g.I.String()
+	if g.I.Cmp(bigNeg1) == 0 {
+		res += "-"
+	} else if g.I.Cmp(big1) != 0 {
+		res += g.I.String()
 	}
-	str += "i"
-	return str
+	res += "i"
+	return res
 }
 
-// GCD calculates the greatest common divisor of two Gaussian Integers using Euclidean algorithm
-// the result is stored in the Gaussian Integer that calls the method and returned
+// GCD calculates the greatest common divisor of two Gaussian integers using Euclidean algorithm
+// the result is stored in the Gaussian integer that calls the method and returned
 func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
 	a = a.Copy()
 	b = b.Copy()

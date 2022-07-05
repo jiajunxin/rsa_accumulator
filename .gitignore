@@ -1,6 +1,7 @@
 # IDEs and editors
 .vscode/
 .idea/
+.cache/
 
 # Binaries for programs and plugins
 *.exe
