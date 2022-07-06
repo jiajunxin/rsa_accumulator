@@ -27,10 +27,10 @@ func main() {
 	}
 
 	target := new(big.Int)
-	target.SetString("987894564567894654567897564654654897894564651654657498798749865465456789695465465432213215487875454848484848484445", 10)
+	target.SetString("4096427", 10)
 	fmt.Println(target.BitLen())
 	start := time.Now()
-	fmt.Println(proof.LagrangeFourSquaresPollack(target))
+	fmt.Println(proof.LagrangeFourSquares(target))
 	fmt.Println(time.Since(start))
 	//fmt.Println("end test in main")
 }
