@@ -21,12 +21,20 @@ func isPerfectSquare(n *big.Int) (*big.Int, bool) {
 	return sqrt, new(big.Int).Mul(sqrt, sqrt).Cmp(n) == 0
 }
 
-func euclideanStep(a, b *big.Int) (*big.Int, error) {
+func euclideanDivision(a, b *big.Int) (*big.Int, *big.Int, error) {
 	if a.Cmp(b) == -1 {
 		a, b = b, a
 	}
-	q := new(big.Int).Mod(b, a)
-	return q, nil
+	if b.Cmp(big0) == 0 {
+		return nil, nil, fmt.Errorf("euclideanDivision: valid input should be no less than 0")
+	}
+	if b.Cmp(big1) == 0 {
+		return a, big.NewInt(0), nil
+	}
+	quotient := new(big.Int)
+	remainder := new(big.Int)
+	quotient.DivMod(a, b, remainder)
+	return quotient, remainder, nil
 }
 
 func log2(n *big.Int) *big.Int {

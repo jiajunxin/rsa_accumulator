@@ -31,6 +31,8 @@ var (
 	hGCRD8 = complex.NewHurwitzInt(big.NewInt(2), big.NewInt(2), big.NewInt(0), big.NewInt(0), false)
 	// precomputed Hurwitz GCRDs for small integers
 	precomputedHurwitzGCRDs = []*complex.HurwitzInt{hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8}
+	// LagrangeFourSquares is the function that computes the Lagrange four-squares
+	LagrangeFourSquares = LagrangeFourSquaresPollack
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -283,20 +285,20 @@ func calW1W2W3W4(mu *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
 
 		dividend := new(big.Int).Set(u)
 		divisor := new(big.Int).Set(p)
-		w3, err = euclideanStep(dividend, divisor)
+		_, w3, err = euclideanDivision(dividend, divisor)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
 		for w3.Cmp(sqrtP) != -1 {
 			dividend = divisor
 			divisor = w3
-			w3, err = euclideanStep(dividend, divisor)
+			_, w3, err = euclideanDivision(dividend, divisor)
 			if err != nil {
 				return nil, nil, nil, nil, err
 			}
 		}
 		dividend = divisor
-		w4, err = euclideanStep(dividend, w3)
+		_, w4, err = euclideanDivision(dividend, w3)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
