@@ -11,10 +11,10 @@ import (
 // AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
 func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := GenRepersentatives(set, encodeType)
+	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	numWorkers, _ := calNumWorkers()
 	proofs := ProveMembershipParallel(setup.G, setup.N, rep, numWorkers)
@@ -28,10 +28,10 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*bi
 func AccAndProveIterParallel(set []string, encodeType EncodeType,
 	setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := GenRepersentatives(set, encodeType)
+	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	proofs := ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation

@@ -14,7 +14,7 @@ const (
 	// together with one time Baillie-PSW test. Totally heuristic value for now.
 	securityParaHashToPrime = 10
 
-	// N2048String is the 2048 bit RSA challenge from
+	// N2048String is the 2048-bit RSA challenge from
 	// https://en.wikipedia.org/wiki/RSA_numbers#RSA-2048
 	N2048String = "25195908475657893494027183240048398571429282126204032027777137836043662020707" +
 		"595556264018525880784406918290641249515082189298559149176184502808489120072844992687392" +
@@ -35,7 +35,7 @@ const (
 		"942419460436082633536437816415174009734025695067902861309122781712179279787649475651300" +
 		"600345042772613903033967878379857249999473018461052103366618611873817620719707699275384" +
 		"636400658849792"
-	// HashToPrimeFromSha256 is a prime number generatted from Sha256
+	// HashToPrimeFromSha256 is a prime number generated from Sha256
 	HashToPrimeFromSha256 = iota
 	// DIHashFromPoseidon is a division intractable Hash output
 	DIHashFromPoseidon

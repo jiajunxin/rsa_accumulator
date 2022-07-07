@@ -28,7 +28,9 @@ var (
 	// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 	hGCRD8 = complex.NewHurwitzInt(big2, big2, big0, big0, false)
 	// precomputed Hurwitz GCRDs for small integers
-	precomputedHurwitzGCRDs = []*complex.HurwitzInt{hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8}
+	precomputedHurwitzGCRDs = [9]*complex.HurwitzInt{
+		hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8,
+	}
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -94,6 +96,18 @@ func (f *FourSquare) String() string {
 	)
 }
 
+func (f *FourSquare) RangeProofCommit(g, h *big.Int, coins RangeProofRandomCoins) (c1, c2, c3, c4 *big.Int) {
+	c1 = new(big.Int).Exp(g, f.W1, nil)
+	c1.Mul(c1, new(big.Int).Exp(h, coins.r1, nil))
+	c2 = new(big.Int).Exp(g, f.W2, nil)
+	c2.Mul(c2, new(big.Int).Exp(h, coins.r2, nil))
+	c3 = new(big.Int).Exp(g, f.W3, nil)
+	c3.Mul(c3, new(big.Int).Exp(h, coins.r3, nil))
+	c4 = new(big.Int).Exp(g, f.W4, nil)
+	c4.Mul(c4, new(big.Int).Exp(h, coins.r4, nil))
+	return
+}
+
 // LagrangeFourSquares calculates the Lagrange four squares representation of a positive integer
 // Paper: Finding the Four Squares in Lagrange’s Theorem
 // Link: http://pollack.uga.edu/finding4squares.pdf (page 6)
@@ -134,7 +148,7 @@ func LagrangeFourSquares(n *big.Int) (*FourSquare, error) {
 	// if X'^2 + Y'^2 + Z'^2 + W'^2 = n'
 	// then X^2 + Y^2 + Z^2 + W^2 = n for X, Y, Z, W defined by
 	// (1 + i)^e * (X' + Y'i + Z'j + W'k) = (X + Yi + Zj + Wk)
-	// Hurwitz integer: i + i
+	// Hurwitz integer: 1 + i
 	hurwitz1PlusI := complex.NewHurwitzInt(big1, big1, big0, big0, false)
 	hurwitzProd := complex.NewHurwitzInt(big1, big0, big0, big0, false)
 	for e.Sign() > 0 {

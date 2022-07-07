@@ -21,8 +21,8 @@ func TrustedSetup() *Setup {
 	return ret
 }
 
-// GenRepersentatives generates different representatives that can be inputted into RSA accumulator
-func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
+// GenRepresentatives generates different representatives that can be inputted into RSA accumulator
+func GenRepresentatives(set []string, encodeType EncodeType) []*big.Int {
 	switch encodeType {
 	case HashToPrimeFromSha256:
 		return genRepWithHashToPrimeFromSHA256(set)
@@ -36,10 +36,10 @@ func GenRepersentatives(set []string, encodeType EncodeType) []*big.Int {
 // AccAndProve generates the accumulator with all the memberships precomputed
 func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := GenRepersentatives(set, encodeType)
+	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
 	proofs := ProveMembership(setup.G, setup.N, rep)
@@ -51,7 +51,7 @@ func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, [
 
 // AccAndProveIter iteratively generates the accumulator with all the memberships precomputed
 func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
-	rep := GenRepersentatives(set, encodeType)
+	rep := GenRepresentatives(set, encodeType)
 
 	proofs := ProveMembershipIter(*setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation

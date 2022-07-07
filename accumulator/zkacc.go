@@ -24,10 +24,10 @@ func GenRandomizer() *big.Int {
 // ZKAccumulate generates one accumulator which is zero-knowledge
 func ZKAccumulate(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := GenRepersentatives(set, encodeType)
+	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration time.Duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepersentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
 	r := GenRandomizer()

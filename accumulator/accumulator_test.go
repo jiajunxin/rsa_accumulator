@@ -62,7 +62,7 @@ func TestAccAndProve(t *testing.T) {
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 := accumulateNew(setup.G, setup.N, rep)
 	acc3 := AccumulateNew(proofs[5], rep[5], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -79,7 +79,7 @@ func TestAccAndProve(t *testing.T) {
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep = GenRepersentatives(set, HashToPrimeFromSha256)
+	rep = GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
 	acc3 = AccumulateNew(proofs[7], rep[7], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -96,7 +96,7 @@ func TestAccAndProve(t *testing.T) {
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep = GenRepersentatives(set, HashToPrimeFromSha256)
+	rep = GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
 	acc3 = AccumulateNew(proofs[253], rep[253], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -108,7 +108,7 @@ func TestAccAndProve(t *testing.T) {
 }
 
 func genAccts(set []string, setup *Setup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	acc1 = accumulateNew(setup.G, setup.N, rep)
 	acc2 = AccumulateNew(proofs[idx], rep[idx], setup.N)
 	return
