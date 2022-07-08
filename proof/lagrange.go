@@ -2,10 +2,13 @@ package proof
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 
 	"github.com/rsa_accumulator/complex"
+)
+
+const (
+	squareNum = 4
 )
 
 var (
@@ -35,15 +38,10 @@ var (
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
 // w <- LagrangeFourSquareLipmaa(mu), mu = w = W1^2 + W2^2 + W3^2 + W4^2
-type FourSquare struct {
-	W1 *big.Int
-	W2 *big.Int
-	W3 *big.Int
-	W4 *big.Int
-}
+type FourSquare [squareNum]*big.Int
 
 // NewFourSquare creates a new FourSquare
-func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) *FourSquare {
+func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) FourSquare {
 	w1.Abs(w1)
 	w2.Abs(w2)
 	w3.Abs(w3)
@@ -67,44 +65,40 @@ func NewFourSquare(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) *FourSqua
 	if w3.Cmp(w4) == -1 {
 		w3, w4 = w4, w3
 	}
-	return &FourSquare{w1, w2, w3, w4}
+	return FourSquare{w1, w2, w3, w4}
 }
 
 // Mul multiplies all the square numbers by n
 func (f *FourSquare) Mul(n *big.Int) {
-	f.W1.Mul(f.W1, n)
-	f.W2.Mul(f.W2, n)
-	f.W3.Mul(f.W3, n)
-	f.W4.Mul(f.W4, n)
+	for i := 0; i < squareNum; i++ {
+		f[i].Mul(f[i], n)
+	}
 }
 
 // Div divides all the square numbers by n
 func (f *FourSquare) Div(n *big.Int) {
-	f.W1.Div(f.W1, n)
-	f.W2.Div(f.W2, n)
-	f.W3.Div(f.W3, n)
-	f.W4.Div(f.W4, n)
+	for i := 0; i < squareNum; i++ {
+		f[i].Div(f[i], n)
+	}
 }
 
 // String stringnifies the FourSquare object
 func (f *FourSquare) String() string {
-	return fmt.Sprintf("{%s %s %s %s}",
-		f.W1.String(),
-		f.W2.String(),
-		f.W3.String(),
-		f.W4.String(),
-	)
+	res := "{"
+	for i := 0; i < squareNum-1; i++ {
+		res += f[i].String()
+		res += ", "
+	}
+	res += f[squareNum-1].String()
+	res += "}"
+	return res
 }
 
-func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins *RPRandomCoins) (c1, c2, c3, c4 *big.Int) {
-	c1 = new(big.Int).Exp(pp.G, f.W1, pp.N)
-	c1.Mul(c1, new(big.Int).Exp(pp.H, coins.R1, pp.N))
-	c2 = new(big.Int).Exp(pp.G, f.W2, pp.N)
-	c2.Mul(c2, new(big.Int).Exp(pp.H, coins.R2, pp.N))
-	c3 = new(big.Int).Exp(pp.G, f.W3, pp.N)
-	c3.Mul(c3, new(big.Int).Exp(pp.H, coins.R3, pp.N))
-	c4 = new(big.Int).Exp(pp.G, f.W4, pp.N)
-	c4.Mul(c4, new(big.Int).Exp(pp.G, coins.R4, pp.N))
+func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins RPRandomCoins) (cList [squareNum]*big.Int) {
+	for i := 0; i < squareNum; i++ {
+		cList[i] = new(big.Int).Exp(pp.G, f[i], pp.N)
+		cList[i].Mul(cList[i], new(big.Int).Exp(pp.H, coins[i], pp.N))
+	}
 	return
 }
 
@@ -112,7 +106,11 @@ func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins *RPRandomCoins
 // Paper: Finding the Four Squares in Lagrange’s Theorem
 // Link: http://pollack.uga.edu/finding4squares.pdf (page 6)
 // The input should be an odd positive integer no less than 9
-func LagrangeFourSquares(n *big.Int) (*FourSquare, error) {
+func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
+	if n.Sign() == 0 {
+		res := NewFourSquare(hGCRD0.ValInt())
+		return res, nil
+	}
 	n = new(big.Int).Set(n)
 	// n = 2^e * n', n' is odd
 	e := big.NewInt(0)
@@ -127,27 +125,27 @@ func LagrangeFourSquares(n *big.Int) (*FourSquare, error) {
 	} else {
 		primeProd, err := preCompute(n)
 		if err != nil {
-			return nil, err
+			return FourSquare{}, err
 		}
 		for {
 			s, p, err := randomTrails(n, primeProd)
 			if err != nil {
-				return nil, err
+				return FourSquare{}, err
 			}
 			hurwitzGCRD, err = denouement(n, s, p)
 			if err != nil {
-				return nil, err
+				return FourSquare{}, err
 			}
 			w1, w2, w3, w4 := hurwitzGCRD.ValInt()
-			if Verify(n, w1, w2, w3, w4) {
+			if Verify(n, [squareNum]*big.Int{w1, w2, w3, w4}) {
 				break
 			}
 		}
 	}
 
-	// if X'^2 + Y'^2 + Z'^2 + W'^2 = n'
-	// then X^2 + Y^2 + Z^2 + W^2 = n for X, Y, Z, W defined by
-	// (1 + i)^e * (X' + Y'i + Z'j + W'k) = (X + Yi + Zj + Wk)
+	// if x'^2 + Y'^2 + Z'^2 + W'^2 = n'
+	// then x^2 + Y^2 + Z^2 + W^2 = n for x, Y, Z, W defined by
+	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
 	// Hurwitz integer: 1 + i
 	hurwitz1PlusI := complex.NewHurwitzInt(big1, big1, big0, big0, false)
 	hurwitzProd := complex.NewHurwitzInt(big1, big0, big0, big0, false)
@@ -257,10 +255,10 @@ func denouement(n, s, p *big.Int) (*complex.HurwitzInt, error) {
 
 // Verify checks if the four-square sum is equal to the original integer
 // i.e. target = w1^2 + w2^2 + w3^2 + w4^2
-func Verify(target, w1, w2, w3, w4 *big.Int) bool {
-	sum := new(big.Int).Mul(w1, w1)
-	sum.Add(sum, new(big.Int).Mul(w2, w2))
-	sum.Add(sum, new(big.Int).Mul(w3, w3))
-	sum.Add(sum, new(big.Int).Mul(w4, w4))
+func Verify(target *big.Int, fs [squareNum]*big.Int) bool {
+	sum := new(big.Int).Mul(fs[0], fs[0])
+	for i := 1; i < squareNum; i++ {
+		sum.Add(sum, new(big.Int).Mul(fs[i], fs[i]))
+	}
 	return sum.Cmp(target) == 0
 }

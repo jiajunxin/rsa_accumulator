@@ -1,45 +1,44 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
-	"time"
 
+	"github.com/rsa_accumulator/accumulator"
 	"github.com/rsa_accumulator/proof"
 )
 
 func main() {
-	fmt.Println("start test in main")
-	//testSizes := []int{1000}
-	//for _, size := range testSizes {
-	//	fmt.Printf("test size: %d\n", size)
-	//   accumulator.ManualBench(size)
-	//	accumulator.ManualBenchZKAcc(size)
-	//	fmt.Println()
-	//}
-
-	{
-		// set := accumulator.GenBenchSet(1000)
-		// setup := *accumulator.TrustedSetup()
-		// rep := accumulator.GenRepersentatives(set, accumulator.DIHashFromPoseidon)
-		// 	defer profile.Start(profile.TraceProfile).Stop()
-		// accumulator.ProveMembershipIterParallel(*setup.G, setup.N, rep)
-	}
-
-	target := new(big.Int)
-	target.SetString("40964278080989080987878784783748374837483928374832974783748297387489378473258378678678678866556868686868686868686868686868686868687", 10)
-	fmt.Println(target.BitLen())
-	start := time.Now()
-	res, err := proof.LagrangeFourSquares(target)
+	setup := accumulator.TrustedSetup()
+	h, err := rand.Int(rand.Reader, setup.N)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(time.Since(start))
-	fmt.Println(res)
-	if proof.Verify(target, res.W1, res.W2, res.W3, res.W4) {
-		fmt.Println("verify success")
-	} else {
-		fmt.Println("verify failed")
+
+	pp := proof.NewPublicParameters(setup.N, setup.G, h)
+	r, _ := new(big.Int).SetString("24235325234562345123453242432454789165454564654564698", 10)
+	prover := proof.NewRPProver(r, big.NewInt(12), pp)
+	commitX, err := prover.CommitX()
+	if err != nil {
+		panic(err)
 	}
-	//fmt.Println("end test in main")
+	commitment, err := prover.ComposeCommitment()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("commitment done")
+	verifier := proof.NewRPVerifier(prover.C, pp)
+	verifier.Commitment = commitment
+	e, err := verifier.Challenge()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("e: %s\n", e)
+	response, err := prover.Response(e)
+	if err != nil {
+		panic(err)
+	}
+	res := verifier.Verify(e, commitX, response)
+	fmt.Printf("res: %t\n", res)
 }
