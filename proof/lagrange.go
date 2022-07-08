@@ -96,15 +96,15 @@ func (f *FourSquare) String() string {
 	)
 }
 
-func (f *FourSquare) RangeProofCommit(g, h *big.Int, coins RangeProofRandomCoins) (c1, c2, c3, c4 *big.Int) {
-	c1 = new(big.Int).Exp(g, f.W1, nil)
-	c1.Mul(c1, new(big.Int).Exp(h, coins.r1, nil))
-	c2 = new(big.Int).Exp(g, f.W2, nil)
-	c2.Mul(c2, new(big.Int).Exp(h, coins.r2, nil))
-	c3 = new(big.Int).Exp(g, f.W3, nil)
-	c3.Mul(c3, new(big.Int).Exp(h, coins.r3, nil))
-	c4 = new(big.Int).Exp(g, f.W4, nil)
-	c4.Mul(c4, new(big.Int).Exp(h, coins.r4, nil))
+func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins *RPRandomCoins) (c1, c2, c3, c4 *big.Int) {
+	c1 = new(big.Int).Exp(pp.G, f.W1, pp.N)
+	c1.Mul(c1, new(big.Int).Exp(pp.H, coins.R1, pp.N))
+	c2 = new(big.Int).Exp(pp.G, f.W2, pp.N)
+	c2.Mul(c2, new(big.Int).Exp(pp.H, coins.R2, pp.N))
+	c3 = new(big.Int).Exp(pp.G, f.W3, pp.N)
+	c3.Mul(c3, new(big.Int).Exp(pp.H, coins.R3, pp.N))
+	c4 = new(big.Int).Exp(pp.G, f.W4, pp.N)
+	c4.Mul(c4, new(big.Int).Exp(pp.G, coins.R4, pp.N))
 	return
 }
 
