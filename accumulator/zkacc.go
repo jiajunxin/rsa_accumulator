@@ -13,7 +13,7 @@ func GenRandomizer() *big.Int {
 	ret := big.NewInt(1)
 	fmt.Println("Randomizers are ")
 	for i := range randomizers {
-		if flipCoin() == true {
+		if flipCoin() {
 			ret.Mul(ret, big.NewInt(int64(randomizers[i])))
 			fmt.Printf("%d, ", randomizers[i])
 		}
@@ -26,7 +26,7 @@ func ZKAccumulate(set []string, encodeType EncodeType, setup *Setup) (*big.Int, 
 	startingTime := time.Now().UTC()
 	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
-	var duration time.Duration = endingTime.Sub(startingTime)
+	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 

@@ -13,7 +13,7 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*bi
 	startingTime := time.Now().UTC()
 	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
-	var duration time.Duration = endingTime.Sub(startingTime)
+	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	numWorkers, _ := calNumWorkers()
@@ -30,7 +30,7 @@ func AccAndProveIterParallel(set []string, encodeType EncodeType,
 	startingTime := time.Now().UTC()
 	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
-	var duration time.Duration = endingTime.Sub(startingTime)
+	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	proofs := ProveMembershipIterParallel(*setup.G, setup.N, rep)
@@ -40,7 +40,7 @@ func AccAndProveIterParallel(set []string, encodeType EncodeType,
 	return acc, proofs
 }
 
-// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 // It uses at most O(2^limit) Goroutines
 func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big.Int {
 	if limit == 0 {
@@ -65,7 +65,7 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 	return proofs1
 }
 
-// proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+// proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan []*big.Int) {
 	if limit == 0 {
 		c <- ProveMembership(base, N, set)
@@ -187,13 +187,13 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 		return nil
 	}
 	var (
-		header *proofNode = &proofNode{
+		header = &proofNode{
 			left:  left,
 			right: right,
 			proof: &base,
 		}
-		iter       *proofNode = header
-		finishFlag bool       = true
+		iter       = header
+		finishFlag = true
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())

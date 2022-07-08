@@ -47,8 +47,8 @@ func TestSetup(t *testing.T) {
 		//this condition should never happen
 		t.Errorf("g and N not co-prime! We win the RSA-2048 challenge!")
 	}
-	len := Min2048.BitLen()
-	if len != 2048 {
+	bitLen := Min2048.BitLen()
+	if bitLen != 2048 {
 		t.Errorf("Min2048 is not 2048 bits")
 	}
 }

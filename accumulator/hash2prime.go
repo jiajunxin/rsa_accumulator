@@ -9,7 +9,7 @@ import (
 func HashToPrime(input []byte) *big.Int {
 	var ret big.Int
 	h := sha256.New()
-	h.Write([]byte(input))
+	h.Write(input)
 	hashTemp := h.Sum(nil)
 	ret.SetBytes(hashTemp)
 	flag := false
@@ -29,7 +29,7 @@ func HashToPrime(input []byte) *big.Int {
 func SHA256ToInt(input []byte) *big.Int {
 	var ret big.Int
 	h := sha256.New()
-	h.Write([]byte(input))
+	h.Write(input)
 	hashTemp := h.Sum(nil)
 	ret.SetBytes(hashTemp)
 	return &ret

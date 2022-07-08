@@ -38,7 +38,7 @@ func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, [
 	startingTime := time.Now().UTC()
 	rep := GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
-	var duration time.Duration = endingTime.Sub(startingTime)
+	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
@@ -60,7 +60,7 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.In
 	return acc, proofs
 }
 
-// ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlogn)
+// ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
@@ -87,12 +87,12 @@ func ProveMembershipIter(base big.Int, N *big.Int, set []*big.Int) []*big.Int {
 		return nil
 	}
 	var (
-		header *proofNode = &proofNode{
+		header = &proofNode{
 			right: len(set),
 			proof: &base,
 		}
-		iter       *proofNode = header
-		finishFlag bool       = true
+		iter       = header
+		finishFlag = true
 	)
 
 	for finishFlag {

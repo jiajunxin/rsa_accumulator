@@ -90,9 +90,9 @@ func (h *HurwitzInt) Set(a *HurwitzInt) *HurwitzInt {
 }
 
 // SetFloat set scalars of a Hurwitz integer by big float variables
-func (h *HurwitzInt) SetFloat(r, i, j, k *big.Float) *HurwitzInt {
-	panic("not implemented")
-}
+//func (h *HurwitzInt) SetFloat(r, i, j, k *big.Float) *HurwitzInt {
+//	panic("not implemented")
+//}
 
 // Val reveals value of a Hurwitz integer
 func (h *HurwitzInt) Val() (r, i, j, k *big.Float) {

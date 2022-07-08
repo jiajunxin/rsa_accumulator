@@ -17,7 +17,10 @@ func main() {
 	}
 
 	pp := proof.NewPublicParameters(setup.N, setup.G, h)
-	r, _ := new(big.Int).SetString("24235325234562345123453242432454789165454564654564698", 10)
+	r, err := rand.Int(rand.Reader, setup.N)
+	if err != nil {
+		panic(err)
+	}
 	prover := proof.NewRPProver(r, big.NewInt(12), pp)
 	commitX, err := prover.CommitX()
 	if err != nil {
@@ -27,18 +30,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("commitment done")
 	verifier := proof.NewRPVerifier(prover.C, pp)
-	verifier.Commitment = commitment
+	verifier.SetCommitment(commitment)
 	e, err := verifier.Challenge()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("e: %s\n", e)
 	response, err := prover.Response(e)
 	if err != nil {
 		panic(err)
 	}
 	res := verifier.Verify(e, commitX, response)
-	fmt.Printf("res: %t\n", res)
+	if res {
+		fmt.Println("argument accepted")
+	} else {
+		fmt.Println("argument rejected")
+	}
 }

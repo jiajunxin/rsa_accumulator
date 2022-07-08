@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
 	"math/big"
 )
 
@@ -65,7 +64,6 @@ type RPProver struct {
 	randomMList RPRandomCoins
 	randomRList RPRandomCoins
 	randomSList RPRandomCoins
-	randomR     *big.Int
 	randomS     *big.Int
 }
 
@@ -116,7 +114,6 @@ func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	powMLmtPart := new(big.Int).Set(r.sp)
 	powMLmtPart.Mul(powMLmtPart, big2)
 	powMLmt.Add(powMLmt, powMLmtPart)
-	fmt.Printf("powMLmt: %v\n", powMLmt)
 	mLmt.Exp(mLmt, powMLmt, nil)
 	mList, err := NewRPRandomCoins(mLmt)
 	if err != nil {
@@ -194,7 +191,7 @@ func (r *RPProver) Response(e *big.Int) (*RPResponse, error) {
 
 	sumXR := big.NewInt(0)
 	for i := 0; i < squareNum; i++ {
-		sumXR.Add(sumXR, new(big.Int).Mul(r.randomSList[i], r.randomRList[i]))
+		sumXR.Add(sumXR, new(big.Int).Mul(r.fourSquareX[i], r.randomRList[i]))
 	}
 	t := new(big.Int).Sub(r.r, sumXR)
 	t.Mul(t, e)
@@ -204,7 +201,6 @@ func (r *RPProver) Response(e *big.Int) (*RPResponse, error) {
 		TList: tList,
 		T:     t,
 	}
-	fmt.Println("T: ", t)
 	return response, nil
 }
 
@@ -213,7 +209,7 @@ type RPVerifier struct {
 	pp         *PublicParameters
 	sp         *big.Int
 	C          *big.Int
-	Commitment RPCommitment
+	commitment RPCommitment
 }
 
 // NewRPVerifier generates a new range proof verifier
@@ -224,6 +220,11 @@ func NewRPVerifier(c *big.Int, pp *PublicParameters) *RPVerifier {
 		C:  c,
 	}
 	return verifier
+}
+
+// SetCommitment sets the commitment to the verifier
+func (r *RPVerifier) SetCommitment(c RPCommitment) {
+	r.commitment = c
 }
 
 // Challenge generates a challenge for prover's commitment
@@ -284,21 +285,13 @@ func (r *RPVerifier) Verify(e *big.Int, cx CommitX, response *RPResponse) bool {
 	}
 	hashResult = append(hashResult, h...)
 
-	fmt.Println(hashResult)
-	fmt.Println(r.Commitment)
-	fmt.Println(len(hashResult))
-	fmt.Println(len(r.Commitment))
-	fmt.Println(hashResult[127:])
-	fmt.Println(r.Commitment[127:])
-
 	for i := 0; i < len(hashResult); i++ {
-		if hashResult[i] != r.Commitment[i] {
-			fmt.Println(i)
+		if hashResult[i] != r.commitment[i] {
 			break
 		}
 	}
 
-	return bytes.Equal(hashResult, r.Commitment)
+	return bytes.Equal(hashResult, r.commitment)
 }
 
 // PublicParameters holds public parameters initialized during the setup procedure
