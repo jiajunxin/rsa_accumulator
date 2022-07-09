@@ -76,8 +76,8 @@ func Test_preCompute(t *testing.T) {
 			args: args{
 				n: big.NewInt(8),
 			},
-			want:    big.NewInt(6),
-			wantErr: false,
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name: "test_2^20",

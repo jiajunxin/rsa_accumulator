@@ -3,6 +3,7 @@ package proof
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"math/big"
 	"runtime"
 
@@ -166,6 +167,9 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 // preCompute determine the primes not exceeding log n and compute their product
 // the function only handles positive integers larger than 8
 func preCompute(n *big.Int) (*big.Int, error) {
+	if n.Cmp(big8) <= 0 {
+		return nil, errors.New("n should be larger than 8")
+	}
 	logN := log2(n)
 	var (
 		// primes in [2, 8]
@@ -202,14 +206,12 @@ func randomTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	preP.Mul(preP, n)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	//return findSRoutine(ctx, big0, nPow5Div2, preP)
 	batches := rangeDiv(nPow5Div2, numCPU)
 	resChan := make(chan findSResult)
 	for _, batch := range batches {
 		go findSRoutine(ctx, batch[0], batch[1], preP, resChan)
 	}
 	res := <-resChan
-	close(resChan)
 	return res.s, res.p, res.err
 }
 

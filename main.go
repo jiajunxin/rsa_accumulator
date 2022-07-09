@@ -44,7 +44,7 @@ func main() {
 	//	fmt.Println("argument rejected")
 	//}
 	target := new(big.Int)
-	target.Exp(big.NewInt(2), big.NewInt(600), nil)
+	target.Exp(big.NewInt(2), big.NewInt(100), nil)
 	target.Sub(target, big.NewInt(1))
 	fmt.Println("bit len: ", target.BitLen())
 	start := time.Now()
