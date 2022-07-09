@@ -1,8 +1,10 @@
 package proof
 
 import (
+	"context"
 	"crypto/rand"
 	"math/big"
+	"runtime"
 
 	"github.com/rsa_accumulator/complex"
 )
@@ -34,6 +36,7 @@ var (
 	precomputedHurwitzGCRDs = [9]*complex.HurwitzInt{
 		hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8,
 	}
+	numCPU = runtime.NumCPU()
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -192,47 +195,76 @@ func randomTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	nPow5Div2.Div(nPow5Div2, big2)
 	preP := new(big.Int).Set(primeProd)
 	preP.Mul(preP, n)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	//return findSRoutine(ctx, big0, nPow5Div2, preP)
+	batches := rangeDiv(nPow5Div2, numCPU)
+	resChan := make(chan findSResult)
+	for _, batch := range batches {
+		go findSRoutine(ctx, batch[0], batch[1], preP, resChan)
+	}
+	res := <-resChan
+	return res.s, res.p, res.err
+}
+
+func findSRoutine(ctx context.Context, start, end, preP *big.Int, resChan chan<- findSResult) {
 	for {
-		var (
-			k   = big.NewInt(0)
-			u   *big.Int
-			err error
-		)
-		// choose an odd number k < n^5 at random
-		// let k = 2k' + 1, then 2k' + 1 < n^5
-		// 2k' <= n^5 - 2
-		// k' < ceiling{n^5 / 2}
-		// start finding k' in [0, n^5 / 2)
-		for new(big.Int).Mod(k, big2).Sign() == 0 {
-			if k, err = rand.Int(rand.Reader, nPow5Div2); err != nil {
-				return nil, nil, err
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			s, p, err := pickS(start, end, preP)
+			if err != nil {
+				resChan <- findSResult{err: err}
+				return
+			}
+			targetMod := new(big.Int).Mod(bigNeg1, p)
+			// test if s^2 = -1 (mod p)
+			// if so, continue to the next step, otherwise, repeat this step
+			if new(big.Int).Exp(s, big2, p).Cmp(targetMod) == 0 {
+				ctx.Done()
+				resChan <- findSResult{s: s, p: p}
+				return
 			}
 		}
-		// construct k
-		k.Mul(k, big2)
-		k.Add(k, big1)
-		// p = {Product of primes} * n * k - 1
-		p := new(big.Int).Set(preP)
-		p.Mul(p, k)
-		p.Sub(p, big1)
-		pMinus1 := new(big.Int).Set(p)
-		pMinus1.Sub(pMinus1, big1)
-		// choose u from [1, p - 1]
-		if u, err = rand.Int(rand.Reader, pMinus1); err != nil {
-			return nil, nil, err
-		}
-		u.Add(u, big1)
-		// compute s = u^((p - 1) / 4) mod p
-		powU := new(big.Int).Set(pMinus1)
-		powU.Div(powU, big4)
-		s := new(big.Int).Exp(u, powU, p)
-		targetMod := new(big.Int).Mod(bigNeg1, p)
-		// test if s^2 = -1 (mod p)
-		// if so, continue to the next step, otherwise, repeat this step
-		if new(big.Int).Exp(s, big2, p).Cmp(targetMod) == 0 {
-			return s, p, nil
-		}
 	}
+}
+
+type findSResult struct {
+	s, p *big.Int
+	err  error
+}
+
+func pickS(start, end, preP *big.Int) (*big.Int, *big.Int, error) {
+	var (
+		k, u *big.Int
+		err  error
+	)
+	// choose k' in [start, end)
+	gap := new(big.Int).Sub(end, start)
+	if k, err = rand.Int(rand.Reader, gap); err != nil {
+		return nil, nil, err
+	}
+	k.Add(k, start)
+	// construct k, k = 2k' + 1
+	k.Lsh(k, 1)
+	k.Add(k, big1)
+	// p = {Product of primes} * n * k - 1 = preP * k - 1
+	p := new(big.Int).Set(preP)
+	p.Mul(p, k)
+	p.Sub(p, big1)
+	pMinus1 := new(big.Int).Set(p)
+	pMinus1.Sub(pMinus1, big1)
+	// choose u from [1, p - 1]
+	if u, err = rand.Int(rand.Reader, pMinus1); err != nil {
+		return nil, nil, err
+	}
+	u.Add(u, big1)
+	// compute s = u^((p - 1) / 4) mod p
+	powU := new(big.Int).Set(pMinus1)
+	powU.Div(powU, big4)
+	s := new(big.Int).Exp(u, powU, p)
+	return s, p, nil
 }
 
 func denouement(n, s, p *big.Int) (*complex.HurwitzInt, error) {

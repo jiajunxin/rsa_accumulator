@@ -56,3 +56,24 @@ func log10(n *big.Int) (*big.Int, error) {
 	}
 	return res, nil
 }
+
+func rangeDiv(n *big.Int, numDIv int) (res [][2]*big.Int) {
+	nd := big.NewInt(int64(numDIv))
+	if n.Cmp(nd) < 0 {
+		return [][2]*big.Int{
+			{big0, new(big.Int).Add(n, big1)},
+		}
+	}
+	batchSize := new(big.Int).Div(n, nd)
+	idx := big.NewInt(0)
+	for idx.Cmp(nd) == -1 {
+		start := new(big.Int).Mul(idx, batchSize)
+		end := new(big.Int).Add(start, batchSize)
+		if new(big.Int).Add(idx, big1).Cmp(nd) == 0 {
+			end = n
+		}
+		res = append(res, [2]*big.Int{start, end})
+		idx.Add(idx, big1)
+	}
+	return
+}
