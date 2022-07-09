@@ -164,12 +164,16 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 }
 
 // preCompute determine the primes not exceeding log n and compute their product
+// the function only handles positive integers larger than 8
 func preCompute(n *big.Int) (*big.Int, error) {
 	logN := log2(n)
 	var (
-		primes    []*big.Int
-		primeProd = big.NewInt(1) // 1
-		idx       = big.NewInt(2) // 2
+		// primes in [2, 8]
+		primes = []*big.Int{big2, big3, big5, big7}
+		// product of primes, 2 * 3 * 5 * 7 = 210
+		primeProd = big.NewInt(210)
+		// starting from 9
+		idx = big.NewInt(9)
 	)
 	for idx.Cmp(logN) < 1 {
 		isPrime := true
@@ -185,7 +189,8 @@ func preCompute(n *big.Int) (*big.Int, error) {
 			primes = append(primes, newPrime)
 			primeProd.Mul(primeProd, newPrime)
 		}
-		idx.Add(idx, big1)
+		// increase index by 2, skip even numbers
+		idx.Add(idx, big2)
 	}
 	return primeProd, nil
 }
@@ -204,6 +209,7 @@ func randomTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 		go findSRoutine(ctx, batch[0], batch[1], preP, resChan)
 	}
 	res := <-resChan
+	close(resChan)
 	return res.s, res.p, res.err
 }
 
@@ -215,16 +221,24 @@ func findSRoutine(ctx context.Context, start, end, preP *big.Int, resChan chan<-
 		default:
 			s, p, err := pickS(start, end, preP)
 			if err != nil {
-				resChan <- findSResult{err: err}
-				return
+				select {
+				case resChan <- findSResult{err: err}:
+					return
+				default:
+					return
+				}
 			}
 			targetMod := new(big.Int).Mod(bigNeg1, p)
 			// test if s^2 = -1 (mod p)
 			// if so, continue to the next step, otherwise, repeat this step
 			if new(big.Int).Exp(s, big2, p).Cmp(targetMod) == 0 {
 				ctx.Done()
-				resChan <- findSResult{s: s, p: p}
-				return
+				select {
+				case resChan <- findSResult{s: s, p: p}:
+					return
+				default:
+					return
+				}
 			}
 		}
 	}
