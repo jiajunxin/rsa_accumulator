@@ -79,10 +79,10 @@ func BenchmarkAccumulateNew256bits(b *testing.B) {
 func BenchmarkAccumulateNewDIHash(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
-	dihashResult := dihash.DIHash(testBytes)
+	diHashResult := dihash.DIHash(testBytes)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		AccumulateNew(testObject.G, dihashResult, testObject.N)
+		AccumulateNew(testObject.G, diHashResult, testObject.N)
 	}
 }
 

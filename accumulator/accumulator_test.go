@@ -17,8 +17,8 @@ func TestDIHash(t *testing.T) {
 	// we need to check if A ?= B + C
 	testObject := TrustedSetup()
 
-	dihashValue := dihash.DIHash([]byte(testString))
-	A := AccumulateNew(testObject.G, dihashValue, testObject.N)
+	diHashValue := dihash.DIHash([]byte(testString))
+	A := AccumulateNew(testObject.G, diHashValue, testObject.N)
 
 	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
 	var tempInt big.Int

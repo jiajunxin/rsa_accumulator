@@ -8,8 +8,14 @@ import (
 	"math/big"
 )
 
+const (
+	challengeStatement = "c = (g^x)(h^r), x is non-negative"
+)
+
 var (
-	_B           = big.NewInt(4096)
+	// bound B
+	_B = big.NewInt(4096)
+	// security parameter, kappa
 	securityPara = big.NewInt(128)
 )
 
@@ -17,7 +23,50 @@ var (
 type RPCommitment []byte
 
 // RPChallenge is the challenge for range proof
-type RPChallenge *big.Int
+//type RPChallenge *big.Int
+type RPChallenge struct {
+	statement string
+	g, h, n   *big.Int
+	cList     [squareNum]*big.Int
+}
+
+// NewRPChallenge generates a new challenge for range proof
+func NewRPChallenge(pp *PublicParameters, cList [squareNum]*big.Int) *RPChallenge {
+	return &RPChallenge{
+		statement: challengeStatement,
+		g:         pp.G,
+		h:         pp.H,
+		n:         pp.N,
+		cList:     cList,
+	}
+}
+
+// Serialize generates the serialized data for range proof challenge in byte format
+func (r *RPChallenge) Serialize() []byte {
+	var buf bytes.Buffer
+	buf.WriteString(r.statement)
+	buf.WriteString(r.g.String())
+	buf.WriteString(r.h.String())
+	buf.WriteString(r.n.String())
+	for _, c := range r.cList {
+		buf.WriteString(c.String())
+	}
+	return buf.Bytes()
+}
+
+// SHA256 generates the SHA256 hash of the range proof challenge
+func (r *RPChallenge) SHA256() []byte {
+	hashF := crypto.SHA256.New()
+	hashF.Write(r.Serialize())
+	return hashF.Sum(nil)
+}
+
+// SHA256BigInt serializes the range proof challenge to bytes, generates the SHA256 hash of the byte data,
+// and convert the hash to big integer
+func (r *RPChallenge) SHA256BigInt() *big.Int {
+	hashVal := r.SHA256()
+	return new(big.Int).SetBytes(hashVal)
+}
 
 // RPResponse is the response sent by the prover after receiving verifier's challenge
 type RPResponse struct {
@@ -54,17 +103,17 @@ type CommitX [squareNum]*big.Int
 
 // RPProver refers to the Prover in zero-knowledge integer range proof
 type RPProver struct {
-	pp          *PublicParameters
-	x           *big.Int
-	r           *big.Int
-	sp          *big.Int
+	pp          *PublicParameters // public parameters
+	x           *big.Int          // x, non-negative integer
+	r           *big.Int          // r
+	sp          *big.Int          // security parameter, kappa
 	C           *big.Int
 	fourSquareX FourSquare
 	commitFSX   FourSquare
-	randomMList RPRandomCoins
-	randomRList RPRandomCoins
-	randomSList RPRandomCoins
-	randomS     *big.Int
+	randMList   RPRandomCoins
+	randRList   RPRandomCoins
+	randSList   RPRandomCoins
+	randS       *big.Int
 }
 
 // NewRPProver generates a new range proof prover
@@ -99,7 +148,7 @@ func (r *RPProver) CommitX() ([squareNum]*big.Int, error) {
 	if err != nil {
 		return [squareNum]*big.Int{}, err
 	}
-	r.randomRList = rc
+	r.randRList = rc
 	cList := fs.RangeProofCommit(r.pp, rc)
 	r.commitFSX = cList
 	return cList, nil
@@ -119,7 +168,7 @@ func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.randomMList = mList
+	r.randMList = mList
 	// pick s1, s2, s3, s4
 	sLmt := big.NewInt(2)
 	powSLmt := new(big.Int).Mul(r.sp, big2)
@@ -129,14 +178,14 @@ func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.randomSList = sList
+	r.randSList = sList
 	sLmt.Set(mLmt)
 	sLmt.Mul(sLmt, r.pp.N)
 	s, err := PseudoFreshRandomCoin(sLmt)
 	if err != nil {
 		return nil, err
 	}
-	r.randomS = s
+	r.randS = s
 	// calculate commitment
 	dList := calDiList(r.pp, mList, sList)
 	d := calD(s, r.pp.H, r.pp.N, r.commitFSX, mList)
@@ -176,26 +225,32 @@ func calD(s, h, n *big.Int, c FourSquare, m RPRandomCoins) *big.Int {
 	return d
 }
 
+func (r *RPProver) calChallengeBigInt() *big.Int {
+	challenge := NewRPChallenge(r.pp, r.commitFSX)
+	return challenge.SHA256BigInt()
+}
+
 // Response generates the response for verifier's challenge
-func (r *RPProver) Response(e *big.Int) (*RPResponse, error) {
+func (r *RPProver) Response() (*RPResponse, error) {
+	c := r.calChallengeBigInt()
 	var zList [squareNum]*big.Int
 	for i := 0; i < squareNum; i++ {
-		zList[i] = new(big.Int).Mul(e, r.fourSquareX[i])
-		zList[i].Add(zList[i], r.randomMList[i])
+		zList[i] = new(big.Int).Mul(c, r.fourSquareX[i])
+		zList[i].Add(zList[i], r.randMList[i])
 	}
 	var tList [squareNum]*big.Int
 	for i := 0; i < squareNum; i++ {
-		tList[i] = new(big.Int).Mul(e, r.randomRList[i])
-		tList[i].Add(tList[i], r.randomSList[i])
+		tList[i] = new(big.Int).Mul(c, r.randRList[i])
+		tList[i].Add(tList[i], r.randSList[i])
 	}
 
 	sumXR := big.NewInt(0)
 	for i := 0; i < squareNum; i++ {
-		sumXR.Add(sumXR, new(big.Int).Mul(r.fourSquareX[i], r.randomRList[i]))
+		sumXR.Add(sumXR, new(big.Int).Mul(r.fourSquareX[i], r.randRList[i]))
 	}
 	t := new(big.Int).Sub(r.r, sumXR)
-	t.Mul(t, e)
-	t.Add(t, r.randomS)
+	t.Mul(t, c)
+	t.Add(t, r.randS)
 	response := &RPResponse{
 		ZList: zList,
 		TList: tList,
@@ -206,20 +261,25 @@ func (r *RPProver) Response(e *big.Int) (*RPResponse, error) {
 
 // RPVerifier refers to the Verifier in zero-knowledge integer range proof
 type RPVerifier struct {
-	pp         *PublicParameters
-	sp         *big.Int
-	C          *big.Int
-	commitment RPCommitment
+	pp         *PublicParameters // public parameters
+	sp         *big.Int          // security parameters
+	C          *big.Int          // C, (g^x)(h^r)
+	commitment RPCommitment      // commitment, delta = H(d1, d2, d3, d4, d)
+	commitFSX  [squareNum]*big.Int
 }
 
 // NewRPVerifier generates a new range proof verifier
-func NewRPVerifier(c *big.Int, pp *PublicParameters) *RPVerifier {
+func NewRPVerifier(pp *PublicParameters) *RPVerifier {
 	verifier := &RPVerifier{
 		pp: pp,
 		sp: securityPara,
-		C:  c,
 	}
 	return verifier
+}
+
+// SetC sets C to the verifier
+func (r *RPVerifier) SetC(c *big.Int) {
+	r.C = c
 }
 
 // SetCommitment sets the commitment to the verifier
@@ -227,70 +287,65 @@ func (r *RPVerifier) SetCommitment(c RPCommitment) {
 	r.commitment = c
 }
 
+// SetCommitX sets the commitment of x to the verifier
+// Commitment of x: c1, c2, c3, c4, ci = (g^x1=i)(h^ri)
+func (r *RPVerifier) SetCommitX(cList [squareNum]*big.Int) {
+	r.commitFSX = cList
+}
+
 // Challenge generates a challenge for prover's commitment
-func (r *RPVerifier) Challenge() (*big.Int, error) {
-	eLmt := big.NewInt(2)
-	eLmt.Exp(eLmt, r.sp, nil)
-	e, err := PseudoFreshRandomCoin(eLmt)
-	if err != nil {
-		return nil, err
-	}
-	return e, nil
+func (r *RPVerifier) Challenge() *big.Int {
+	challenge := NewRPChallenge(r.pp, r.commitFSX)
+	return challenge.SHA256BigInt()
 }
 
 // Verify verifies the response, if accepts, return true; otherwise, return false
-func (r *RPVerifier) Verify(e *big.Int, cx CommitX, response *RPResponse) bool {
-	var gPowZHPowTCPowNegEModNList [squareNum]*big.Int
-	negE := new(big.Int).Neg(e)
+func (r *RPVerifier) Verify(response *RPResponse) bool {
+	c := r.Challenge()
+	var firstFourParamList [squareNum]*big.Int
+	negC := new(big.Int).Neg(c)
 	for i := 0; i < squareNum; i++ {
-		gPowZHPowTCPowNegEModNList[i] = new(big.Int).Exp(r.pp.G, response.ZList[i], r.pp.N)
-		gPowZHPowTCPowNegEModNList[i].Mul(
-			gPowZHPowTCPowNegEModNList[i],
+		firstFourParamList[i] = new(big.Int).Exp(r.pp.G, response.ZList[i], r.pp.N)
+		firstFourParamList[i].Mul(
+			firstFourParamList[i],
 			new(big.Int).Exp(r.pp.H, response.TList[i], r.pp.N),
 		)
-		gPowZHPowTCPowNegEModNList[i].Mul(
-			gPowZHPowTCPowNegEModNList[i],
-			new(big.Int).Exp(cx[i], negE, r.pp.N),
+		firstFourParamList[i].Mul(
+			firstFourParamList[i],
+			new(big.Int).Exp(r.commitFSX[i], negC, r.pp.N),
 		)
-		gPowZHPowTCPowNegEModNList[i].Mod(gPowZHPowTCPowNegEModNList[i], r.pp.N)
+		firstFourParamList[i].Mod(firstFourParamList[i], r.pp.N)
 	}
 
-	cPowNegE := new(big.Int).Exp(r.C, negE, r.pp.N)
+	cPowNegE := new(big.Int).Exp(r.C, negC, r.pp.N)
 	hPowT := new(big.Int).Exp(r.pp.H, response.T, r.pp.N)
-	prodCiPowZiHPowTCPowNegE := big.NewInt(1)
+	prodParam := big.NewInt(1)
 	for i := 0; i < squareNum; i++ {
-		prodCiPowZiHPowTCPowNegE.Mul(
-			prodCiPowZiHPowTCPowNegE,
-			new(big.Int).Exp(cx[i], response.ZList[i], r.pp.N),
+		prodParam.Mul(
+			prodParam,
+			new(big.Int).Exp(r.commitFSX[i], response.ZList[i], r.pp.N),
 		)
-		prodCiPowZiHPowTCPowNegE.Mod(prodCiPowZiHPowTCPowNegE, r.pp.N)
+		prodParam.Mod(prodParam, r.pp.N)
 	}
-	prodCiPowZiHPowTCPowNegE.Mul(prodCiPowZiHPowTCPowNegE, hPowT)
-	prodCiPowZiHPowTCPowNegE.Mod(prodCiPowZiHPowTCPowNegE, r.pp.N)
-	prodCiPowZiHPowTCPowNegE.Mul(prodCiPowZiHPowTCPowNegE, cPowNegE)
-	prodCiPowZiHPowTCPowNegE.Mod(prodCiPowZiHPowTCPowNegE, r.pp.N)
+	prodParam.Mul(prodParam, hPowT)
+	prodParam.Mod(prodParam, r.pp.N)
+	prodParam.Mul(prodParam, cPowNegE)
+	prodParam.Mod(prodParam, r.pp.N)
 
 	hashF := sha256.New()
 	var sha256List [squareNum][]byte
 	for i := 0; i < squareNum; i++ {
-		hashF.Write(gPowZHPowTCPowNegEModNList[i].Bytes())
+		hashF.Write(firstFourParamList[i].Bytes())
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
-	hashF.Write(prodCiPowZiHPowTCPowNegE.Bytes())
+	hashF.Write(prodParam.Bytes())
 	h := hashF.Sum(nil)
 	var hashResult []byte
 	for i := 0; i < squareNum; i++ {
 		hashResult = append(hashResult, sha256List[i]...)
 	}
 	hashResult = append(hashResult, h...)
-
-	for i := 0; i < len(hashResult); i++ {
-		if hashResult[i] != r.commitment[i] {
-			break
-		}
-	}
-
 	return bytes.Equal(hashResult, r.commitment)
 }
 

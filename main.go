@@ -30,17 +30,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	verifier := proof.NewRPVerifier(prover.C, pp)
+	verifier := proof.NewRPVerifier(pp)
+	verifier.SetC(prover.C)
 	verifier.SetCommitment(commitment)
-	e, err := verifier.Challenge()
+	verifier.SetCommitX(commitX)
+	response, err := prover.Response()
 	if err != nil {
 		panic(err)
 	}
-	response, err := prover.Response(e)
-	if err != nil {
-		panic(err)
-	}
-	res := verifier.Verify(e, commitX, response)
+	res := verifier.Verify(response)
 	if res {
 		fmt.Println("argument accepted")
 	} else {
