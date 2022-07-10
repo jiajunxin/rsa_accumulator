@@ -46,38 +46,62 @@ func NewGaussianInt(r *big.Int, i *big.Int) *GaussianInt {
 
 // Set sets the Gaussian integer to the given Gaussian integer
 func (g *GaussianInt) Set(a *GaussianInt) *GaussianInt {
-	g.R = new(big.Int).Set(a.R)
-	g.I = new(big.Int).Set(a.I)
+	if g.R == nil {
+		g.R = new(big.Int)
+	}
+	g.R.Set(a.R)
+	if g.I == nil {
+		g.I = new(big.Int)
+	}
+	g.I.Set(a.I)
 	return g
 }
 
 // Update updates the Gaussian integer with the given real and imaginary parts
 func (g *GaussianInt) Update(r, i *big.Int) {
-	g.R = r
-	g.I = i
+	if g.R == nil {
+		g.R = new(big.Int)
+	}
+	g.R.Set(r)
+	if g.I == nil {
+		g.I = new(big.Int)
+	}
+	g.I.Set(i)
 }
 
 // Add adds two Gaussian integers
 func (g *GaussianInt) Add(a, b *GaussianInt) *GaussianInt {
-	g.R = new(big.Int).Add(a.R, b.R)
-	g.I = new(big.Int).Add(a.I, b.I)
+	if g.R == nil {
+		g.R = new(big.Int)
+	}
+	g.R.Add(a.R, b.R)
+	if g.I == nil {
+		g.I = new(big.Int)
+	}
+	g.I.Add(a.I, b.I)
 	return g
 }
 
 // Sub subtracts two Gaussian integers
 func (g *GaussianInt) Sub(a, b *GaussianInt) *GaussianInt {
-	g.R = new(big.Int).Sub(a.R, b.R)
-	g.I = new(big.Int).Sub(a.I, b.I)
+	if g.R == nil {
+		g.R = new(big.Int)
+	}
+	g.R.Sub(a.R, b.R)
+	if g.I == nil {
+		g.I = new(big.Int)
+	}
+	g.I.Sub(a.I, b.I)
 	return g
 }
 
 // Prod returns the products of two Gaussian integers
 func (g *GaussianInt) Prod(a, b *GaussianInt) *GaussianInt {
-	g.R = new(big.Int).Mul(a.R, b.R)
-	imgMul := new(big.Int).Mul(a.I, b.I)
-	g.R.Sub(g.R, imgMul)
-	g.I = new(big.Int).Mul(a.R, b.I)
-	g.I.Add(g.I, new(big.Int).Mul(a.I, b.R))
+	r := new(big.Int).Mul(a.R, b.R)
+	r.Sub(r, new(big.Int).Mul(a.I, b.I))
+	i := new(big.Int).Mul(a.R, b.I)
+	i.Add(i, new(big.Int).Mul(a.I, b.R))
+	g.R, g.I = r, i
 	return g
 }
 
@@ -110,13 +134,12 @@ func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
 	bConj := new(GaussianInt).Conj(b)
 	numerator := new(GaussianInt).Prod(a, bConj)
 	denominator := new(GaussianInt).Prod(b, bConj)
-	deInt := denominator.R
-	deFloat := new(big.Float).SetInt(deInt)
+	deFloat := new(big.Float).SetInt(denominator.R)
 
-	nuRealFloat := new(big.Float).SetInt(numerator.R)
-	nuImagFloat := new(big.Float).SetInt(numerator.I)
-	realScalar := new(big.Float).Quo(nuRealFloat, deFloat)
-	imagScalar := new(big.Float).Quo(nuImagFloat, deFloat)
+	realScalar := new(big.Float).SetInt(numerator.R)
+	realScalar.Quo(realScalar, deFloat)
+	imagScalar := new(big.Float).SetInt(numerator.I)
+	imagScalar.Quo(imagScalar, deFloat)
 
 	rsInt := roundFloat(realScalar)
 	isInt := roundFloat(imagScalar)
@@ -140,14 +163,17 @@ func (g *GaussianInt) CmpNorm(a *GaussianInt) int {
 func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
 	a = a.Copy()
 	b = b.Copy()
+	if a.CmpNorm(b) < 0 {
+		a, b = b, a
+	}
 	remainder := new(GaussianInt)
 	for {
 		remainder.Div(a, b)
 		if remainder.IsZero() {
-			g.Update(b.R, b.I)
+			g.Set(b)
 			return b
 		}
-		a.Update(b.R, b.I)
-		b.Update(remainder.R, remainder.I)
+		a.Set(b)
+		b.Set(remainder)
 	}
 }

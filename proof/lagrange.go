@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"runtime"
 
-	"github.com/rsa_accumulator/complex"
+	comp "github.com/rsa_accumulator/complex"
 )
 
 const (
@@ -16,25 +16,25 @@ const (
 
 var (
 	// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
-	hGCRD0 = complex.NewHurwitzInt(big0, big0, big0, big0, false)
+	hGCRD0 = comp.NewHurwitzInt(big0, big0, big0, big0, false)
 	// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
-	hGCRD1 = complex.NewHurwitzInt(big1, big0, big0, big0, false)
+	hGCRD1 = comp.NewHurwitzInt(big1, big0, big0, big0, false)
 	// 2's precomputed Hurwitz GCRD: 1, 1, 0, 0
-	hGCRD2 = complex.NewHurwitzInt(big1, big1, big0, big0, false)
+	hGCRD2 = comp.NewHurwitzInt(big1, big1, big0, big0, false)
 	// 3's precomputed Hurwitz GCRD: 1, 1, 1, 0
-	hGCRD3 = complex.NewHurwitzInt(big1, big1, big1, big0, false)
+	hGCRD3 = comp.NewHurwitzInt(big1, big1, big1, big0, false)
 	// 4's precomputed Hurwitz GCRD: 2, 0, 0, 0
-	hGCRD4 = complex.NewHurwitzInt(big2, big0, big0, big0, false)
+	hGCRD4 = comp.NewHurwitzInt(big2, big0, big0, big0, false)
 	// 5's precomputed Hurwitz GCRD: 2, 1, 0, 0
-	hGCRD5 = complex.NewHurwitzInt(big2, big1, big0, big0, false)
+	hGCRD5 = comp.NewHurwitzInt(big2, big1, big0, big0, false)
 	// 6's precomputed Hurwitz GCRD: 2, 1, 1, 0
-	hGCRD6 = complex.NewHurwitzInt(big2, big1, big1, big0, false)
+	hGCRD6 = comp.NewHurwitzInt(big2, big1, big1, big0, false)
 	// 7's precomputed Hurwitz GCRD: 2, 1, 1, 1
-	hGCRD7 = complex.NewHurwitzInt(big2, big1, big1, big1, false)
+	hGCRD7 = comp.NewHurwitzInt(big2, big1, big1, big1, false)
 	// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
-	hGCRD8 = complex.NewHurwitzInt(big2, big2, big0, big0, false)
+	hGCRD8 = comp.NewHurwitzInt(big2, big2, big0, big0, false)
 	// precomputed Hurwitz GCRDs for small integers
-	precomputedHurwitzGCRDs = [9]*complex.HurwitzInt{
+	precomputedHurwitzGCRDs = [9]*comp.HurwitzInt{
 		hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8,
 	}
 	numCPU = runtime.NumCPU()
@@ -123,7 +123,7 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 		n.Rsh(n, 1)
 		e.Add(e, big1)
 	}
-	var hurwitzGCRD *complex.HurwitzInt
+	var hurwitzGCRD *comp.HurwitzInt
 
 	if n.Cmp(big8) <= 0 {
 		hurwitzGCRD = precomputedHurwitzGCRDs[n.Int64()]
@@ -152,12 +152,20 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	// then x^2 + Y^2 + Z^2 + W^2 = n for x, Y, Z, W defined by
 	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
 	// Hurwitz integer: 1 + i
-	hurwitz1PlusI := complex.NewHurwitzInt(big1, big1, big0, big0, false)
-	hurwitzProd := complex.NewHurwitzInt(big1, big0, big0, big0, false)
+	//hurwitz1PlusI := clx.NewHurwitzInt(big1, big1, big0, big0, false)
+	//hurwitzProd := clx.NewHurwitzInt(big1, big0, big0, big0, false)
+	//for e.Sign() > 0 {
+	//	hurwitzProd.Prod(hurwitzProd, hurwitz1PlusI)
+	//	e.Sub(e, big1)
+	//}
+	// Gaussian integer: 1 + i
+	gaussian1PlusI := comp.NewGaussianInt(big1, big1)
+	gaussianProd := comp.NewGaussianInt(big1, big0)
 	for e.Sign() > 0 {
-		hurwitzProd.Prod(hurwitzProd, hurwitz1PlusI)
+		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
 		e.Sub(e, big1)
 	}
+	hurwitzProd := comp.NewHurwitzInt(gaussianProd.R, gaussianProd.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
 	w1, w2, w3, w4 := hurwitzProd.ValInt()
 	fs := NewFourSquare(w1, w2, w3, w4)
@@ -201,7 +209,7 @@ func preCompute(n *big.Int) (*big.Int, error) {
 
 func randomTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	nPow5Div2 := new(big.Int).Exp(n, big5, nil)
-	nPow5Div2.Div(nPow5Div2, big2)
+	nPow5Div2.Rsh(nPow5Div2, 1)
 	preP := new(big.Int).Set(primeProd)
 	preP.Mul(preP, n)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -283,20 +291,20 @@ func pickS(start, end, preP *big.Int) (*big.Int, *big.Int, error) {
 	return s, p, nil
 }
 
-func denouement(n, s, p *big.Int) (*complex.HurwitzInt, error) {
+func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
 	// compute A + Bi := gcd(s + i, p)
 	// Gaussian integer: s + i
-	gaussianInt := complex.NewGaussianInt(s, big1)
+	gaussianInt := comp.NewGaussianInt(s, big1)
 	// Gaussian integer: p
-	gaussianP := complex.NewGaussianInt(p, big0)
-	gcd := new(complex.GaussianInt)
+	gaussianP := comp.NewGaussianInt(p, big0)
+	gcd := new(comp.GaussianInt)
 	gcd.GCD(gaussianInt, gaussianP)
 	// compute gcrd(A + Bi + j, n), normalized to have integer component
 	// Hurwitz integer: A + Bi + j
-	hurwitzInt := complex.NewHurwitzInt(gcd.R, gcd.I, big1, big0, false)
+	hurwitzInt := comp.NewHurwitzInt(gcd.R, gcd.I, big1, big0, false)
 	// Hurwitz integer: n
-	hurwitzN := complex.NewHurwitzInt(n, big0, big0, big0, false)
-	gcrd := new(complex.HurwitzInt)
+	hurwitzN := comp.NewHurwitzInt(n, big0, big0, big0, false)
+	gcrd := new(comp.HurwitzInt)
 	gcrd.GCRD(hurwitzInt, hurwitzN)
 
 	return gcrd, nil

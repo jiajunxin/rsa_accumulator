@@ -159,7 +159,7 @@ func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	// pick m1, m2, m3, m4
 	mLmt := big.NewInt(2)
 	powMLmt := new(big.Int).Set(_B)
-	powMLmt.Div(powMLmt, big2)
+	powMLmt.Rsh(powMLmt, 1)
 	powMLmtPart := new(big.Int).Set(r.sp)
 	powMLmtPart.Mul(powMLmtPart, big2)
 	powMLmt.Add(powMLmt, powMLmtPart)

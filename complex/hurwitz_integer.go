@@ -193,42 +193,77 @@ func (h *HurwitzInt) Zero() *HurwitzInt {
 
 // Add adds two integral quaternions
 func (h *HurwitzInt) Add(a, b *HurwitzInt) *HurwitzInt {
-	//h.dblR = new(big.Int).Add(a.dblR, b.dblR)
 	if h.dblR == nil {
 		h.dblR = new(big.Int)
 	}
 	h.dblR.Add(a.dblR, b.dblR)
-	h.dblI = new(big.Int).Add(a.dblI, b.dblI)
-	h.dblJ = new(big.Int).Add(a.dblJ, b.dblJ)
-	h.dblK = new(big.Int).Add(a.dblK, b.dblK)
+	if h.dblI == nil {
+		h.dblI = new(big.Int)
+	}
+	h.dblI.Add(a.dblI, b.dblI)
+	if h.dblJ == nil {
+		h.dblJ = new(big.Int)
+	}
+	h.dblJ.Add(a.dblJ, b.dblJ)
+	if h.dblK == nil {
+		h.dblK = new(big.Int)
+	}
+	h.dblK.Add(a.dblK, b.dblK)
 	return h
 }
 
 // Sub subtracts two integral quaternions
 func (h *HurwitzInt) Sub(a, b *HurwitzInt) *HurwitzInt {
-	h.dblR = new(big.Int).Sub(a.dblR, b.dblR)
-	h.dblI = new(big.Int).Sub(a.dblI, b.dblI)
-	h.dblJ = new(big.Int).Sub(a.dblJ, b.dblJ)
-	h.dblK = new(big.Int).Sub(a.dblK, b.dblK)
+	if h.dblR == nil {
+		h.dblR = new(big.Int)
+	}
+	h.dblR.Sub(a.dblR, b.dblR)
+	if h.dblI == nil {
+		h.dblI = new(big.Int)
+	}
+	h.dblI.Sub(a.dblI, b.dblI)
+	if h.dblJ == nil {
+		h.dblJ = new(big.Int)
+	}
+	h.dblJ.Sub(a.dblJ, b.dblJ)
+	if h.dblK == nil {
+		h.dblK = new(big.Int)
+	}
+	h.dblK.Sub(a.dblK, b.dblK)
 	return h
 }
 
 // Conj obtains the conjugate of the original integral quaternion
 func (h *HurwitzInt) Conj(origin *HurwitzInt) *HurwitzInt {
-	h.dblR = origin.dblR
-	h.dblI = new(big.Int).Neg(origin.dblI)
-	h.dblJ = new(big.Int).Neg(origin.dblJ)
-	h.dblK = new(big.Int).Neg(origin.dblK)
+	if h.dblR == nil {
+		h.dblR = new(big.Int)
+	}
+	h.dblR.Set(origin.dblR)
+	if h.dblI == nil {
+		h.dblI = new(big.Int)
+	}
+	h.dblI.Neg(origin.dblI)
+	if h.dblJ == nil {
+		h.dblJ = new(big.Int)
+	}
+	h.dblJ.Neg(origin.dblJ)
+	if h.dblK == nil {
+		h.dblK = new(big.Int)
+	}
+	h.dblK.Neg(origin.dblK)
 	return h
 }
 
 // Norm obtains the norm of the integral quaternion
 func (h *HurwitzInt) Norm() *big.Int {
 	norm := new(big.Int).Mul(h.dblR, h.dblR)
-	norm.Add(norm, new(big.Int).Mul(h.dblI, h.dblI))
-	norm.Add(norm, new(big.Int).Mul(h.dblJ, h.dblJ))
-	norm.Add(norm, new(big.Int).Mul(h.dblK, h.dblK))
-	norm.Div(norm, big4)
+	opt := new(big.Int).Mul(h.dblI, h.dblI)
+	norm.Add(norm, opt)
+	opt.Mul(h.dblJ, h.dblJ)
+	norm.Add(norm, opt)
+	opt.Mul(h.dblK, h.dblK)
+	norm.Add(norm, opt)
+	norm.Rsh(norm, 2)
 	return norm
 }
 
@@ -241,49 +276,40 @@ func (h *HurwitzInt) Copy() *HurwitzInt {
 // the product (a1 + b1j + c1k + d1)(a2 + b2j + c2k + d2) is determined by the products of the
 // basis elements and the distributive law
 func (h *HurwitzInt) Prod(a, b *HurwitzInt) *HurwitzInt {
-	a = a.Copy()
-	b = b.Copy()
+	r := new(big.Int)
+	i := new(big.Int)
+	j := new(big.Int)
+	k := new(big.Int)
 	opt := new(big.Int)
 	// 1 part
-	if h.dblR == nil {
-		h.dblR = new(big.Int)
-	}
-	h.dblR.Mul(a.dblR, b.dblR)
-	h.dblR.Sub(h.dblR, opt.Mul(a.dblI, b.dblI))
-	h.dblR.Sub(h.dblR, opt.Mul(a.dblJ, b.dblJ))
-	h.dblR.Sub(h.dblR, opt.Mul(a.dblK, b.dblK))
-	h.dblR.Div(h.dblR, big2)
+	r.Mul(a.dblR, b.dblR)
+	r.Sub(r, opt.Mul(a.dblI, b.dblI))
+	r.Sub(r, opt.Mul(a.dblJ, b.dblJ))
+	r.Sub(r, opt.Mul(a.dblK, b.dblK))
+	r.Rsh(r, 1)
 
 	// i part
-	if h.dblI == nil {
-		h.dblI = new(big.Int)
-	}
-	h.dblI.Mul(a.dblR, b.dblI)
-	h.dblI.Add(h.dblI, opt.Mul(a.dblI, b.dblR))
-	h.dblI.Add(h.dblI, opt.Mul(a.dblJ, b.dblK))
-	h.dblI.Sub(h.dblI, opt.Mul(a.dblK, b.dblJ))
-	h.dblI.Div(h.dblI, big2)
+	i.Mul(a.dblR, b.dblI)
+	i.Add(i, opt.Mul(a.dblI, b.dblR))
+	i.Add(i, opt.Mul(a.dblJ, b.dblK))
+	i.Sub(i, opt.Mul(a.dblK, b.dblJ))
+	i.Rsh(i, 1)
 
 	// j part
-	if h.dblJ == nil {
-		h.dblJ = new(big.Int)
-	}
-	h.dblJ.Mul(a.dblR, b.dblJ)
-	h.dblJ.Sub(h.dblJ, opt.Mul(a.dblI, b.dblK))
-	h.dblJ.Add(h.dblJ, opt.Mul(a.dblJ, b.dblR))
-	h.dblJ.Add(h.dblJ, opt.Mul(a.dblK, b.dblI))
-	h.dblJ.Div(h.dblJ, big2)
+	j.Mul(a.dblR, b.dblJ)
+	j.Sub(j, opt.Mul(a.dblI, b.dblK))
+	j.Add(j, opt.Mul(a.dblJ, b.dblR))
+	j.Add(j, opt.Mul(a.dblK, b.dblI))
+	j.Rsh(j, 1)
 
 	// k part
-	if h.dblK == nil {
-		h.dblK = new(big.Int)
-	}
-	h.dblK.Mul(a.dblR, b.dblK)
-	h.dblK.Add(h.dblK, opt.Mul(a.dblI, b.dblJ))
-	h.dblK.Sub(h.dblK, opt.Mul(a.dblJ, b.dblI))
-	h.dblK.Add(h.dblK, opt.Mul(a.dblK, b.dblR))
-	h.dblK.Div(h.dblK, big2)
+	k.Mul(a.dblR, b.dblK)
+	k.Add(k, opt.Mul(a.dblI, b.dblJ))
+	k.Sub(k, opt.Mul(a.dblJ, b.dblI))
+	k.Add(k, opt.Mul(a.dblK, b.dblR))
+	k.Rsh(k, 1)
 
+	h.dblR, h.dblI, h.dblJ, h.dblK = r, i, j, k
 	return h
 }
 
@@ -299,14 +325,14 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 	deInt := denominator.dblR
 	deFloat := new(big.Float).SetInt(deInt)
 
-	nuRFloat := new(big.Float).SetInt(numerator.dblR)
-	nuIFloat := new(big.Float).SetInt(numerator.dblI)
-	nuJFloat := new(big.Float).SetInt(numerator.dblJ)
-	nuKFloat := new(big.Float).SetInt(numerator.dblK)
-	rScalar := new(big.Float).Quo(nuRFloat, deFloat)
-	iScalar := new(big.Float).Quo(nuIFloat, deFloat)
-	jScalar := new(big.Float).Quo(nuJFloat, deFloat)
-	kScalar := new(big.Float).Quo(nuKFloat, deFloat)
+	rScalar := new(big.Float).SetInt(numerator.dblR)
+	rScalar.Quo(rScalar, deFloat)
+	iScalar := new(big.Float).SetInt(numerator.dblI)
+	iScalar.Quo(iScalar, deFloat)
+	jScalar := new(big.Float).SetInt(numerator.dblJ)
+	jScalar.Quo(jScalar, deFloat)
+	kScalar := new(big.Float).SetInt(numerator.dblK)
+	kScalar.Quo(kScalar, deFloat)
 
 	rsInt := roundFloat(rScalar)
 	isInt := roundFloat(iScalar)

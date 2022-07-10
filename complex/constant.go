@@ -10,9 +10,9 @@ var (
 	// big integer
 	big1    = big.NewInt(1)
 	bigNeg1 = big.NewInt(-1)
-	big2    = big.NewInt(2)
-	big4    = big.NewInt(4)
 
 	// big float
 	big2f = big.NewFloat(2)
+	// delta for rounding big float to big int
+	rDelta = big.NewFloat(roundingDelta)
 )
