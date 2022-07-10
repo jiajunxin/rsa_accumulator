@@ -16,43 +16,68 @@ type HurwitzInt struct {
 	dblK *big.Int // k part doubled
 }
 
+// Init initialize a Hurwitz integer
+func (h *HurwitzInt) Init() *HurwitzInt {
+	h.dblR = new(big.Int)
+	h.dblI = new(big.Int)
+	h.dblJ = new(big.Int)
+	h.dblK = new(big.Int)
+	return h
+}
+
 // String returns the string representation of the integral quaternion
 func (h *HurwitzInt) String() string {
 	if h.dblR.Sign() == 0 && h.dblI.Sign() == 0 && h.dblJ.Sign() == 0 && h.dblK.Sign() == 0 {
 		return "0"
 	}
 	res := ""
-	if h.dblR.Sign() != 0 {
-		res += new(big.Int).Div(h.dblR, big2).String()
+	if h.dblR.Cmp(big1) == 0 {
+		res += "0.5"
+	} else if h.dblR.Cmp(bigNeg1) == 0 {
+		res += "-0.5"
+	} else if h.dblR.Sign() != 0 {
+		res += new(big.Int).Rsh(h.dblR, 1).String()
 		if h.dblR.Bit(0) == 1 {
 			res += ".5"
 		}
 	}
-	if h.dblI.Sign() != 0 {
+	if h.dblI.Cmp(big1) == 0 {
+		res += "0.5i"
+	} else if h.dblI.Cmp(bigNeg1) == 0 {
+		res += "-0.5i"
+	} else if h.dblI.Sign() != 0 {
 		if h.dblR.Sign() == 1 {
 			res += "+"
 		}
-		res += new(big.Int).Div(h.dblI, big2).String()
+		res += new(big.Int).Rsh(h.dblI, 1).String()
 		if h.dblI.Bit(0) == 1 {
 			res += ".5"
 		}
 		res += "i"
 	}
-	if h.dblJ.Sign() != 0 {
+	if h.dblJ.Cmp(big1) == 0 {
+		res += "0.5j"
+	} else if h.dblJ.Cmp(bigNeg1) == 0 {
+		res += "-0.5j"
+	} else if h.dblJ.Sign() != 0 {
 		if h.dblJ.Sign() == 1 {
 			res += "+"
 		}
-		res += new(big.Int).Div(h.dblJ, big2).String()
+		res += new(big.Int).Rsh(h.dblJ, 1).String()
 		if h.dblJ.Bit(0) == 1 {
 			res += ".5"
 		}
 		res += "j"
 	}
-	if h.dblK.Sign() != 0 {
+	if h.dblK.Cmp(big1) == 0 {
+		res += "0.5j"
+	} else if h.dblK.Cmp(bigNeg1) == 0 {
+		res += "-0.5j"
+	} else if h.dblK.Sign() != 0 {
 		if h.dblK.Sign() == 1 {
 			res += "+"
 		}
-		res += new(big.Int).Div(h.dblK, big2).String()
+		res += new(big.Int).Rsh(h.dblK, 1).String()
 		if h.dblK.Bit(0) == 1 {
 			res += ".5"
 		}
@@ -73,19 +98,31 @@ func NewHurwitzInt(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
 		}
 	}
 	return &HurwitzInt{
-		dblR: new(big.Int).Mul(r, big2),
-		dblI: new(big.Int).Mul(i, big2),
-		dblJ: new(big.Int).Mul(j, big2),
-		dblK: new(big.Int).Mul(k, big2),
+		dblR: new(big.Int).Lsh(r, 1),
+		dblI: new(big.Int).Lsh(i, 1),
+		dblJ: new(big.Int).Lsh(j, 1),
+		dblK: new(big.Int).Lsh(k, 1),
 	}
 }
 
 // Set sets the Hurwitz integer to the given Hurwitz integer
 func (h *HurwitzInt) Set(a *HurwitzInt) *HurwitzInt {
-	h.dblR = a.dblR
-	h.dblI = a.dblI
-	h.dblJ = a.dblJ
-	h.dblK = a.dblK
+	if h.dblR == nil {
+		h.dblR = new(big.Int)
+	}
+	h.dblR.Set(a.dblR)
+	if h.dblI == nil {
+		h.dblI = new(big.Int)
+	}
+	h.dblI.Set(a.dblI)
+	if h.dblJ == nil {
+		h.dblJ = new(big.Int)
+	}
+	h.dblJ.Set(a.dblJ)
+	if h.dblK == nil {
+		h.dblK = new(big.Int)
+	}
+	h.dblK.Set(a.dblK)
 	return h
 }
 
@@ -125,17 +162,42 @@ func (h *HurwitzInt) Update(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
 		h.dblJ = j
 		h.dblK = k
 	} else {
-		h.dblR = new(big.Int).Mul(r, big2)
-		h.dblI = new(big.Int).Mul(i, big2)
-		h.dblJ = new(big.Int).Mul(j, big2)
-		h.dblK = new(big.Int).Mul(k, big2)
+		if h.dblR == nil {
+			h.dblR = new(big.Int)
+		}
+		h.dblR.Lsh(r, 1)
+		if h.dblI == nil {
+			h.dblI = new(big.Int)
+		}
+		h.dblI.Lsh(i, 1)
+		if h.dblJ == nil {
+			h.dblJ = new(big.Int)
+		}
+		h.dblJ.Lsh(j, 1)
+		if h.dblK == nil {
+			h.dblK = new(big.Int)
+		}
+		h.dblK.Lsh(k, 1)
 	}
+	return h
+}
+
+// Zero sets the Hurwitz integer to zero
+func (h *HurwitzInt) Zero() *HurwitzInt {
+	h.dblR = big.NewInt(0)
+	h.dblI = big.NewInt(0)
+	h.dblJ = big.NewInt(0)
+	h.dblK = big.NewInt(0)
 	return h
 }
 
 // Add adds two integral quaternions
 func (h *HurwitzInt) Add(a, b *HurwitzInt) *HurwitzInt {
-	h.dblR = new(big.Int).Add(a.dblR, b.dblR)
+	//h.dblR = new(big.Int).Add(a.dblR, b.dblR)
+	if h.dblR == nil {
+		h.dblR = new(big.Int)
+	}
+	h.dblR.Add(a.dblR, b.dblR)
 	h.dblI = new(big.Int).Add(a.dblI, b.dblI)
 	h.dblJ = new(big.Int).Add(a.dblJ, b.dblJ)
 	h.dblK = new(big.Int).Add(a.dblK, b.dblK)
@@ -183,28 +245,40 @@ func (h *HurwitzInt) Prod(a, b *HurwitzInt) *HurwitzInt {
 	b = b.Copy()
 	opt := new(big.Int)
 	// 1 part
-	h.dblR = new(big.Int).Mul(a.dblR, b.dblR)
+	if h.dblR == nil {
+		h.dblR = new(big.Int)
+	}
+	h.dblR.Mul(a.dblR, b.dblR)
 	h.dblR.Sub(h.dblR, opt.Mul(a.dblI, b.dblI))
 	h.dblR.Sub(h.dblR, opt.Mul(a.dblJ, b.dblJ))
 	h.dblR.Sub(h.dblR, opt.Mul(a.dblK, b.dblK))
 	h.dblR.Div(h.dblR, big2)
 
 	// i part
-	h.dblI = new(big.Int).Mul(a.dblR, b.dblI)
+	if h.dblI == nil {
+		h.dblI = new(big.Int)
+	}
+	h.dblI.Mul(a.dblR, b.dblI)
 	h.dblI.Add(h.dblI, opt.Mul(a.dblI, b.dblR))
 	h.dblI.Add(h.dblI, opt.Mul(a.dblJ, b.dblK))
 	h.dblI.Sub(h.dblI, opt.Mul(a.dblK, b.dblJ))
 	h.dblI.Div(h.dblI, big2)
 
 	// j part
-	h.dblJ = new(big.Int).Mul(a.dblR, b.dblJ)
+	if h.dblJ == nil {
+		h.dblJ = new(big.Int)
+	}
+	h.dblJ.Mul(a.dblR, b.dblJ)
 	h.dblJ.Sub(h.dblJ, opt.Mul(a.dblI, b.dblK))
 	h.dblJ.Add(h.dblJ, opt.Mul(a.dblJ, b.dblR))
 	h.dblJ.Add(h.dblJ, opt.Mul(a.dblK, b.dblI))
 	h.dblJ.Div(h.dblJ, big2)
 
 	// k part
-	h.dblK = new(big.Int).Mul(a.dblR, b.dblK)
+	if h.dblK == nil {
+		h.dblK = new(big.Int)
+	}
+	h.dblK.Mul(a.dblR, b.dblK)
 	h.dblK.Add(h.dblK, opt.Mul(a.dblI, b.dblJ))
 	h.dblK.Sub(h.dblK, opt.Mul(a.dblJ, b.dblI))
 	h.dblK.Add(h.dblK, opt.Mul(a.dblK, b.dblR))
@@ -250,24 +324,27 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 func (h *HurwitzInt) GCRD(a, b *HurwitzInt) *HurwitzInt {
 	a = a.Copy()
 	b = b.Copy()
-	if a.Norm().Cmp(b.Norm()) < 0 {
+	if a.CmpNorm(b) < 0 {
 		a, b = b, a
 	}
 	remainder := new(HurwitzInt)
 	for {
 		remainder.Div(a, b)
 		if remainder.IsZero() {
-			h.Update(b.dblR, b.dblI, b.dblJ, b.dblK, true)
+			h.Set(b)
 			return b
 		}
-		a.Update(b.dblR, b.dblI, b.dblJ, b.dblK, true)
-		b.Update(remainder.dblR, remainder.dblI, remainder.dblJ, remainder.dblK, true)
+		a.Set(b)
+		b.Set(remainder)
 	}
 }
 
 // IsZero returns true if the Hurwitz integer is zero
 func (h *HurwitzInt) IsZero() bool {
-	return h.dblR.Sign() == 0 && h.dblI.Sign() == 0 && h.dblJ.Sign() == 0 && h.dblK.Sign() == 0
+	return h.dblR.Sign() == 0 &&
+		h.dblI.Sign() == 0 &&
+		h.dblJ.Sign() == 0 &&
+		h.dblK.Sign() == 0
 }
 
 // CmpNorm compares the norm of two Hurwitz integers
