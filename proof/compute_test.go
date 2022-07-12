@@ -186,3 +186,45 @@ func Test_euclideanDivision(t *testing.T) {
 		})
 	}
 }
+
+func Test_rangeDiv(t *testing.T) {
+	type args struct {
+		n      *big.Int
+		numDIv int
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantRes [][2]*big.Int
+	}{
+		{
+			name: "test_1_1",
+			args: args{
+				n:      big.NewInt(1),
+				numDIv: 1,
+			},
+			wantRes: [][2]*big.Int{
+				{big.NewInt(0), big.NewInt(1)},
+			},
+		},
+		{
+			name: "test_10_3",
+			args: args{
+				n:      big.NewInt(10),
+				numDIv: 3,
+			},
+			wantRes: [][2]*big.Int{
+				{big.NewInt(0), big.NewInt(3)},
+				{big.NewInt(3), big.NewInt(6)},
+				{big.NewInt(6), big.NewInt(10)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotRes := rangeDiv(tt.args.n, tt.args.numDIv); !reflect.DeepEqual(gotRes, tt.wantRes) {
+				t.Errorf("rangeDiv() = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
+}

@@ -76,8 +76,8 @@ func Test_preCompute(t *testing.T) {
 			args: args{
 				n: big.NewInt(8),
 			},
-			want:    big.NewInt(6),
-			wantErr: false,
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name: "test_2^20",
@@ -160,7 +160,13 @@ func TestVerify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Verify(tt.args.target, tt.args.w1, tt.args.w2, tt.args.w3, tt.args.w4); got != tt.want {
+			fs := [squareNum]*big.Int{
+				tt.args.w1,
+				tt.args.w2,
+				tt.args.w3,
+				tt.args.w4,
+			}
+			if got := Verify(tt.args.target, fs); got != tt.want {
 				t.Errorf("Verify() = %v, want %v", got, tt.want)
 			}
 		})
@@ -198,7 +204,7 @@ func TestLagrangeFourSquares(t *testing.T) {
 				t.Errorf("LagrangeFourSquares() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !Verify(tt.args.n, got.W1, got.W2, got.W3, got.W4) {
+			if !Verify(tt.args.n, got) {
 				t.Errorf("LagrangeFourSquares() verify failed, got: %v != %v", got, tt.args.n)
 			}
 		})

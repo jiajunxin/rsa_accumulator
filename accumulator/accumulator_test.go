@@ -17,8 +17,8 @@ func TestDIHash(t *testing.T) {
 	// we need to check if A ?= B + C
 	testObject := TrustedSetup()
 
-	dihashValue := dihash.DIHash([]byte(testString))
-	A := AccumulateNew(testObject.G, dihashValue, testObject.N)
+	diHashValue := dihash.DIHash([]byte(testString))
+	A := AccumulateNew(testObject.G, diHashValue, testObject.N)
 
 	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
 	var tempInt big.Int
@@ -47,8 +47,8 @@ func TestSetup(t *testing.T) {
 		//this condition should never happen
 		t.Errorf("g and N not co-prime! We win the RSA-2048 challenge!")
 	}
-	len := Min2048.BitLen()
-	if len != 2048 {
+	bitLen := Min2048.BitLen()
+	if bitLen != 2048 {
 		t.Errorf("Min2048 is not 2048 bits")
 	}
 }
@@ -62,7 +62,7 @@ func TestAccAndProve(t *testing.T) {
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 := accumulateNew(setup.G, setup.N, rep)
 	acc3 := AccumulateNew(proofs[5], rep[5], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -79,7 +79,7 @@ func TestAccAndProve(t *testing.T) {
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep = GenRepersentatives(set, HashToPrimeFromSha256)
+	rep = GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
 	acc3 = AccumulateNew(proofs[7], rep[7], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -96,7 +96,7 @@ func TestAccAndProve(t *testing.T) {
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep = GenRepersentatives(set, HashToPrimeFromSha256)
+	rep = GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
 	acc3 = AccumulateNew(proofs[253], rep[253], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -108,7 +108,7 @@ func TestAccAndProve(t *testing.T) {
 }
 
 func genAccts(set []string, setup *Setup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	acc1 = accumulateNew(setup.G, setup.N, rep)
 	acc2 = AccumulateNew(proofs[idx], rep[idx], setup.N)
 	return

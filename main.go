@@ -1,45 +1,40 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
-	"time"
 
-	"github.com/rsa_accumulator/proof"
+	"github.com/rsa_accumulator/accumulator"
+	pf "github.com/rsa_accumulator/proof"
 )
 
 func main() {
-	fmt.Println("start test in main")
-	//testSizes := []int{1000}
-	//for _, size := range testSizes {
-	//	fmt.Printf("test size: %d\n", size)
-	//   accumulator.ManualBench(size)
-	//	accumulator.ManualBenchZKAcc(size)
-	//	fmt.Println()
-	//}
-
-	{
-		// set := accumulator.GenBenchSet(1000)
-		// setup := *accumulator.TrustedSetup()
-		// rep := accumulator.GenRepersentatives(set, accumulator.DIHashFromPoseidon)
-		// 	defer profile.Start(profile.TraceProfile).Stop()
-		// accumulator.ProveMembershipIterParallel(*setup.G, setup.N, rep)
-	}
-
-	target := new(big.Int)
-	target.SetString("409642780809890809878787847837483748374839283748329747837482973874893784732", 10)
-	fmt.Println(target.BitLen())
-	start := time.Now()
-	res, err := proof.LagrangeFourSquares(target)
+	setup := accumulator.TrustedSetup()
+	h, err := rand.Int(rand.Reader, setup.N)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(time.Since(start))
-	fmt.Println(res)
-	if proof.Verify(target, res.W1, res.W2, res.W3, res.W4) {
-		fmt.Println("verify success")
-	} else {
-		fmt.Println("verify failed")
+	pp := pf.NewPublicParameters(setup.N, setup.G, h)
+	r, err := rand.Int(rand.Reader, setup.N)
+	if err != nil {
+		panic(err)
 	}
-	//fmt.Println("end test in main")
+	x := new(big.Int)
+	x.Exp(big.NewInt(2), big.NewInt(100), nil)
+	x.Sub(x, big.NewInt(1))
+
+	prover := pf.NewRPProver(r, x, pp)
+	proof, err := prover.Prove()
+	if err != nil {
+		panic(err)
+	}
+	verifier := pf.NewRPVerifier(pp)
+	isAccepted := verifier.Verify(proof)
+
+	if isAccepted {
+		fmt.Println("argument accepted")
+	} else {
+		fmt.Println("argument rejected")
+	}
 }

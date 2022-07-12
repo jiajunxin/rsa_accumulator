@@ -2,6 +2,7 @@
 .vscode/
 .idea/
 .cache/
+.run/
 
 # Binaries for programs and plugins
 *.exe

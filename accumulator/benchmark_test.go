@@ -28,7 +28,7 @@ func BenchmarkAccAndProve(b *testing.B) {
 func BenchmarkProveMembership(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -39,7 +39,7 @@ func BenchmarkProveMembership(b *testing.B) {
 func BenchmarkProveMembershipIter(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -50,7 +50,7 @@ func BenchmarkProveMembershipIter(b *testing.B) {
 func BenchmarkProveMembershipParallel(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepersentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, HashToPrimeFromSha256)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -79,10 +79,10 @@ func BenchmarkAccumulateNew256bits(b *testing.B) {
 func BenchmarkAccumulateNewDIHash(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
-	dihashResult := dihash.DIHash(testBytes)
+	diHashResult := dihash.DIHash(testBytes)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		AccumulateNew(testObject.G, dihashResult, testObject.N)
+		AccumulateNew(testObject.G, diHashResult, testObject.N)
 	}
 }
 

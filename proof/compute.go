@@ -10,8 +10,10 @@ var (
 	big0    = big.NewInt(0)
 	big1    = big.NewInt(1)
 	big2    = big.NewInt(2)
+	big3    = big.NewInt(3)
 	big4    = big.NewInt(4)
 	big5    = big.NewInt(5)
+	big7    = big.NewInt(7)
 	big8    = big.NewInt(8)
 	big10   = big.NewInt(10)
 )
@@ -55,4 +57,25 @@ func log10(n *big.Int) (*big.Int, error) {
 		res.Add(res, big1)
 	}
 	return res, nil
+}
+
+func rangeDiv(n *big.Int, numDIv int) (res [][2]*big.Int) {
+	nd := big.NewInt(int64(numDIv))
+	if n.Cmp(nd) < 0 {
+		return [][2]*big.Int{
+			{big0, new(big.Int).Add(n, big1)},
+		}
+	}
+	batchSize := new(big.Int).Div(n, nd)
+	idx := big.NewInt(0)
+	for idx.Cmp(nd) == -1 {
+		start := new(big.Int).Mul(idx, batchSize)
+		end := new(big.Int).Add(start, batchSize)
+		if new(big.Int).Add(idx, big1).Cmp(nd) == 0 {
+			end = n
+		}
+		res = append(res, [2]*big.Int{start, end})
+		idx.Add(idx, big1)
+	}
+	return
 }
