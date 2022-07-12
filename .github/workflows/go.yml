@@ -42,5 +42,5 @@ jobs:
       - name: Run go-mnd
         uses: tommy-muehle/go-mnd@master
         with:
-          ingnore: -ignored-numbers=2,10,256
+          ignore: -ignored-numbers=2,10,256
           working-directory: ./...

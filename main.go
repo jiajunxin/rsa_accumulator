@@ -3,9 +3,10 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/rsa_accumulator/accumulator"
-	"github.com/rsa_accumulator/proof"
 	"math/big"
+
+	"github.com/rsa_accumulator/accumulator"
+	pf "github.com/rsa_accumulator/proof"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 		panic(err)
 	}
 
-	pp := proof.NewPublicParameters(setup.N, setup.G, h)
+	pp := pf.NewPublicParameters(setup.N, setup.G, h)
 	r, err := rand.Int(rand.Reader, setup.N)
 	if err != nil {
 		panic(err)
@@ -23,24 +24,13 @@ func main() {
 	x := new(big.Int)
 	x.Exp(big.NewInt(2), big.NewInt(100), nil)
 	x.Sub(x, big.NewInt(1))
-	prover := proof.NewRPProver(r, x, pp)
-	commitX, err := prover.CommitX()
+	prover := pf.NewRPProver(r, x, pp)
+	proof, err := prover.Prove()
 	if err != nil {
 		panic(err)
 	}
-	commitment, err := prover.ComposeCommitment()
-	if err != nil {
-		panic(err)
-	}
-	verifier := proof.NewRPVerifier(pp)
-	verifier.SetC(prover.C)
-	verifier.SetCommitment(commitment)
-	verifier.SetCommitX(commitX)
-	response, err := prover.Response()
-	if err != nil {
-		panic(err)
-	}
-	res := verifier.Verify(response)
+	verifier := pf.NewRPVerifier(pp)
+	res := verifier.Verify(proof)
 	if res {
 		fmt.Println("argument accepted")
 	} else {

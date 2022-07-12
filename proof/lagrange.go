@@ -99,7 +99,7 @@ func (f *FourSquare) String() string {
 }
 
 // RangeProofCommit generates a range proof commitment for a given integer
-func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins RPRandomCoins) (cList [squareNum]*big.Int) {
+func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins rpRandCoins) (cList [squareNum]*big.Int) {
 	for i := 0; i < squareNum; i++ {
 		cList[i] = new(big.Int).Exp(pp.G, f[i], pp.N)
 		cList[i].Mul(cList[i], new(big.Int).Exp(pp.H, coins[i], pp.N))
