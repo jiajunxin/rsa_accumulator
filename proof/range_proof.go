@@ -22,7 +22,7 @@ const (
 
 var (
 	// bound B
-	_B = big.NewInt(4096)
+	rpB = big.NewInt(4096)
 	// range proof security parameter, kappa
 	rpSecurityParam = big.NewInt(128)
 )
@@ -205,7 +205,7 @@ func (r *RPProver) CommitX() ([squareNum]*big.Int, error) {
 func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	// pick m1, m2, m3, m4, mi is in [0, 2^(B/2 + 2kappa)]
 	mLmt := big.NewInt(2)
-	powMLmt := new(big.Int).Set(_B)
+	powMLmt := new(big.Int).Set(rpB)
 	powMLmt.Rsh(powMLmt, 1)
 	powMLmtPart := new(big.Int).Set(r.sp)
 	powMLmtPart.Mul(powMLmtPart, big2)

@@ -24,7 +24,7 @@ func main() {
 	x.Exp(big.NewInt(2), big.NewInt(100), nil)
 	x.Sub(x, big.NewInt(1))
 
-	prover := pf.NewRPProver(r, x, pp)
+	prover := pf.NewRPProver(pp, r, x)
 	proof, err := prover.Prove()
 	if err != nil {
 		panic(err)
