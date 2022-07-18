@@ -23,8 +23,8 @@ const (
 var (
 	// bound B
 	_B = big.NewInt(4096)
-	// security parameter, kappa
-	securityPara = big.NewInt(128)
+	// range proof security parameter, kappa
+	rpSecurityParam = big.NewInt(128)
 )
 
 // RPProof is the proof for range proof
@@ -146,12 +146,12 @@ type RPProver struct {
 }
 
 // NewRPProver generates a new range proof prover
-func NewRPProver(r, x *big.Int, pp *PublicParameters) *RPProver {
+func NewRPProver(pp *PublicParameters, r, x *big.Int) *RPProver {
 	prover := &RPProver{
 		pp: pp,
 		x:  x,
 		r:  r,
-		sp: securityPara,
+		sp: rpSecurityParam,
 	}
 	prover.calC()
 	return prover
@@ -327,7 +327,7 @@ type RPVerifier struct {
 func NewRPVerifier(pp *PublicParameters) *RPVerifier {
 	verifier := &RPVerifier{
 		pp: pp,
-		sp: securityPara,
+		sp: rpSecurityParam,
 	}
 	return verifier
 }
