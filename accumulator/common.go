@@ -1,14 +1,15 @@
 package accumulator
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"fmt"
 	"math/big"
 	"strconv"
 )
 
 const (
-	securityPara      = 2048
+	securityPara      = 128
+	RSABitLength      = 2048
 	randomizerSetSize = 256
 	// Note that the securityParaHashToPrime is running securityParaHashToPrime rounds of Miller-Robin test
 	// together with one time Baillie-PSW test. Totally heuristic value for now.
@@ -43,7 +44,7 @@ const (
 
 var (
 	one = big.NewInt(1)
-
+	two = big.NewInt(2)
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
 	Min2048 = big.NewInt(0)
@@ -105,11 +106,105 @@ func GetPseudoRandomElement(input int) *Element {
 // flipCoin outputs 1/0 with equal probability
 func flipCoin() bool {
 	//Int returns a uniform random value in [0, max)
-	result, err := rand.Int(rand.Reader, big.NewInt(100))
+	result, err := crand.Int(crand.Reader, big.NewInt(100))
 	if err != nil {
 		panic(err)
 	}
 	if result.Int64() < 50 {
+		return true
+	}
+	return false
+}
+
+// TrustedSetupForQRN outputs a hidden order group
+func TrustedSetupForQRN() {
+	var p, q, N, g, h big.Int
+	p = *getSafePrime()
+	q = *getSafePrime()
+	fmt.Println("Bit length of p = ", p.BitLen())
+	fmt.Println("Bit length of q = ", q.BitLen())
+	N.Mul(&p, &q)
+
+	g = *getRanQR(&p, &q)
+	// get a uniform random value randomNum in the QR_N, where the order of the group is p'q'
+	randomNum, err := crand.Prime(crand.Reader, RSABitLength)
+	if err != nil {
+		panic(err)
+	}
+	order := getOrder(&p, &q)
+	randomNum.Mod(randomNum, order)
+	h.Exp(&g, randomNum, &N)
+	fmt.Println("N = ", N.String())
+	fmt.Println("g = ", g.String())
+	fmt.Println("h = ", h.String())
+}
+
+func getOrder(p, q *big.Int) *big.Int {
+	var pPrime, qPrime, phiN big.Int
+	pPrime.Sub(p, one)
+	pPrime.Div(&pPrime, two)
+	qPrime.Sub(q, one)
+	qPrime.Div(&qPrime, two)
+	phiN.Mul(&pPrime, &qPrime)
+	return &phiN
+}
+
+func getPrime() *big.Int {
+	ranNum, err := crand.Prime(crand.Reader, RSABitLength/2-1)
+	if err != nil {
+		panic(err)
+	}
+	flag := false
+	for !flag {
+		flag = ranNum.ProbablyPrime(securityPara / 2)
+		if !flag {
+			ranNum, _ = crand.Prime(crand.Reader, securityPara)
+		}
+	}
+	return ranNum
+}
+
+// a safe prime p = 2p' +1 where p' is also a prime number
+func getSafePrime() *big.Int {
+	ranNum := getPrime()
+	ranNum.Mul(ranNum, two)
+	ranNum.Add(ranNum, one)
+	flag := false
+	for !flag {
+		flag = ranNum.ProbablyPrime(securityPara / 2)
+		if !flag {
+			ranNum := getPrime()
+			ranNum.Mul(ranNum, two)
+			ranNum.Add(ranNum, one)
+		}
+	}
+	return ranNum
+}
+
+func getRanQR(p, q *big.Int) *big.Int {
+	var N big.Int
+	N.Mul(p, q)
+
+	ranNum, err := crand.Int(crand.Reader, big.NewInt(RSABitLength))
+	if err != nil {
+		panic(err)
+	}
+
+	flag := false
+	for !flag {
+		flag = isQR(ranNum, p, q)
+		if !flag {
+			ranNum, err = crand.Int(crand.Reader, big.NewInt(RSABitLength))
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+	return ranNum
+}
+
+func isQR(input, p, q *big.Int) bool {
+	if big.Jacobi(input, p) == 1 && big.Jacobi(input, q) == 1 {
 		return true
 	}
 	return false
