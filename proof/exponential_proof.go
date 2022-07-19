@@ -40,7 +40,7 @@ func (e *ExpProver) chooseRand() (*big.Int, error) {
 	return num, nil
 }
 
-func (e *ExpProver) Prove(u, w, x *big.Int) (*EPCommitment, error) {
+func (e *ExpProver) Commit(u, w, x *big.Int) (*EPCommitment, error) {
 	e.u = new(big.Int).Set(u)
 	e.x = new(big.Int).Set(x)
 	// choose random k, rho_x, rho_y from [-B, B]
