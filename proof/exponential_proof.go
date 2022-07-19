@@ -27,6 +27,7 @@ func NewExpProver(pp *PublicParameters) *ExpProver {
 	}
 }
 
+// chooseRand chooses a random number in [-B, B]
 func (e *ExpProver) chooseRand() (*big.Int, error) {
 	// random number should be generated in [0, 2B]
 	randRange := new(big.Int).Lsh(e.b, 1)
