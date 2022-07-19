@@ -23,8 +23,6 @@ const (
 var (
 	// bound B
 	rpB = big.NewInt(4096)
-	// range proof security parameter, kappa
-	rpSecurityParam = big.NewInt(128)
 )
 
 // RPProof is the proof for range proof
@@ -151,7 +149,7 @@ func NewRPProver(pp *PublicParameters, r, x *big.Int) *RPProver {
 		pp: pp,
 		x:  x,
 		r:  r,
-		sp: rpSecurityParam,
+		sp: big.NewInt(securityParam),
 	}
 	prover.calC()
 	return prover
@@ -327,7 +325,7 @@ type RPVerifier struct {
 func NewRPVerifier(pp *PublicParameters) *RPVerifier {
 	verifier := &RPVerifier{
 		pp: pp,
-		sp: rpSecurityParam,
+		sp: big.NewInt(securityParam),
 	}
 	return verifier
 }
@@ -412,18 +410,6 @@ func (r *RPVerifier) VerifyResponse(response *RPResponse) bool {
 	}
 	copy(commitment[commitLen-sha256ResultLen:], h)
 	return commitment == r.commitment
-}
-
-// PublicParameters holds public parameters initialized during the setup procedure
-type PublicParameters struct {
-	N *big.Int
-	G *big.Int
-	H *big.Int
-}
-
-// NewPublicParameters generates a new public parameter configuration
-func NewPublicParameters(n, g, h *big.Int) *PublicParameters {
-	return &PublicParameters{N: n, G: g, H: h}
 }
 
 // rpRandCoins is the random coins used in range proof
