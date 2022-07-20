@@ -43,8 +43,24 @@ const (
 )
 
 var (
-	one = big.NewInt(1)
-	two = big.NewInt(2)
+	big1  = big.NewInt(1)
+	big2  = big.NewInt(2)
+	big3  = big.NewInt(3)
+	big5  = big.NewInt(5)
+	big7  = big.NewInt(7)
+	big11 = big.NewInt(11)
+	big13 = big.NewInt(13)
+	big17 = big.NewInt(17)
+	big19 = big.NewInt(19)
+	big23 = big.NewInt(23)
+	big29 = big.NewInt(29)
+	big31 = big.NewInt(31)
+	big37 = big.NewInt(37)
+	big41 = big.NewInt(41)
+	big43 = big.NewInt(43)
+	big47 = big.NewInt(47)
+	big53 = big.NewInt(53)
+	big59 = big.NewInt(59)
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
 	Min2048 = big.NewInt(0)
@@ -76,7 +92,7 @@ func GenerateG() {
 	fmt.Println("prod = ", prod.String())
 	var gcd big.Int
 	gcd.GCD(nil, nil, &N, prod)
-	if gcd.Cmp(one) != 0 {
+	if gcd.Cmp(big1) != 0 {
 		// gcd != 1
 		//this condition should never happen
 		fmt.Println("g and N not co-prime! We win the RSA-2048 challenge!")
@@ -87,7 +103,7 @@ func GenerateG() {
 func SetProduct(inputSet []big.Int) *big.Int {
 	var ret big.Int
 	setSize := len(inputSet)
-	ret.Set(one)
+	ret.Set(big1)
 	// ret is set to 1
 	for i := 0; i < setSize; i++ {
 		ret.Mul(&ret, &inputSet[i])
@@ -141,66 +157,137 @@ func TrustedSetupForQRN() {
 
 func getOrder(p, q *big.Int) *big.Int {
 	var pPrime, qPrime, phiN big.Int
-	pPrime.Sub(p, one)
-	pPrime.Div(&pPrime, two)
-	qPrime.Sub(q, one)
-	qPrime.Div(&qPrime, two)
+	pPrime.Sub(p, big1)
+	pPrime.Div(&pPrime, big2)
+	qPrime.Sub(q, big1)
+	qPrime.Div(&qPrime, big2)
 	phiN.Mul(&pPrime, &qPrime)
 	return &phiN
 }
 
-func getPrime() *big.Int {
-	ranNum, err := crand.Prime(crand.Reader, RSABitLength/2-1)
-	if err != nil {
-		panic(err)
+func testRemainder(input, modulo *big.Int) bool {
+	var remainder, cmp big.Int
+	cmp.Sub(modulo, big1)
+	cmp.Div(&cmp, big2)
+	remainder.Mod(input, modulo)
+	if remainder.Cmp(&cmp) != 0 {
+		return true
 	}
+	return true
+}
+
+// The following function implements the method described in "Safe Prime Generation with a Combined Sieve"
+// for small prime r, if the input == (r-1)/2 mod r, then return false. How many r should be tested is purely experimental.
+func safePrimeSieve(input *big.Int) bool {
+	if !testRemainder(input, big3) {
+		return false
+	}
+	if !testRemainder(input, big5) {
+		return false
+	}
+	if !testRemainder(input, big7) {
+		return false
+	}
+	if !testRemainder(input, big11) {
+		return false
+	}
+	if !testRemainder(input, big13) {
+		return false
+	}
+	if !testRemainder(input, big17) {
+		return false
+	}
+	if !testRemainder(input, big19) {
+		return false
+	}
+	if !testRemainder(input, big23) {
+		return false
+	}
+	if !testRemainder(input, big29) {
+		return false
+	}
+	if !testRemainder(input, big31) {
+		return false
+	}
+	if !testRemainder(input, big37) {
+		return false
+	}
+	if !testRemainder(input, big41) {
+		return false
+	}
+	if !testRemainder(input, big43) {
+		return false
+	}
+	if !testRemainder(input, big47) {
+		return false
+	}
+	if !testRemainder(input, big53) {
+		return false
+	}
+	if !testRemainder(input, big59) {
+		return false
+	}
+
+	return true
+}
+
+func getSuitablePrime() *big.Int {
 	flag := false
 	for !flag {
+		ranNum, err := crand.Prime(crand.Reader, RSABitLength/2-1)
+		if err != nil {
+			panic(err)
+		}
+		flag = safePrimeSieve(ranNum)
+		if !flag {
+			continue
+		}
 		flag = ranNum.ProbablyPrime(securityPara / 2)
 		if !flag {
-			ranNum, _ = crand.Prime(crand.Reader, securityPara)
+			continue
 		}
+		return ranNum
 	}
-	return ranNum
+	return nil
 }
 
 // a safe prime p = 2p' +1 where p' is also a prime number
 func getSafePrime() *big.Int {
-	ranNum := getPrime()
-	ranNum.Mul(ranNum, two)
-	ranNum.Add(ranNum, one)
 	flag := false
 	for !flag {
+		ranNum := getSuitablePrime()
+		//fmt.Println("get a prime = ", ranNum.String())
+		ranNum.Mul(ranNum, big2)
+		ranNum.Add(ranNum, big1)
 		flag = ranNum.ProbablyPrime(securityPara / 2)
 		if !flag {
-			ranNum := getPrime()
-			ranNum.Mul(ranNum, two)
-			ranNum.Add(ranNum, one)
+			continue
+		} else {
+			fmt.Println("Found one safe prime = ", ranNum.String())
+			return ranNum
 		}
 	}
-	return ranNum
+	return nil
 }
 
 func getRanQR(p, q *big.Int) *big.Int {
 	var N big.Int
 	N.Mul(p, q)
 
-	ranNum, err := crand.Int(crand.Reader, big.NewInt(RSABitLength))
-	if err != nil {
-		panic(err)
-	}
-
 	flag := false
 	for !flag {
+		ranNum, err := crand.Int(crand.Reader, Min2048)
+		if err != nil {
+			panic(err)
+		}
 		flag = isQR(ranNum, p, q)
 		if !flag {
-			ranNum, err = crand.Int(crand.Reader, big.NewInt(RSABitLength))
-			if err != nil {
-				panic(err)
-			}
+			continue
+		} else {
+			return ranNum
 		}
 	}
-	return ranNum
+	return nil
 }
 
 func isQR(input, p, q *big.Int) bool {
