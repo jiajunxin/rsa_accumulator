@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/rsa_accumulator/proof"
 )
 
 func main() {
-	const logDir = "test.log"
-	f, err := os.OpenFile(logDir, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	const bitLen = 100
+	f, err := os.OpenFile("test_"+strconv.Itoa(bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -23,12 +24,12 @@ func main() {
 		}
 	}(f)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		_, err = f.WriteString(time.Now().String() + "\n")
 		if err != nil {
 			panic(err)
 		}
-		randLmt := new(big.Int).Exp(big.NewInt(2), big.NewInt(100), nil)
+		randLmt := new(big.Int).Exp(big.NewInt(2), big.NewInt(200), nil)
 		target, err := rand.Int(rand.Reader, randLmt)
 		if err != nil {
 			panic(err)

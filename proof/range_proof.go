@@ -194,7 +194,7 @@ func (r *RPProver) CommitX() ([squareNum]*big.Int, error) {
 		return [squareNum]*big.Int{}, err
 	}
 	r.randR4 = rc
-	c4 := fs.RangeProofCommit(r.pp, rc)
+	c4 := fs.RPCommit(r.pp, rc)
 	r.commitFSX = c4
 	return c4, nil
 }

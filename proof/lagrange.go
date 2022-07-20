@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"math/big"
+	"runtime"
 
 	comp "github.com/rsa_accumulator/complex"
 )
@@ -37,8 +38,8 @@ var (
 		hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8,
 	}
 	// TODO: for testing purpose, to be reverted later
-	//numCPU = runtime.NumCPU()
-	numCPU = 6
+	numCPU = runtime.NumCPU()
+	//numCPU = 6
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -99,8 +100,8 @@ func (f *FourSquare) String() string {
 	return res
 }
 
-// RangeProofCommit generates a range proof commitment for a given integer
-func (f *FourSquare) RangeProofCommit(pp *PublicParameters, coins rpRandCoins) (cList [squareNum]*big.Int) {
+// RPCommit generates a range proof commitment for a given integer
+func (f *FourSquare) RPCommit(pp *PublicParameters, coins rpRandCoins) (cList [squareNum]*big.Int) {
 	for i := 0; i < squareNum; i++ {
 		cList[i] = new(big.Int).Exp(pp.G, f[i], pp.N)
 		cList[i].Mul(cList[i], new(big.Int).Exp(pp.H, coins[i], pp.N))
@@ -134,7 +135,7 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 			return FourSquare{}, err
 		}
 		for {
-			s, p, err := randomTrails(n, primeProd)
+			s, p, err := randTrails(n, primeProd)
 			if err != nil {
 				return FourSquare{}, err
 			}
@@ -201,29 +202,39 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	return primeProd, nil
 }
 
-func randomTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
-	nPow5Div2 := new(big.Int).Exp(n, big5, nil)
-	nPow5Div2.Rsh(nPow5Div2, 1)
+func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
+	nPow5Div2NumCPUAdd1 := new(big.Int).Exp(n, big5, nil)
+	nPow5Div2NumCPUAdd1.Rsh(nPow5Div2NumCPUAdd1, 1)
+	nPow5Div2NumCPUAdd1.Div(nPow5Div2NumCPUAdd1, big.NewInt(int64(numCPU)))
+	nPow5Div2NumCPUAdd1.Add(nPow5Div2NumCPUAdd1, big1)
 	preP := new(big.Int).Set(primeProd)
 	preP.Mul(preP, n)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	batches := rangeDiv(nPow5Div2, numCPU)
+
+	//nPow5Div2NumCPUAdd1 := new(big.Int).Div(nPow5Div2NumCPUAdd1, big.NewInt(int64(numCPU)))
+	var (
+		mul  = big.NewInt(int64(2 * numCPU))
+		adds []*big.Int
+	)
+	for i := 0; i <= numCPU; i++ {
+		adds = append(adds, big.NewInt(int64(2*i)))
+	}
 	resChan := make(chan findSResult)
-	for _, batch := range batches {
-		go findSRoutine(ctx, batch[0], batch[1], preP, resChan)
+	for _, add := range adds {
+		go findSRoutine(ctx, add, mul, nPow5Div2NumCPUAdd1, preP, resChan)
 	}
 	res := <-resChan
 	return res.s, res.p, res.err
 }
 
-func findSRoutine(ctx context.Context, start, end, preP *big.Int, resChan chan<- findSResult) {
+func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			s, p, err := pickS(start, end, preP)
+			s, p, err := pickS(mul, add, randLmt, preP)
 			if err != nil {
 				select {
 				case resChan <- findSResult{err: err}:
@@ -253,19 +264,21 @@ type findSResult struct {
 	err  error
 }
 
-func pickS(start, end, preP *big.Int) (*big.Int, *big.Int, error) {
+func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	var (
 		k, u *big.Int
 		err  error
 	)
-	// choose k' in [start, end)
-	gap := new(big.Int).Sub(end, start)
-	if k, err = rand.Int(rand.Reader, gap); err != nil {
+	// choose k'' in [0, randLmt)
+	k, err = rand.Int(rand.Reader, randLmt)
+	if err != nil {
 		return nil, nil, err
 	}
-	k.Add(k, start)
-	// construct k, k = 2k' + 1
-	k.Lsh(k, 1)
+	// construct k', k' = k'' * mul + add
+	k.Mul(k, mul)
+	k.Add(k, add)
+	// construct k, k = k' + 1
+	//k.Lsh(k, 1)
 	k.Add(k, big1)
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
 	p := new(big.Int).Set(preP)
