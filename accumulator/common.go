@@ -39,11 +39,6 @@ var (
 	big29 = big.NewInt(29)
 	big31 = big.NewInt(31)
 	big37 = big.NewInt(37)
-	big41 = big.NewInt(41)
-	big43 = big.NewInt(43)
-	big47 = big.NewInt(47)
-	big53 = big.NewInt(53)
-	big59 = big.NewInt(59)
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
 	Min2048 = big.NewInt(0)
@@ -193,21 +188,6 @@ func safePrimeSieve(input *big.Int) bool {
 		return false
 	}
 	if !testRemainder(input, big37) {
-		return false
-	}
-	if !testRemainder(input, big41) {
-		return false
-	}
-	if !testRemainder(input, big43) {
-		return false
-	}
-	if !testRemainder(input, big47) {
-		return false
-	}
-	if !testRemainder(input, big53) {
-		return false
-	}
-	if !testRemainder(input, big59) {
 		return false
 	}
 
