@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"math/big"
-	"runtime"
 
 	comp "github.com/rsa_accumulator/complex"
 )
@@ -37,7 +36,9 @@ var (
 	precomputedHurwitzGCRDs = [9]*comp.HurwitzInt{
 		hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8,
 	}
-	numCPU = runtime.NumCPU()
+	// TODO: for testing purpose, to be reverted later
+	//numCPU = runtime.NumCPU()
+	numCPU = 6
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -151,13 +152,6 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	// if x'^2 + Y'^2 + Z'^2 + W'^2 = n'
 	// then x^2 + Y^2 + Z^2 + W^2 = n for x, Y, Z, W defined by
 	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
-	// Hurwitz integer: 1 + i
-	//hurwitz1PlusI := clx.NewHurwitzInt(big1, big1, big0, big0, false)
-	//hurwitzProd := clx.NewHurwitzInt(big1, big0, big0, big0, false)
-	//for e.Sign() > 0 {
-	//	hurwitzProd.Prod(hurwitzProd, hurwitz1PlusI)
-	//	e.Sub(e, big1)
-	//}
 	// Gaussian integer: 1 + i
 	gaussian1PlusI := comp.NewGaussianInt(big1, big1)
 	gaussianProd := comp.NewGaussianInt(big1, big0)

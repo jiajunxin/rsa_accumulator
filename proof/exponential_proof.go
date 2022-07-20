@@ -16,6 +16,7 @@ type ExpProver struct {
 	x    *big.Int
 }
 
+// NewExpProver creates a new prover of proof of exponentiation
 func NewExpProver(pp *PublicParameters) *ExpProver {
 	// let |G| be N/4, calculate B = (2^(2*lambda))*|G| = N*(2^(2*lambda-2)
 	b := new(big.Int).Set(pp.N)
@@ -41,7 +42,8 @@ func (e *ExpProver) chooseRand() (*big.Int, error) {
 	return num, nil
 }
 
-func (e *ExpProver) Commit(u, w, x *big.Int) (*EPCommitment, error) {
+// Commit generates a commitment provided by the prover
+func (e *ExpProver) Commit(u, x *big.Int) (*EPCommitment, error) {
 	e.u = new(big.Int).Set(u)
 	e.x = new(big.Int).Set(x)
 	// choose random k, rho_x, rho_y from [-B, B]
@@ -104,16 +106,19 @@ type ExpVerifier struct {
 	commitment *EPCommitment
 }
 
+// NewExpVerifier creates a new verifier of proof of exponentiation
 func NewExpVerifier(pp *PublicParameters) *ExpVerifier {
 	return &ExpVerifier{
 		pp: pp,
 	}
 }
 
+// SetCommitment sets the commitment of the verifier
 func (e *ExpVerifier) SetCommitment(commitment *EPCommitment) {
 	e.commitment = commitment
 }
 
+// Challenge generates a challenge for the verifier
 func (e *ExpVerifier) Challenge() (*EPChallenge, error) {
 	// choose random c in [0, 2^lambda]
 	r := new(big.Int).Lsh(big1, securityParam)
@@ -135,6 +140,7 @@ func (e *ExpVerifier) Challenge() (*EPChallenge, error) {
 	}, nil
 }
 
+// VerifyResponse verifies the response of the verifier
 func (e *ExpVerifier) VerifyResponse(u, w *big.Int, response *EPResponse) (bool, error) {
 	// check if r_x, r_rho in [l]
 	if response.rX.Cmp(e.l) >= 0 || response.rRho.Cmp(e.l) >= 0 {
