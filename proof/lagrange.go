@@ -34,9 +34,6 @@ var (
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
 	numCPU = runtime.NumCPU()
-	//bigIntPool = sync.Pool{
-	//	New: func() interface{} { return new(big.Int) },
-	//}
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -268,9 +265,9 @@ type findSResult struct {
 func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	var err error
 	// choose k' in [0, randLmt)
-	//k := bigIntPool.Get().(*big.Int)
-	//defer bigIntPool.Put(k)
-	k, err := rand.Int(rand.Reader, randLmt)
+	k := iPool.Get().(*big.Int)
+	defer iPool.Put(k)
+	k, err = rand.Int(rand.Reader, randLmt)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -281,25 +278,22 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
 	p := new(big.Int).Mul(preP, k)
 	p.Sub(p, big1)
-	//pMinus1 := bigIntPool.Get().(*big.Int)
-	//defer bigIntPool.Put(pMinus1)
-	//pMinus1.Sub(p, big1)
-	pMinus1 := new(big.Int).Sub(p, big1)
+	pMinus1 := iPool.Get().(*big.Int)
+	defer iPool.Put(pMinus1)
+	pMinus1.Sub(p, big1)
 
 	// choose u from [1, p - 1]
-	//u := bigIntPool.Get().(*big.Int)
-	//defer bigIntPool.Put(u)
-	u, err := rand.Int(rand.Reader, pMinus1)
-	if err != nil {
+	u := iPool.Get().(*big.Int)
+	defer iPool.Put(u)
+	if u, err = rand.Int(rand.Reader, pMinus1); err != nil {
 		return nil, nil, err
 	}
 	u.Add(u, big1)
 
 	// compute s = u^((p - 1) / 4) mod p
-	//powU := bigIntPool.Get().(*big.Int)
-	//defer bigIntPool.Put(powU)
-	//powU.Rsh(pMinus1, 2)
-	powU := new(big.Int).Rsh(pMinus1, 2)
+	powU := iPool.Get().(*big.Int)
+	defer iPool.Put(powU)
+	powU.Rsh(pMinus1, 2)
 	s := new(big.Int).Exp(u, powU, p)
 
 	return s, p, nil

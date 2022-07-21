@@ -158,7 +158,9 @@ func NewRPProver(pp *PublicParameters, r, x *big.Int) *RPProver {
 // calculate parameter c, c = (g^x)(h^r)
 func (r *RPProver) calC() *big.Int {
 	r.C = new(big.Int).Exp(r.pp.G, r.x, r.pp.N)
-	r.C.Mul(r.C, new(big.Int).Exp(r.pp.H, r.r, r.pp.N))
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	r.C.Mul(r.C, opt.Exp(r.pp.H, r.r, r.pp.N))
 	r.C.Mod(r.C, r.pp.N)
 	return r.C
 }
@@ -203,9 +205,13 @@ func (r *RPProver) CommitX() ([squareNum]*big.Int, error) {
 func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	// pick m1, m2, m3, m4, mi is in [0, 2^(B/2 + 2kappa)]
 	mLmt := big.NewInt(2)
-	powMLmt := new(big.Int).Set(rpB)
+	//powMLmt := new(big.Int).Set(rpB)
+	powMLmt := iPool.Get().(*big.Int).Set(rpB)
+	defer iPool.Put(powMLmt)
 	powMLmt.Rsh(powMLmt, 1)
-	powMLmtPart := new(big.Int).Set(r.sp)
+	//powMLmtPart := new(big.Int).Set(r.sp)
+	powMLmtPart := iPool.Get().(*big.Int).Set(r.sp)
+	defer iPool.Put(powMLmtPart)
 	powMLmtPart.Mul(powMLmtPart, big2)
 	powMLmt.Add(powMLmt, powMLmtPart)
 	mLmt.Exp(mLmt, powMLmt, nil)
@@ -216,7 +222,9 @@ func (r *RPProver) ComposeCommitment() (RPCommitment, error) {
 	r.randM4 = m4
 	// pick s1, s2, s3, s4, si is in [0, 2^(B/2 + 2kappa)*n]
 	sLmt := big.NewInt(2)
-	powSLmt := new(big.Int).Mul(r.sp, big2)
+	//powSLmt := new(big.Int).Mul(r.sp, big2)
+	powSLmt := iPool.Get().(*big.Int).Mul(r.sp, big2)
+	defer iPool.Put(powSLmt)
 	sLmt.Exp(sLmt, powSLmt, nil)
 	sLmt.Mul(sLmt, r.pp.N)
 	s4, err := newRPRandCoins(sLmt)
@@ -252,7 +260,9 @@ func calD4(pp *PublicParameters, m, s rpRandCoins) [squareNum]*big.Int {
 func calDi(g, h, mi, si, n *big.Int) *big.Int {
 	res := new(big.Int).Set(g)
 	res.Exp(res, mi, n)
-	res.Mul(res, new(big.Int).Exp(h, si, n))
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	res.Mul(res, opt.Exp(h, si, n))
 	res.Mod(res, n)
 	return res
 }
@@ -260,7 +270,9 @@ func calDi(g, h, mi, si, n *big.Int) *big.Int {
 // calD calculates d = product of (ci^mi)(h^s) mod n
 func calD(s, h, n *big.Int, c FourSquare, m rpRandCoins) *big.Int {
 	// h^s
-	hPowS := new(big.Int).Exp(h, s, n)
+	//hPowS := new(big.Int).Exp(h, s, n)
+	hPowS := iPool.Get().(*big.Int).Exp(h, s, n)
+	defer iPool.Put(hPowS)
 	// ci^mi
 	var cPowM4 [squareNum]*big.Int
 	for i := 0; i < squareNum; i++ {
@@ -298,8 +310,10 @@ func (r *RPProver) Response() (*RPResponse, error) {
 	}
 
 	sumXR := big.NewInt(0)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
 	for i := 0; i < squareNum; i++ {
-		sumXR.Add(sumXR, new(big.Int).Mul(r.fourSquareX[i], r.randR4[i]))
+		sumXR.Add(sumXR, opt.Mul(r.fourSquareX[i], r.randR4[i]))
 	}
 	t := new(big.Int).Sub(r.r, sumXR)
 	t.Mul(t, c)
@@ -365,28 +379,36 @@ func (r *RPVerifier) VerifyResponse(response *RPResponse) bool {
 	c := r.challenge()
 	// the first 4 parameters: (g^zi)(h^ti)(ci^(-e)) mod n
 	var firstFourParams [squareNum]*big.Int
-	negC := new(big.Int).Neg(c)
+	//negC := new(big.Int).Neg(c)
+	negC := iPool.Get().(*big.Int).Neg(c)
+	defer iPool.Put(negC)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
 	for i := 0; i < squareNum; i++ {
 		firstFourParams[i] = new(big.Int).Exp(r.pp.G, response.Z4[i], r.pp.N)
 		firstFourParams[i].Mul(
 			firstFourParams[i],
-			new(big.Int).Exp(r.pp.H, response.T4[i], r.pp.N),
+			opt.Exp(r.pp.H, response.T4[i], r.pp.N),
 		)
 		firstFourParams[i].Mul(
 			firstFourParams[i],
-			new(big.Int).Exp(r.commitFSX[i], negC, r.pp.N),
+			opt.Exp(r.commitFSX[i], negC, r.pp.N),
 		)
 		firstFourParams[i].Mod(firstFourParams[i], r.pp.N)
 	}
 
-	cPowNegE := new(big.Int).Exp(r.C, negC, r.pp.N)       // c^(-e)
-	hPowT := new(big.Int).Exp(r.pp.H, response.T, r.pp.N) // h^t
+	//cPowNegE := new(big.Int).Exp(r.C, negC, r.pp.N)       // c^(-e)
+	cPowNegE := iPool.Get().(*big.Int).Exp(r.C, negC, r.pp.N) // c^(-e)
+	defer iPool.Put(cPowNegE)
+	//hPowT := new(big.Int).Exp(r.pp.H, response.T, r.pp.N) // h^t
+	hPowT := iPool.Get().(*big.Int).Exp(r.pp.H, response.T, r.pp.N) // h^t
+	defer iPool.Put(hPowT)
 	//product of (ci^zi)(h^t)(c^(-e)) mod n
 	prodParam := big.NewInt(1)
 	for i := 0; i < squareNum; i++ {
 		prodParam.Mul(
 			prodParam,
-			new(big.Int).Exp(r.commitFSX[i], response.Z4[i], r.pp.N),
+			opt.Exp(r.commitFSX[i], response.Z4[i], r.pp.N),
 		)
 		prodParam.Mod(prodParam, r.pp.N)
 	}
@@ -428,7 +450,9 @@ func newRPRandCoins(n *big.Int) (coins rpRandCoins, err error) {
 
 // freshRandCoin creates a new fresh random coin in [0, n]
 func freshRandCoin(n *big.Int) (*big.Int, error) {
-	lmt := new(big.Int).Set(n)
+	//lmt := new(big.Int).Set(n)
+	lmt := iPool.Get().(*big.Int).Set(n)
+	defer iPool.Put(lmt)
 	lmt.Add(lmt, big1)
 	res, err := rand.Int(rand.Reader, lmt)
 	if err != nil {
