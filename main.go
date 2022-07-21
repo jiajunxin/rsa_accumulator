@@ -57,10 +57,11 @@ func handleError(err error) {
 }
 
 func randOddGen(bitLen int) *big.Int {
-	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen-1))
+	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen-2))
 	target, err := rand.Int(rand.Reader, randLmt)
 	target.Lsh(target, 1)
 	handleError(err)
 	target.Add(target, big.NewInt(1))
+	target.Add(target, new(big.Int).Lsh(big.NewInt(1), uint(bitLen-1)))
 	return target
 }
