@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"flag"
 	"fmt"
 	"math/big"
 	"os"
@@ -12,60 +13,62 @@ import (
 )
 
 func main() {
-	const bitLen = 500
-	f, err := os.OpenFile("test_"+strconv.Itoa(bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
+	bitLen := flag.Int("bit", 896, "bit length of the modulus")
+	tries := flag.Int("try", 1, "number of tries")
+	flag.Parse()
+	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	handleError(err)
 	defer func(f *os.File) {
 		err := f.Close()
-		if err != nil {
-			panic(err)
-		}
+		handleError(err)
 	}(f)
 
-	for i := 0; i < 100; i++ {
-		fmt.Println("No. ", i+1)
+	for i := 0; i < *tries; i++ {
+		fmt.Println("No. ", i)
+		_, err = f.WriteString(fmt.Sprintf("%d\n", i))
+		handleError(err)
 		_, err = f.WriteString(time.Now().String() + "\n")
-		if err != nil {
-			panic(err)
-		}
-		randLmt := new(big.Int).Exp(big.NewInt(2), big.NewInt(bitLen), nil)
-		target, err := rand.Int(rand.Reader, randLmt)
-		if err != nil {
-			panic(err)
-		}
+		handleError(err)
+		target := randOddGen(*bitLen)
+		handleError(err)
 		fmt.Println(target)
 		_, err = f.WriteString(target.String() + "\n")
-		if err != nil {
-			panic(err)
-		}
+		handleError(err)
 		start := time.Now()
 		fs, err := proof.LagrangeFourSquares(target)
-		if err != nil {
-			panic(err)
-		}
+		handleError(err)
 		currTime := time.Now()
 		timeInterval := currTime.Sub(start)
 		fmt.Println(timeInterval)
 		secondsStr := fmt.Sprintf("%f", timeInterval.Seconds())
 		_, err = f.WriteString(secondsStr + "\n")
-		if err != nil {
-			panic(err)
-		}
+		handleError(err)
 		ok := proof.Verify(target, fs)
 		if ok {
 			fmt.Println("verification succeeded")
 			_, err := f.WriteString("verification succeeded\n")
-			if err != nil {
-				panic(err)
-			}
+			handleError(err)
 		} else {
 			fmt.Println("verification failed")
 			_, err := f.WriteString("verification failed\n")
-			if err != nil {
-				panic(err)
-			}
+			handleError(err)
 		}
 	}
+}
+
+func handleError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func randOddGen(bitLen int) *big.Int {
+	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen-1))
+	randLmt.Sub(randLmt, big.NewInt(1))
+	//randLmt.Sub(randLmt, big.NewInt(1))
+	target, err := rand.Int(rand.Reader, randLmt)
+	target.Lsh(target, 1)
+	handleError(err)
+	target.Add(target, big.NewInt(1))
+	return target
 }
