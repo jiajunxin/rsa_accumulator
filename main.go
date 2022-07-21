@@ -24,7 +24,8 @@ func main() {
 		}
 	}(f)
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 100; i++ {
+		fmt.Println("No. ", i+1)
 		_, err = f.WriteString(time.Now().String() + "\n")
 		if err != nil {
 			panic(err)

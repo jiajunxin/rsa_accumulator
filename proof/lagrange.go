@@ -281,9 +281,7 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	k.Add(k, add)
 
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
-	p := bigIntPool.Get().(*big.Int)
-	defer bigIntPool.Put(p)
-	p.Mul(preP, k)
+	p := new(big.Int).Mul(preP, k)
 	p.Sub(p, big1)
 	pMinus1 := bigIntPool.Get().(*big.Int)
 	defer bigIntPool.Put(pMinus1)
@@ -301,9 +299,7 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	powU := bigIntPool.Get().(*big.Int)
 	defer bigIntPool.Put(powU)
 	powU.Rsh(pMinus1, 2)
-	s := bigIntPool.Get().(*big.Int)
-	defer bigIntPool.Put(s)
-	s.Exp(u, powU, p)
+	s := new(big.Int).Exp(u, powU, p)
 
 	return s, p, nil
 }
