@@ -88,8 +88,8 @@ func (h *HurwitzInt) String() string {
 
 // NewHurwitzInt declares a new integral quaternion with the real, i, j, and k parts
 // If isDouble is true, the arguments r, i, j, k are twice the original scalars
-func NewHurwitzInt(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
-	if isDouble {
+func NewHurwitzInt(r, i, j, k *big.Int, doubled bool) *HurwitzInt {
+	if doubled {
 		return &HurwitzInt{
 			dblR: new(big.Int).Set(r),
 			dblI: new(big.Int).Set(i),

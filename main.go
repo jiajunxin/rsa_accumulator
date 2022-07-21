@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	const bitLen = 100
+	const bitLen = 500
 	f, err := os.OpenFile("test_"+strconv.Itoa(bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		panic(err)
@@ -24,12 +24,12 @@ func main() {
 		}
 	}(f)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		_, err = f.WriteString(time.Now().String() + "\n")
 		if err != nil {
 			panic(err)
 		}
-		randLmt := new(big.Int).Exp(big.NewInt(2), big.NewInt(200), nil)
+		randLmt := new(big.Int).Exp(big.NewInt(2), big.NewInt(bitLen), nil)
 		target, err := rand.Int(rand.Reader, randLmt)
 		if err != nil {
 			panic(err)

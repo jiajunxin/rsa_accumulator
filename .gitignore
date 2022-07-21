@@ -23,3 +23,6 @@ vendor/
 
 # pprof
 *.pprof
+
+# log files
+*.log

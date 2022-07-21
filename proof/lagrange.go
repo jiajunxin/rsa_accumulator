@@ -15,31 +15,28 @@ const (
 )
 
 var (
-	// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
-	hGCRD0 = comp.NewHurwitzInt(big0, big0, big0, big0, false)
-	// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
-	hGCRD1 = comp.NewHurwitzInt(big1, big0, big0, big0, false)
-	// 2's precomputed Hurwitz GCRD: 1, 1, 0, 0
-	hGCRD2 = comp.NewHurwitzInt(big1, big1, big0, big0, false)
-	// 3's precomputed Hurwitz GCRD: 1, 1, 1, 0
-	hGCRD3 = comp.NewHurwitzInt(big1, big1, big1, big0, false)
-	// 4's precomputed Hurwitz GCRD: 2, 0, 0, 0
-	hGCRD4 = comp.NewHurwitzInt(big2, big0, big0, big0, false)
-	// 5's precomputed Hurwitz GCRD: 2, 1, 0, 0
-	hGCRD5 = comp.NewHurwitzInt(big2, big1, big0, big0, false)
-	// 6's precomputed Hurwitz GCRD: 2, 1, 1, 0
-	hGCRD6 = comp.NewHurwitzInt(big2, big1, big1, big0, false)
-	// 7's precomputed Hurwitz GCRD: 2, 1, 1, 1
-	hGCRD7 = comp.NewHurwitzInt(big2, big1, big1, big1, false)
-	// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
-	hGCRD8 = comp.NewHurwitzInt(big2, big2, big0, big0, false)
 	// precomputed Hurwitz GCRDs for small integers
 	precomputedHurwitzGCRDs = [9]*comp.HurwitzInt{
-		hGCRD0, hGCRD1, hGCRD2, hGCRD3, hGCRD4, hGCRD5, hGCRD6, hGCRD7, hGCRD8,
+		// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
+		comp.NewHurwitzInt(big0, big0, big0, big0, false),
+		// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
+		comp.NewHurwitzInt(big1, big0, big0, big0, false),
+		// 2's precomputed Hurwitz GCRD: 1, 1, 0, 0
+		comp.NewHurwitzInt(big1, big1, big0, big0, false),
+		// 3's precomputed Hurwitz GCRD: 1, 1, 1, 0
+		comp.NewHurwitzInt(big1, big1, big1, big0, false),
+		// 4's precomputed Hurwitz GCRD: 2, 0, 0, 0
+		comp.NewHurwitzInt(big2, big0, big0, big0, false),
+		// 5's precomputed Hurwitz GCRD: 2, 1, 0, 0
+		comp.NewHurwitzInt(big2, big1, big0, big0, false),
+		// 6's precomputed Hurwitz GCRD: 2, 1, 1, 0
+		comp.NewHurwitzInt(big2, big1, big1, big0, false),
+		// 7's precomputed Hurwitz GCRD: 2, 1, 1, 1
+		comp.NewHurwitzInt(big2, big1, big1, big1, false),
+		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
+		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
-	// TODO: for testing purpose, to be reverted later
 	numCPU = runtime.NumCPU()
-	//numCPU = 6
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -115,15 +112,15 @@ func (f *FourSquare) RPCommit(pp *PublicParameters, coins rpRandCoins) (cList [s
 // The input should be an odd positive integer no less than 9
 func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	if n.Sign() == 0 {
-		res := NewFourSquare(hGCRD0.ValInt())
+		res := NewFourSquare(precomputedHurwitzGCRDs[0].ValInt())
 		return res, nil
 	}
 	n = new(big.Int).Set(n)
 	// n = 2^e * n', n' is odd
-	e := big.NewInt(0)
+	var e int
 	for n.Bit(0) == 0 {
 		n.Rsh(n, 1)
-		e.Add(e, big1)
+		e++
 	}
 	var hurwitzGCRD *comp.HurwitzInt
 
@@ -156,9 +153,9 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	// Gaussian integer: 1 + i
 	gaussian1PlusI := comp.NewGaussianInt(big1, big1)
 	gaussianProd := comp.NewGaussianInt(big1, big0)
-	for e.Sign() > 0 {
+	for e > 0 {
 		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
-		e.Sub(e, big1)
+		e--
 	}
 	hurwitzProd := comp.NewHurwitzInt(gaussianProd.R, gaussianProd.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
@@ -173,56 +170,61 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	if n.Cmp(big8) <= 0 {
 		return nil, errors.New("n should be larger than 8")
 	}
-	logN := log2(n)
 	var (
+		// log(n), limit for finding the prime numbers
+		logN = log2(n)
 		// primes in [2, 8]
 		primes = []*big.Int{big2, big3, big5, big7}
 		// product of primes, 2 * 3 * 5 * 7 = 210
 		primeProd = big.NewInt(210)
 		// starting from 9
-		idx = big.NewInt(9)
+		idx = 9
 	)
-	for idx.Cmp(logN) < 1 {
-		isPrime := true
+	for idx < logN {
+		var (
+			isPrime = true
+			bigIDX  = big.NewInt(int64(idx))
+		)
 		for _, prime := range primes {
-			mod := new(big.Int).Mod(idx, prime)
-			if mod.Sign() == 0 {
+			if new(big.Int).Mod(bigIDX, prime).Sign() == 0 {
 				isPrime = false
 				break
 			}
 		}
 		if isPrime {
-			newPrime := new(big.Int).Set(idx)
-			primes = append(primes, newPrime)
-			primeProd.Mul(primeProd, newPrime)
+			primes = append(primes, bigIDX)
+			primeProd.Mul(primeProd, bigIDX)
 		}
 		// increase index by 2, skip even numbers
-		idx.Add(idx, big2)
+		idx += 2
 	}
 	return primeProd, nil
 }
 
 func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
-	nPow5Div2NumCPUAdd1 := new(big.Int).Exp(n, big5, nil)
-	nPow5Div2NumCPUAdd1.Rsh(nPow5Div2NumCPUAdd1, 1)
-	nPow5Div2NumCPUAdd1.Div(nPow5Div2NumCPUAdd1, big.NewInt(int64(numCPU)))
-	nPow5Div2NumCPUAdd1.Add(nPow5Div2NumCPUAdd1, big1)
+	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
+	// then construct k based on the random number
+	// and check the validity of the trails
+	randLmt := new(big.Int).Exp(n, big5, nil)
+	randLmt.Rsh(randLmt, 1)
+	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
+	randLmt.Add(randLmt, big1)
+	// p = M * n * k - 1, pre-p = M * n
 	preP := new(big.Int).Set(primeProd)
 	preP.Mul(preP, n)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	//nPow5Div2NumCPUAdd1 := new(big.Int).Div(nPow5Div2NumCPUAdd1, big.NewInt(int64(numCPU)))
 	var (
-		mul  = big.NewInt(int64(2 * numCPU))
+		mul  = big.NewInt(int64(2 * numCPU)) // 2 * numCPU
 		adds []*big.Int
 	)
 	for i := 0; i <= numCPU; i++ {
-		adds = append(adds, big.NewInt(int64(2*i)))
+		adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
 	}
 	resChan := make(chan findSResult)
 	for _, add := range adds {
-		go findSRoutine(ctx, add, mul, nPow5Div2NumCPUAdd1, preP, resChan)
+		go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
 	}
 	res := <-resChan
 	return res.s, res.p, res.err
@@ -243,7 +245,7 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 					return
 				}
 			}
-			targetMod := new(big.Int).Mod(bigNeg1, p)
+			targetMod := new(big.Int).Sub(p, big1)
 			// test if s^2 = -1 (mod p)
 			// if so, continue to the next step, otherwise, repeat this step
 			if new(big.Int).Exp(s, big2, p).Cmp(targetMod) == 0 {
@@ -269,23 +271,18 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 		k, u *big.Int
 		err  error
 	)
-	// choose k'' in [0, randLmt)
+	// choose k' in [0, randLmt)
 	k, err = rand.Int(rand.Reader, randLmt)
 	if err != nil {
 		return nil, nil, err
 	}
-	// construct k', k' = k'' * mul + add
+	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
 	k.Add(k, add)
-	// construct k, k = k' + 1
-	//k.Lsh(k, 1)
-	k.Add(k, big1)
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
-	p := new(big.Int).Set(preP)
-	p.Mul(p, k)
+	p := new(big.Int).Mul(preP, k)
 	p.Sub(p, big1)
-	pMinus1 := new(big.Int).Set(p)
-	pMinus1.Sub(pMinus1, big1)
+	pMinus1 := new(big.Int).Sub(p, big1)
 	// choose u from [1, p - 1]
 	if u, err = rand.Int(rand.Reader, pMinus1); err != nil {
 		return nil, nil, err
@@ -293,7 +290,7 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	u.Add(u, big1)
 	// compute s = u^((p - 1) / 4) mod p
 	powU := new(big.Int).Set(pMinus1)
-	powU.Div(powU, big4)
+	powU.Rsh(powU, 2)
 	s := new(big.Int).Exp(u, powU, p)
 	return s, p, nil
 }
@@ -304,15 +301,13 @@ func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
 	gaussianInt := comp.NewGaussianInt(s, big1)
 	// Gaussian integer: p
 	gaussianP := comp.NewGaussianInt(p, big0)
-	gcd := new(comp.GaussianInt)
-	gcd.GCD(gaussianInt, gaussianP)
+	gcd := new(comp.GaussianInt).GCD(gaussianInt, gaussianP)
 	// compute gcrd(A + Bi + j, n), normalized to have integer component
 	// Hurwitz integer: A + Bi + j
 	hurwitzInt := comp.NewHurwitzInt(gcd.R, gcd.I, big1, big0, false)
 	// Hurwitz integer: n
 	hurwitzN := comp.NewHurwitzInt(n, big0, big0, big0, false)
-	gcrd := new(comp.HurwitzInt)
-	gcrd.GCRD(hurwitzInt, hurwitzN)
+	gcrd := new(comp.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
 
 	return gcrd, nil
 }
@@ -320,8 +315,8 @@ func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
 // Verify checks if the four-square sum is equal to the original integer
 // i.e. target = w1^2 + w2^2 + w3^2 + w4^2
 func Verify(target *big.Int, fs [squareNum]*big.Int) bool {
-	sum := new(big.Int).Mul(fs[0], fs[0])
-	for i := 1; i < squareNum; i++ {
+	sum := big.NewInt(0)
+	for i := 0; i < squareNum; i++ {
 		sum.Add(sum, new(big.Int).Mul(fs[i], fs[i]))
 	}
 	return sum.Cmp(target) == 0
