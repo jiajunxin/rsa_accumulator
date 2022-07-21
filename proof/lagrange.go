@@ -6,13 +6,12 @@ import (
 	"errors"
 	"math/big"
 	"runtime"
+	"sync"
 
 	comp "github.com/rsa_accumulator/complex"
 )
 
-const (
-	squareNum = 4
-)
+const squareNum = 4
 
 var (
 	// precomputed Hurwitz GCRDs for small integers
@@ -36,7 +35,10 @@ var (
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
-	numCPU = runtime.NumCPU()
+	numCPU     = runtime.NumCPU()
+	bigIntPool = sync.Pool{
+		New: func() interface{} { return new(big.Int) },
+	}
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -210,8 +212,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
 	randLmt.Add(randLmt, big1)
 	// p = M * n * k - 1, pre-p = M * n
-	preP := new(big.Int).Set(primeProd)
-	preP.Mul(preP, n)
+	preP := new(big.Int).Mul(primeProd, n)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -267,11 +268,10 @@ type findSResult struct {
 }
 
 func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
-	var (
-		k, u *big.Int
-		err  error
-	)
+	var err error
 	// choose k' in [0, randLmt)
+	k := bigIntPool.Get().(*big.Int)
+	defer bigIntPool.Put(k)
 	k, err = rand.Int(rand.Reader, randLmt)
 	if err != nil {
 		return nil, nil, err
@@ -279,19 +279,32 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
 	k.Add(k, add)
+
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
-	p := new(big.Int).Mul(preP, k)
+	p := bigIntPool.Get().(*big.Int)
+	defer bigIntPool.Put(p)
+	p.Mul(preP, k)
 	p.Sub(p, big1)
-	pMinus1 := new(big.Int).Sub(p, big1)
+	pMinus1 := bigIntPool.Get().(*big.Int)
+	defer bigIntPool.Put(pMinus1)
+	pMinus1.Sub(p, big1)
+
 	// choose u from [1, p - 1]
+	u := bigIntPool.Get().(*big.Int)
+	defer bigIntPool.Put(u)
 	if u, err = rand.Int(rand.Reader, pMinus1); err != nil {
 		return nil, nil, err
 	}
 	u.Add(u, big1)
+
 	// compute s = u^((p - 1) / 4) mod p
-	powU := new(big.Int).Set(pMinus1)
-	powU.Rsh(powU, 2)
-	s := new(big.Int).Exp(u, powU, p)
+	powU := bigIntPool.Get().(*big.Int)
+	defer bigIntPool.Put(powU)
+	powU.Rsh(pMinus1, 2)
+	s := bigIntPool.Get().(*big.Int)
+	defer bigIntPool.Put(s)
+	s.Exp(u, powU, p)
+
 	return s, p, nil
 }
 
