@@ -179,10 +179,10 @@ func (g *GaussianInt) CmpNorm(a *GaussianInt) int {
 func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
 	ac := giPool.Get().(*GaussianInt)
 	defer giPool.Put(ac)
-	ac = a.Copy()
+	ac.Set(a)
 	bc := giPool.Get().(*GaussianInt)
 	defer giPool.Put(bc)
-	bc = b.Copy()
+	bc.Set(b)
 
 	if ac.CmpNorm(bc) < 0 {
 		ac, bc = bc, ac

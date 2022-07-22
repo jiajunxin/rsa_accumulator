@@ -3,6 +3,8 @@ package proof
 import (
 	"math/big"
 	"sync"
+
+	comp "github.com/rsa_accumulator/complex"
 )
 
 var (
@@ -16,6 +18,12 @@ var (
 	// sync pool for big integers, lease GC and improve performance
 	iPool = sync.Pool{
 		New: func() interface{} { return new(big.Int) },
+	}
+	giPool = sync.Pool{
+		New: func() interface{} { return new(comp.GaussianInt) },
+	}
+	hiPool = sync.Pool{
+		New: func() interface{} { return new(comp.HurwitzInt) },
 	}
 )
 

@@ -155,8 +155,8 @@ func (h *HurwitzInt) ValInt() (r, i, j, k *big.Int) {
 }
 
 // Update updates the integral quaternion with the given real, i, j, and k parts
-func (h *HurwitzInt) Update(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
-	if isDouble {
+func (h *HurwitzInt) Update(r, i, j, k *big.Int, doubled bool) *HurwitzInt {
+	if doubled {
 		h.dblR = r
 		h.dblI = i
 		h.dblJ = j
@@ -375,10 +375,10 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 func (h *HurwitzInt) GCRD(a, b *HurwitzInt) *HurwitzInt {
 	ac := hiPool.Get().(*HurwitzInt)
 	defer hiPool.Put(ac)
-	ac = a.Copy()
+	ac.Set(a)
 	bc := hiPool.Get().(*HurwitzInt)
 	defer hiPool.Put(bc)
-	bc = b.Copy()
+	bc.Set(b)
 
 	if ac.CmpNorm(bc) < 0 {
 		ac, bc = bc, ac
