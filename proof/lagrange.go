@@ -35,8 +35,7 @@ var (
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
 	numCPU = runtime.NumCPU()
-	ss     = newSquareStore()
-	//randXYMap sync.Map
+	ss     = newSquareStore(0)
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -115,33 +114,27 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 		res := NewFourSquare(precomputedHurwitzGCRDs[0].ValInt())
 		return res, nil
 	}
-	n = new(big.Int).Set(n)
-	// n = 2^e * n', n' is odd
-	var e int
-	for n.Bit(0) == 0 {
-		n.Rsh(n, 1)
-		e++
-	}
+	nc, e := divideN(n)
 	var hurwitzGCRD *comp.HurwitzInt
 
-	if n.Cmp(big8) <= 0 {
-		hurwitzGCRD = precomputedHurwitzGCRDs[n.Int64()]
+	if nc.Cmp(big8) <= 0 {
+		hurwitzGCRD = precomputedHurwitzGCRDs[nc.Int64()]
 	} else {
-		primeProd, err := preCompute(n)
+		primeProd, err := preCompute(nc)
 		if err != nil {
 			return FourSquare{}, err
 		}
 		for {
-			s, p, err := randTrails(n, primeProd)
+			s, p, err := randTrails(nc, primeProd)
 			if err != nil {
 				return FourSquare{}, err
 			}
-			hurwitzGCRD, err = denouement(n, s, p)
+			hurwitzGCRD, err = denouement(nc, s, p)
 			if err != nil {
 				return FourSquare{}, err
 			}
 			w1, w2, w3, w4 := hurwitzGCRD.ValInt()
-			if Verify(n, [squareNum]*big.Int{w1, w2, w3, w4}) {
+			if Verify(nc, [squareNum]*big.Int{w1, w2, w3, w4}) {
 				break
 			}
 		}
@@ -151,17 +144,37 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	// then x^2 + Y^2 + Z^2 + W^2 = n for x, Y, Z, W defined by
 	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
 	// Gaussian integer: 1 + i
-	gaussian1PlusI := comp.NewGaussianInt(big1, big1)
+	gi := gaussian1PlusIPow(e)
+	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
+	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
+	w1, w2, w3, w4 := hurwitzProd.ValInt()
+	fs := NewFourSquare(w1, w2, w3, w4)
+	return fs, nil
+}
+
+func divideN(n *big.Int) (*big.Int, int) {
+	// n = 2^e * n', n' is odd
+	nc := new(big.Int).Set(n)
+	var e int
+	for nc.Bit(0) == 0 {
+		nc.Rsh(nc, 1)
+		e++
+	}
+	return nc, e
+}
+
+// gaussian1PlusIPow calculates Gaussian integer (1 + i)^e
+func gaussian1PlusIPow(e int) *comp.GaussianInt {
+	gaussian1PlusI := giPool.Get().(*comp.GaussianInt)
+	defer giPool.Put(gaussian1PlusI)
+	gaussian1PlusI.Update(big1, big1)
+
 	gaussianProd := comp.NewGaussianInt(big1, big0)
 	for e > 0 {
 		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
 		e--
 	}
-	hurwitzProd := comp.NewHurwitzInt(gaussianProd.R, gaussianProd.I, big0, big0, false)
-	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
-	w1, w2, w3, w4 := hurwitzProd.ValInt()
-	fs := NewFourSquare(w1, w2, w3, w4)
-	return fs, nil
+	return gaussianProd
 }
 
 // preCompute determine the primes not exceeding log n and compute their product
@@ -318,52 +331,71 @@ func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
 	return gcrd, nil
 }
 
+// UnconditionalLagrangeFourSquares calculates the Lagrange four squares for a given non-positive integer
+// the method doesn't rely on the Extended Riemann Hypothesis (ERH
 func UnconditionalLagrangeFourSquares(n *big.Int) (FourSquare, error) {
-	x, y, p, r1, s, primes, err := initialTrail(n)
-	if err != nil {
-		return FourSquare{}, err
+	if n.Sign() == 0 {
+		res := NewFourSquare(precomputedHurwitzGCRDs[0].ValInt())
+		return res, nil
 	}
-	// compute u, v
-	u, v, err := computeUV(r1, n, primes)
-	if err != nil {
-		return FourSquare{}, err
-	}
-	var up, vp *big.Int
-	// compute U -> up, V -> vp
-	if s == nil {
-		up = big.NewInt(1)
-		vp = big.NewInt(0)
-	} else {
-		gcd := giPool.Get().(*comp.GaussianInt)
-		defer giPool.Put(gcd)
-		gopt1 := giPool.Get().(*comp.GaussianInt)
-		defer giPool.Put(gopt1)
-		gopt2 := giPool.Get().(*comp.GaussianInt)
-		defer giPool.Put(gopt2)
-		gopt1.Update(p, big0)
-		gopt2.Update(s, big1)
-		gcd.GCD(gopt1, gopt2)
-		up = gcd.R
-		vp = gcd.I
-	}
-	uvi := comp.NewGaussianInt(u, v)
-	uPvPI := comp.NewGaussianInt(up, vp)
-	zwi := new(comp.GaussianInt).Prod(uvi, uPvPI)
-	hopt1 := hiPool.Get().(*comp.HurwitzInt)
-	defer hiPool.Put(hopt1)
-	hopt1.Update(n, big0, big0, big0, false)
-	hopt2 := hiPool.Get().(*comp.HurwitzInt)
-	defer hiPool.Put(hopt2)
-	hopt2.Update(x, y, zwi.R, zwi.I, false)
-	gcrd := new(comp.HurwitzInt)
-	gcrd.GCRD(hopt1, hopt2)
+	nc, e := divideN(n)
+	var hurwitzGCRD *comp.HurwitzInt
 
-	w1, w2, w3, w4 := gcrd.ValInt()
+	if nc.Cmp(big8) <= 0 {
+		hurwitzGCRD = precomputedHurwitzGCRDs[nc.Int64()]
+	} else {
+		x, y, p, r1, s, primes, err := initTrail(nc)
+		if err != nil {
+			return FourSquare{}, err
+		}
+		// compute u, v
+		u, v, err := computeUV(r1, nc, primes)
+		if err != nil {
+			return FourSquare{}, err
+		}
+		var up, vp *big.Int
+		// compute U -> up, V -> vp
+		if s == nil {
+			up = big.NewInt(1)
+			vp = big.NewInt(0)
+		} else {
+			gcd := giPool.Get().(*comp.GaussianInt)
+			defer giPool.Put(gcd)
+			gopt1 := giPool.Get().(*comp.GaussianInt)
+			defer giPool.Put(gopt1)
+			gopt2 := giPool.Get().(*comp.GaussianInt)
+			defer giPool.Put(gopt2)
+			gopt1.Update(p, big0)
+			gopt2.Update(s, big1)
+			gcd.GCD(gopt1, gopt2)
+			up = gcd.R
+			vp = gcd.I
+		}
+		uvi := comp.NewGaussianInt(u, v)
+		uPvPI := comp.NewGaussianInt(up, vp)
+		zwi := new(comp.GaussianInt).Prod(uvi, uPvPI)
+		hopt1 := hiPool.Get().(*comp.HurwitzInt)
+		defer hiPool.Put(hopt1)
+		hopt1.Update(n, big0, big0, big0, false)
+		hopt2 := hiPool.Get().(*comp.HurwitzInt)
+		defer hiPool.Put(hopt2)
+		hopt2.Update(x, y, zwi.R, zwi.I, false)
+		hurwitzGCRD = new(comp.HurwitzInt).GCRD(hopt1, hopt2)
+	}
+
+	// if x'^2 + Y'^2 + Z'^2 + W'^2 = n'
+	// then x^2 + Y^2 + Z^2 + W^2 = n for x, Y, Z, W defined by
+	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
+	// Gaussian integer: 1 + i
+	gi := gaussian1PlusIPow(e)
+	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
+	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
+	w1, w2, w3, w4 := hurwitzProd.ValInt()
 	fs := NewFourSquare(w1, w2, w3, w4)
 	return fs, nil
 }
 
-func initialTrail(n *big.Int) (x, y, p, r1, s *big.Int, primes []*big.Int, err error) {
+func initTrail(n *big.Int) (x, y, p, r1, s *big.Int, primes []*big.Int, err error) {
 	logN := log2(n)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
@@ -378,6 +410,20 @@ func initialTrail(n *big.Int) (x, y, p, r1, s *big.Int, primes []*big.Int, err e
 		}
 		i += 4
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	resChan := make(chan initTrailResult)
+	for i := 0; i < numCPU; i++ {
+		go initTrailRoutine(ctx, n, primes, resChan)
+	}
+	res := <-resChan
+	return res.x, res.y, res.p, res.r1, res.s, primes, res.err
+}
+
+func initTrailRoutine(ctx context.Context, n *big.Int, primes []*big.Int, resChan chan<- initTrailResult) {
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
 	mod := iPool.Get().(*big.Int)
 	defer iPool.Put(mod)
 	r := iPool.Get().(*big.Int)
@@ -388,32 +434,63 @@ func initialTrail(n *big.Int) (x, y, p, r1, s *big.Int, primes []*big.Int, err e
 	defer iPool.Put(u)
 	powU := iPool.Get().(*big.Int)
 	defer iPool.Put(powU)
+	var (
+		x, y, p, r1, s *big.Int
+		err            error
+	)
 	for {
-		r, x, y, err = randomChoiceXY(n)
-		r1 = big.NewInt(1)
-		for _, prime := range primes {
-			opt = big.NewInt(1)
-			for mod.Mod(r, opt).Cmp(big0) == 0 {
-				r1.Mul(r1, opt)
-				opt.Mul(opt, prime)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			r, x, y, err = randomChoiceXY(n)
+			r1 = big.NewInt(1)
+			for _, prime := range primes {
+				opt = big.NewInt(1)
+				for mod.Mod(r, opt).Cmp(big0) == 0 {
+					r1.Mul(r1, opt)
+					opt.Mul(opt, prime)
+				}
+			}
+			p = new(big.Int).Div(r, r1)
+			if p.Cmp(big1) == 0 {
+				select {
+				case resChan <- initTrailResult{x, y, p, r1, s, err}:
+					ctx.Done()
+					return
+				default:
+					return
+				}
+			}
+			pMinus1.Sub(p, big1)
+			u, err = crand.Int(crand.Reader, pMinus1)
+			if err != nil {
+				select {
+				case resChan <- initTrailResult{x, y, p, r1, s, err}:
+					return
+				default:
+					return
+				}
+			}
+			u.Add(u, big1)
+			powU.Rsh(pMinus1, 2)
+			s = new(big.Int).Exp(u, powU, p)
+			if s.Mul(s, s).Cmp(pMinus1) == 0 {
+				select {
+				case resChan <- initTrailResult{x, y, p, r1, s, err}:
+					ctx.Done()
+					return
+				default:
+					return
+				}
 			}
 		}
-		p = new(big.Int).Div(r, r1)
-		if p.Cmp(big1) == 0 {
-			return
-		}
-		pMinus1.Sub(p, big1)
-		u, err = crand.Int(crand.Reader, pMinus1)
-		if err != nil {
-			return
-		}
-		u.Add(u, big1)
-		powU.Rsh(pMinus1, 2)
-		s = new(big.Int).Exp(u, powU, p)
-		if s.Mul(s, s).Cmp(pMinus1) == 0 {
-			return
-		}
 	}
+}
+
+type initTrailResult struct {
+	x, y, p, r1, s *big.Int
+	err            error
 }
 
 func randomChoiceXY(n *big.Int) (r, x, y *big.Int, err error) {
@@ -465,7 +542,7 @@ func computeUV(r1, n *big.Int, primes []*big.Int) (u, v *big.Int, err error) {
 	gopt := giPool.Get().(*comp.GaussianInt)
 	defer giPool.Put(gopt)
 	for _, prime := range primes {
-		x, y := ss.FindXY(prime)
+		x, y := ss.findXY(prime)
 		gopt.Update(x, y)
 		// determine vl
 		opt.Set(prime)
@@ -485,41 +562,56 @@ func computeSquares(n *big.Int) (*squareStore, error) {
 	for i := ss.max; i <= lmt; i++ {
 		bigI := big.NewInt(int64(i))
 		sq := new(big.Int).Mul(bigI, bigI)
-		ss.Add(bigI, sq)
+		ss.add(bigI, sq)
 		ss.max = i
 	}
 	return ss, nil
 }
 
+func CacheSquareNums(bitLen int) {
+	lmt := int(math.Sqrt(float64(bitLen)))
+	ss = newSquareStore(lmt)
+}
+
 type squareStore struct {
-	sMap  map[*big.Int]*big.Int
-	sList []*big.Int
-	max   int
+	sm  map[*big.Int]*big.Int
+	sl  []*big.Int
+	max int
 }
 
-func newSquareStore() *squareStore {
-	return &squareStore{
-		sMap: make(map[*big.Int]*big.Int),
+func newSquareStore(max int) *squareStore {
+	ss := &squareStore{
+		sm: make(map[*big.Int]*big.Int),
+	}
+	if max > 0 {
+		ss.sl = make([]*big.Int, max)
+		for i := 1; i <= max; i++ {
+			bigI := big.NewInt(int64(i))
+			sq := new(big.Int).Mul(bigI, bigI)
+			ss.add(bigI, sq)
+		}
+		ss.max = max
+	}
+	return ss
+}
+
+func (s *squareStore) add(n, nsq *big.Int) {
+	if _, ok := s.sm[nsq]; !ok {
+		s.sm[nsq] = n
+		s.sl = append(s.sl, nsq)
 	}
 }
 
-func (s *squareStore) Add(n, nsq *big.Int) {
-	if _, ok := s.sMap[nsq]; !ok {
-		s.sMap[nsq] = n
-		s.sList = append(s.sList, nsq)
-	}
-}
-
-func (s *squareStore) FindXY(n *big.Int) (x, y *big.Int) {
+func (s *squareStore) findXY(n *big.Int) (x, y *big.Int) {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	for _, sq := range s.sList {
+	for _, sq := range s.sl {
 		if sq.Cmp(n) == 1 {
 			break
 		}
 		opt.Sub(n, sq)
-		if resY, ok := s.sMap[opt]; ok {
-			x = new(big.Int).Set(s.sMap[sq])
+		if resY, ok := s.sm[opt]; ok {
+			x = new(big.Int).Set(s.sm[sq])
 			y = new(big.Int).Set(resY)
 			return
 		}
