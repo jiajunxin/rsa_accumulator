@@ -35,11 +35,11 @@ var (
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
 	numCPU = runtime.NumCPU()
+	ps     = newPrimeStore(1792)
 	ss     = newSquareStore(0)
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
-// w <- LagrangeFourSquareLipmaa(mu), mu = w = W1^2 + W2^2 + W3^2 + W4^2
 type FourSquare [squareNum]*big.Int
 
 // NewFourSquare creates a new FourSquare
@@ -124,19 +124,13 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 		if err != nil {
 			return FourSquare{}, err
 		}
-		for {
-			s, p, err := randTrails(nc, primeProd)
-			if err != nil {
-				return FourSquare{}, err
-			}
-			hurwitzGCRD, err = denouement(nc, s, p)
-			if err != nil {
-				return FourSquare{}, err
-			}
-			w1, w2, w3, w4 := hurwitzGCRD.ValInt()
-			if Verify(nc, [squareNum]*big.Int{w1, w2, w3, w4}) {
-				break
-			}
+		s, p, err := randTrails(nc, primeProd)
+		if err != nil {
+			return FourSquare{}, err
+		}
+		hurwitzGCRD, err = denouement(nc, s, p)
+		if err != nil {
+			return FourSquare{}, err
 		}
 	}
 
@@ -183,35 +177,78 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	if n.Cmp(big8) <= 0 {
 		return nil, errors.New("n should be larger than 8")
 	}
-	var (
-		// log(n), limit for finding the prime numbers
-		logN = log2(n)
-		// primes in [2, 8]
-		primes = []*big.Int{big2, big3, big5, big7}
-		// product of primes, 2 * 3 * 5 * 7 = 210
-		primeProd = big.NewInt(210)
-		// starting from 9
-		idx = 9
-	)
-	for idx < logN {
-		var (
-			isPrime = true
-			bigIDX  = big.NewInt(int64(idx))
-		)
-		for _, prime := range primes {
-			if new(big.Int).Mod(bigIDX, prime).Sign() == 0 {
+	logN := log2(n)
+	if logN <= ps.max {
+		for idx := len(ps.l) - 1; idx >= 0; idx-- {
+			psl := ps.l[idx]
+			if psl < logN {
+				return ps.m[psl], nil
+			}
+		}
+	}
+	prod := iPool.Get().(*big.Int)
+	defer iPool.Put(prod)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	prod.Set(ps.m[ps.max])
+	for idx := ps.max + 2; idx < logN; idx += 2 {
+		isPrime := true
+		for _, p := range ps.l {
+			if idx%p == 0 && idx != p {
 				isPrime = false
 				break
 			}
 		}
 		if isPrime {
-			primes = append(primes, bigIDX)
-			primeProd.Mul(primeProd, bigIDX)
+			opt.SetInt64(int64(idx))
+			prod.Mul(prod, opt)
+			ps.l = append(ps.l, idx)
+			ps.m[idx] = new(big.Int).Set(prod)
+			ps.max = idx
 		}
-		// increase index by 2, skip even numbers
-		idx += 2
 	}
-	return primeProd, nil
+	return new(big.Int).Set(prod), nil
+}
+
+type primeStore struct {
+	l   []int
+	m   map[int]*big.Int
+	max int
+}
+
+func newPrimeStore(lmt int) *primeStore {
+	ps := &primeStore{
+		l:   []int{2, 3, 5, 7},
+		m:   make(map[int]*big.Int),
+		max: 7,
+	}
+	ps.m[2] = big.NewInt(2)
+	ps.m[3] = big.NewInt(6)
+	ps.m[5] = big.NewInt(30)
+	ps.m[7] = big.NewInt(210)
+
+	prod := iPool.Get().(*big.Int)
+	defer iPool.Put(prod)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	prod.SetInt64(210)
+	for idx := 9; idx <= lmt; idx += 2 {
+		isPrime := true
+		for _, p := range ps.l {
+			if idx%p == 0 && idx != p {
+				isPrime = false
+				break
+			}
+		}
+		if isPrime {
+			opt.SetInt64(int64(idx))
+			ps.l = append(ps.l, idx)
+			prod.Mul(prod, opt)
+			ps.m[idx] = new(big.Int).Set(prod)
+			ps.max = idx
+		}
+	}
+	return ps
 }
 
 func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
@@ -248,7 +285,7 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 		case <-ctx.Done():
 			return
 		default:
-			s, p, err := pickS(mul, add, randLmt, preP)
+			s, p, ok, err := pickS(mul, add, randLmt, preP)
 			if err != nil {
 				select {
 				case resChan <- findSResult{err: err}:
@@ -257,10 +294,7 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 					return
 				}
 			}
-			targetMod := new(big.Int).Sub(p, big1)
-			// test if s^2 = -1 (mod p)
-			// if so, continue to the next step, otherwise, repeat this step
-			if new(big.Int).Exp(s, big2, p).Cmp(targetMod) == 0 {
+			if ok {
 				ctx.Done()
 				select {
 				case resChan <- findSResult{s: s, p: p}:
@@ -278,13 +312,13 @@ type findSResult struct {
 	err  error
 }
 
-func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
+func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	var err error
 	// choose k' in [0, randLmt)
 	k := iPool.Get().(*big.Int)
 	defer iPool.Put(k)
 	if k, err = crand.Int(crand.Reader, randLmt); err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
@@ -301,7 +335,7 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	u := iPool.Get().(*big.Int)
 	defer iPool.Put(u)
 	if u, err = crand.Int(crand.Reader, pMinus1); err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 	u.Add(u, big1)
 
@@ -311,21 +345,39 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, error) {
 	powU.Rsh(pMinus1, 2)
 	s := new(big.Int).Exp(u, powU, p)
 
-	return s, p, nil
+	// test if s^2 = -1 (mod p)
+	// if so, continue to the next step, otherwise, repeat this step
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	if opt.Exp(s, big2, p).Cmp(pMinus1) == 0 {
+		return s, p, true, nil
+	}
+	return nil, nil, false, nil
 }
 
 func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
 	// compute A + Bi := gcd(s + i, p)
 	// Gaussian integer: s + i
-	gaussianInt := comp.NewGaussianInt(s, big1)
+	gaussianInt := giPool.Get().(*comp.GaussianInt)
+	defer giPool.Put(gaussianInt)
+	gaussianInt.Update(s, big1)
 	// Gaussian integer: p
-	gaussianP := comp.NewGaussianInt(p, big0)
-	gcd := new(comp.GaussianInt).GCD(gaussianInt, gaussianP)
+	gaussianP := giPool.Get().(*comp.GaussianInt)
+	defer giPool.Put(gaussianP)
+	gaussianP.Update(p, big0)
+	// compute gcd(s + i, p)
+	gcd := giPool.Get().(*comp.GaussianInt)
+	defer giPool.Put(gcd)
+	gcd.GCD(gaussianInt, gaussianP)
 	// compute gcrd(A + Bi + j, n), normalized to have integer component
 	// Hurwitz integer: A + Bi + j
-	hurwitzInt := comp.NewHurwitzInt(gcd.R, gcd.I, big1, big0, false)
+	hurwitzInt := hiPool.Get().(*comp.HurwitzInt)
+	defer hiPool.Put(hurwitzInt)
+	hurwitzInt.Update(gcd.R, gcd.I, big1, big0, false)
 	// Hurwitz integer: n
-	hurwitzN := comp.NewHurwitzInt(n, big0, big0, big0, false)
+	hurwitzN := hiPool.Get().(*comp.HurwitzInt)
+	defer hiPool.Put(hurwitzN)
+	hurwitzN.Update(n, big0, big0, big0, false)
 	gcrd := new(comp.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
 
 	return gcrd, nil
@@ -574,14 +626,14 @@ func CacheSquareNums(bitLen int) {
 }
 
 type squareStore struct {
-	sm  map[*big.Int]*big.Int
+	sm  map[string]*big.Int
 	sl  []*big.Int
 	max int
 }
 
 func newSquareStore(max int) *squareStore {
 	ss := &squareStore{
-		sm: make(map[*big.Int]*big.Int),
+		sm: make(map[string]*big.Int),
 	}
 	if max > 0 {
 		ss.sl = make([]*big.Int, max)
@@ -596,8 +648,8 @@ func newSquareStore(max int) *squareStore {
 }
 
 func (s *squareStore) add(n, nsq *big.Int) {
-	if _, ok := s.sm[nsq]; !ok {
-		s.sm[nsq] = n
+	if _, ok := s.sm[nsq.String()]; !ok {
+		s.sm[nsq.String()] = n
 		s.sl = append(s.sl, nsq)
 	}
 }
@@ -610,8 +662,8 @@ func (s *squareStore) findXY(n *big.Int) (x, y *big.Int) {
 			break
 		}
 		opt.Sub(n, sq)
-		if resY, ok := s.sm[opt]; ok {
-			x = new(big.Int).Set(s.sm[sq])
+		if resY, ok := s.sm[opt.String()]; ok {
+			x = new(big.Int).Set(s.sm[sq.String()])
 			y = new(big.Int).Set(resY)
 			return
 		}
@@ -622,7 +674,9 @@ func (s *squareStore) findXY(n *big.Int) (x, y *big.Int) {
 // Verify checks if the four-square sum is equal to the original integer
 // i.e. target = w1^2 + w2^2 + w3^2 + w4^2
 func Verify(target *big.Int, fs [squareNum]*big.Int) bool {
-	sum := big.NewInt(0)
+	sum := iPool.Get().(*big.Int)
+	defer iPool.Put(sum)
+	sum.Set(big0)
 	for i := 0; i < squareNum; i++ {
 		sum.Add(sum, new(big.Int).Mul(fs[i], fs[i]))
 	}
