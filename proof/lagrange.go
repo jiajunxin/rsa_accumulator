@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"runtime"
+	"sync"
 )
 
 const squareNum = 4
@@ -34,9 +35,10 @@ var (
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
-	numCPU = runtime.NumCPU()
-	ps     = newPrimeStore(1792)
-	ss     = newSquareStore(0)
+	numCPU     = runtime.NumCPU()
+	ps         = newPrimeStore(1792)
+	ss         = newSquareStore(0)
+	pickSCache = sync.Map{}
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -179,12 +181,18 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	}
 	logN := log2(n)
 	if logN <= ps.max {
-		for idx := len(ps.l) - 1; idx >= 0; idx-- {
-			psl := ps.l[idx]
-			if psl < logN {
-				return ps.m[psl], nil
-			}
+		//for idx := len(ps.l) - 1; idx >= 0; idx-- {
+		//	psl := ps.l[idx]
+		//	if psl < logN {
+		//		return ps.m[psl], nil
+		//	}
+		//}
+		//return nil, errors.New("precomputed primes not found")
+		prod, err := ps.findPrimeProd(logN)
+		if err != nil {
+			return nil, err
 		}
+		return prod, nil
 	}
 	prod := iPool.Get().(*big.Int)
 	defer iPool.Put(prod)
@@ -192,20 +200,7 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	defer iPool.Put(opt)
 	prod.Set(ps.m[ps.max])
 	for idx := ps.max + 2; idx < logN; idx += 2 {
-		isPrime := true
-		for _, p := range ps.l {
-			if idx%p == 0 && idx != p {
-				isPrime = false
-				break
-			}
-		}
-		if isPrime {
-			opt.SetInt64(int64(idx))
-			prod.Mul(prod, opt)
-			ps.l = append(ps.l, idx)
-			ps.m[idx] = new(big.Int).Set(prod)
-			ps.max = idx
-		}
+		ps.checkAddPrime(idx, prod, opt)
 	}
 	return new(big.Int).Set(prod), nil
 }
@@ -233,22 +228,56 @@ func newPrimeStore(lmt int) *primeStore {
 	defer iPool.Put(opt)
 	prod.SetInt64(210)
 	for idx := 9; idx <= lmt; idx += 2 {
-		isPrime := true
-		for _, p := range ps.l {
-			if idx%p == 0 && idx != p {
-				isPrime = false
-				break
-			}
-		}
-		if isPrime {
-			opt.SetInt64(int64(idx))
-			ps.l = append(ps.l, idx)
-			prod.Mul(prod, opt)
-			ps.m[idx] = new(big.Int).Set(prod)
-			ps.max = idx
-		}
+		ps.checkAddPrime(idx, prod, opt)
 	}
 	return ps
+}
+
+func (p *primeStore) checkAddPrime(n int, prod, opt *big.Int) {
+	isPrime := true
+	for _, prime := range p.l {
+		if n%prime == 0 && n != prime {
+			isPrime = false
+			break
+		}
+	}
+	if !isPrime {
+		return
+	}
+	p.l = append(p.l, n)
+	opt.SetInt64(int64(n))
+	prod.Mul(prod, opt)
+	p.m[n] = new(big.Int).Set(prod)
+	p.max = n
+}
+
+// findPrimeProd finds the product of primes less than log n using binary search
+func (p *primeStore) findPrimeProd(logN int) (*big.Int, error) {
+	var (
+		l int
+		r = len(p.l) - 1
+	)
+	for l <= r {
+		mid := (l-r)/2 + r
+		pll := p.l[mid]
+		if mid == len(p.l)-1 {
+			return p.m[pll], nil
+		}
+		plr := p.l[mid+1]
+		if pll < logN && plr >= logN {
+			return p.m[pll], nil
+		}
+		if pll >= logN {
+			r = mid - 1
+		} else {
+			l = mid + 1
+		}
+	}
+	return nil, errors.New("precomputed primes not found")
+}
+
+func ResetPrimeStore() {
+	ps = newPrimeStore(0)
 }
 
 func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
@@ -294,14 +323,17 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 					return
 				}
 			}
-			if ok {
-				ctx.Done()
-				select {
-				case resChan <- findSResult{s: s, p: p}:
-					return
-				default:
-					return
-				}
+			if !ok {
+				continue
+			}
+			ctx.Done()
+			select {
+			case resChan <- findSResult{
+				s: s, p: p,
+			}:
+				return
+			default:
+				return
 			}
 		}
 	}
@@ -325,7 +357,9 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	k.Add(k, add)
 
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
-	p := new(big.Int).Mul(preP, k)
+	p := iPool.Get().(*big.Int)
+	defer iPool.Put(p)
+	p.Mul(preP, k)
 	p.Sub(p, big1)
 	pMinus1 := iPool.Get().(*big.Int)
 	defer iPool.Put(pMinus1)
@@ -343,16 +377,18 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	powU := iPool.Get().(*big.Int)
 	defer iPool.Put(powU)
 	powU.Rsh(pMinus1, 2)
-	s := new(big.Int).Exp(u, powU, p)
+	s := iPool.Get().(*big.Int)
+	defer iPool.Put(s)
+	s.Exp(u, powU, p)
 
 	// test if s^2 = -1 (mod p)
 	// if so, continue to the next step, otherwise, repeat this step
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	if opt.Exp(s, big2, p).Cmp(pMinus1) == 0 {
-		return s, p, true, nil
+	if opt.Exp(s, big2, p).Cmp(pMinus1) != 0 {
+		return nil, nil, false, nil
 	}
-	return nil, nil, false, nil
+	return new(big.Int).Set(s), new(big.Int).Set(p), true, nil
 }
 
 func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
