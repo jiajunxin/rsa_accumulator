@@ -4,10 +4,11 @@ import (
 	"context"
 	crand "crypto/rand"
 	"errors"
-	comp "github.com/rsa_accumulator/complex"
 	"math"
 	"math/big"
 	"runtime"
+
+	comp "github.com/rsa_accumulator/complex"
 )
 
 const squareNum = 4
@@ -34,10 +35,16 @@ var (
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
-	numCPU = runtime.NumCPU()
-	ps     = newPrimeStore(1792)
-	ss     = newSquareStore(0)
+	numCPU  = runtime.NumCPU()
+	pCache  = newPrimeCache(1792)
+	ss      = newSquareCache(0)
+	giCache = make(map[int]*comp.GaussianInt)
 )
+
+// ResetGaussianIntCache resets the Gaussian integer cache
+func ResetGaussianIntCache() {
+	giCache = make(map[int]*comp.GaussianInt)
+}
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
 type FourSquare [squareNum]*big.Int
@@ -159,6 +166,9 @@ func divideN(n *big.Int) (*big.Int, int) {
 
 // gaussian1PlusIPow calculates Gaussian integer (1 + i)^e
 func gaussian1PlusIPow(e int) *comp.GaussianInt {
+	if gi, ok := giCache[e]; ok {
+		return gi
+	}
 	gaussian1PlusI := giPool.Get().(*comp.GaussianInt)
 	defer giPool.Put(gaussian1PlusI)
 	gaussian1PlusI.Update(big1, big1)
@@ -168,6 +178,9 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
 		e--
 	}
+	gi := new(comp.GaussianInt)
+	gi.Update(gaussianProd.R, gaussianProd.I)
+	giCache[e] = gi
 	return gaussianProd
 }
 
@@ -178,15 +191,8 @@ func preCompute(n *big.Int) (*big.Int, error) {
 		return nil, errors.New("n should be larger than 8")
 	}
 	logN := log2(n)
-	if logN <= ps.max {
-		//for idx := len(ps.l) - 1; idx >= 0; idx-- {
-		//	psl := ps.l[idx]
-		//	if psl < logN {
-		//		return ps.m[psl], nil
-		//	}
-		//}
-		//return nil, errors.New("precomputed primes not found")
-		prod, err := ps.findPrimeProd(logN)
+	if logN <= pCache.max {
+		prod, err := pCache.findPrimeProd(logN)
 		if err != nil {
 			return nil, err
 		}
@@ -196,21 +202,21 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	defer iPool.Put(prod)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	prod.Set(ps.m[ps.max])
-	for idx := ps.max + 2; idx < logN; idx += 2 {
-		ps.checkAddPrime(idx, prod, opt)
+	prod.Set(pCache.m[pCache.max])
+	for idx := pCache.max + 2; idx < logN; idx += 2 {
+		pCache.checkAddPrime(idx, prod, opt)
 	}
 	return new(big.Int).Set(prod), nil
 }
 
-type primeStore struct {
-	l   []int
-	m   map[int]*big.Int
-	max int
+type primeCache struct {
+	l   []int            // list of prime numbers
+	m   map[int]*big.Int // map of prime numbers and the products
+	max int              // the largest prime number included
 }
 
-func newPrimeStore(lmt int) *primeStore {
-	ps := &primeStore{
+func newPrimeCache(lmt int) *primeCache {
+	ps := &primeCache{
 		l:   []int{2, 3, 5, 7},
 		m:   make(map[int]*big.Int),
 		max: 7,
@@ -231,7 +237,7 @@ func newPrimeStore(lmt int) *primeStore {
 	return ps
 }
 
-func (p *primeStore) checkAddPrime(n int, prod, opt *big.Int) {
+func (p *primeCache) checkAddPrime(n int, prod, opt *big.Int) {
 	isPrime := true
 	for _, prime := range p.l {
 		if n%prime == 0 && n != prime {
@@ -250,7 +256,7 @@ func (p *primeStore) checkAddPrime(n int, prod, opt *big.Int) {
 }
 
 // findPrimeProd finds the product of primes less than log n using binary search
-func (p *primeStore) findPrimeProd(logN int) (*big.Int, error) {
+func (p *primeCache) findPrimeProd(logN int) (*big.Int, error) {
 	var (
 		l int
 		r = len(p.l) - 1
@@ -274,15 +280,16 @@ func (p *primeStore) findPrimeProd(logN int) (*big.Int, error) {
 	return nil, errors.New("precomputed primes not found")
 }
 
-func ResetPrimeStore() {
-	ps = newPrimeStore(0)
+// ResetPrimeCache resets the prime cache
+func ResetPrimeCache() {
+	pCache = newPrimeCache(0)
 }
 
 func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
 	// then construct k based on the random number
 	// and check the validity of the trails
-	randLmt := new(big.Int).Exp(n, big5, nil)
+	randLmt := new(big.Int).Exp(n, big4, nil)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
 	randLmt.Add(randLmt, big1)
@@ -326,9 +333,7 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 			}
 			ctx.Done()
 			select {
-			case resChan <- findSResult{
-				s: s, p: p,
-			}:
+			case resChan <- findSResult{s: s, p: p}:
 				return
 			default:
 				return
@@ -643,7 +648,7 @@ func computeUV(r1, n *big.Int, primes []*big.Int) (u, v *big.Int, err error) {
 	return
 }
 
-func computeSquares(n *big.Int) (*squareStore, error) {
+func computeSquares(n *big.Int) (*squareCache, error) {
 	lmt := log2(n)
 	lmt = int(math.Sqrt(float64(lmt)))
 	for i := ss.max; i <= lmt; i++ {
@@ -655,19 +660,20 @@ func computeSquares(n *big.Int) (*squareStore, error) {
 	return ss, nil
 }
 
+// CacheSquareNums caches the square numbers of x, x <= sqrt(bit length)
 func CacheSquareNums(bitLen int) {
 	lmt := int(math.Sqrt(float64(bitLen)))
-	ss = newSquareStore(lmt)
+	ss = newSquareCache(lmt)
 }
 
-type squareStore struct {
+type squareCache struct {
 	sm  map[string]*big.Int
 	sl  []*big.Int
 	max int
 }
 
-func newSquareStore(max int) *squareStore {
-	ss := &squareStore{
+func newSquareCache(max int) *squareCache {
+	ss := &squareCache{
 		sm: make(map[string]*big.Int),
 	}
 	if max > 0 {
@@ -682,14 +688,14 @@ func newSquareStore(max int) *squareStore {
 	return ss
 }
 
-func (s *squareStore) add(n, nsq *big.Int) {
+func (s *squareCache) add(n, nsq *big.Int) {
 	if _, ok := s.sm[nsq.String()]; !ok {
 		s.sm[nsq.String()] = n
 		s.sl = append(s.sl, nsq)
 	}
 }
 
-func (s *squareStore) findXY(n *big.Int) (x, y *big.Int) {
+func (s *squareCache) findXY(n *big.Int) (x, y *big.Int) {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	for _, sq := range s.sl {

@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	bitLen := flag.Int("bit", 200, "bit length of the modulus")
-	tries := flag.Int("try", 100, "number of tries")
+	bitLen := flag.Int("bit", 896, "bit length of the modulus")
+	tries := flag.Int("try", 10, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	handleError(err)
@@ -23,7 +23,7 @@ func main() {
 		handleError(err)
 	}(f)
 
-	proof.CacheSquareNums(*bitLen)
+	var totalTime float64
 	for i := 0; i < *tries; i++ {
 		fmt.Println("No. ", i)
 		_, err = f.WriteString(time.Now().String() + "\n")
@@ -41,6 +41,7 @@ func main() {
 		currTime := time.Now()
 		timeInterval := currTime.Sub(start)
 		fmt.Println(timeInterval)
+		totalTime += timeInterval.Seconds()
 		secondsStr := fmt.Sprintf("%f", timeInterval.Seconds())
 		_, err = f.WriteString(secondsStr + "\n")
 		handleError(err)
@@ -48,6 +49,7 @@ func main() {
 			panic("verification failed")
 		}
 	}
+	fmt.Printf("average: %f\n", totalTime/float64(*tries))
 }
 
 func handleError(err error) {

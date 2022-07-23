@@ -20,10 +20,7 @@ const (
 	commitLen          = sha256ResultLen * 5
 )
 
-var (
-	// bound B
-	rpB = big.NewInt(4096)
-)
+var rpB = big.NewInt(4096) // bound B
 
 // RPProof is the proof for range proof
 type RPProof struct {
