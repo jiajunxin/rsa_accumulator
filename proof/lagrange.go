@@ -8,7 +8,6 @@ import (
 	"math"
 	"math/big"
 	"runtime"
-	"sync"
 )
 
 const squareNum = 4
@@ -35,10 +34,9 @@ var (
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
-	numCPU     = runtime.NumCPU()
-	ps         = newPrimeStore(1792)
-	ss         = newSquareStore(0)
-	pickSCache = sync.Map{}
+	numCPU = runtime.NumCPU()
+	ps     = newPrimeStore(1792)
+	ss     = newSquareStore(0)
 )
 
 // FourSquare is the LagrangeFourSquareLipmaa representation of a positive integer
@@ -388,6 +386,7 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	if opt.Exp(s, big2, p).Cmp(pMinus1) != 0 {
 		return nil, nil, false, nil
 	}
+
 	return new(big.Int).Set(s), new(big.Int).Set(p), true, nil
 }
 
