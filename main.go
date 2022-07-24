@@ -49,7 +49,7 @@ func main() {
 			panic("verification failed")
 		}
 	}
-	//fmt.Printf("average: %f\n", totalTime/float64(*tries))
+	fmt.Printf("average: %f\n", totalTime/float64(*tries))
 	//u := big.NewInt(123)
 	//x := big.NewInt(2)
 	//w := new(big.Int).Exp(u, x, nil)
