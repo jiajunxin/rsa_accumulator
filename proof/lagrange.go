@@ -11,7 +11,10 @@ import (
 	comp "github.com/rsa_accumulator/complex"
 )
 
-const squareNum = 4
+const (
+	squareNum        = 4
+	randLmtThreshold = 32
+)
 
 var (
 	// precomputed Hurwitz GCRDs for small integers
@@ -101,15 +104,6 @@ func (f *FourSquare) String() string {
 	res += f[squareNum-1].String()
 	res += "}"
 	return res
-}
-
-// RPCommit generates a range proof commitment for a given integer
-func (f *FourSquare) RPCommit(pp *PublicParameters, coins rpRandCoins) (cList [squareNum]*big.Int) {
-	for i := 0; i < squareNum; i++ {
-		cList[i] = new(big.Int).Exp(pp.G, f[i], pp.N)
-		cList[i].Mul(cList[i], new(big.Int).Exp(pp.H, coins[i], pp.N))
-	}
-	return
 }
 
 // LagrangeFourSquares calculates the Lagrange four squares representation of a positive integer
@@ -289,7 +283,8 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
 	// then construct k based on the random number
 	// and check the validity of the trails
-	randLmt := new(big.Int).Exp(n, big4, nil)
+	//randLmt := new(big.Int).Exp(n, big.NewInt(3), nil)
+	randLmt := new(big.Int).Exp(n, randLmtExp(n.BitLen()), nil)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
 	randLmt.Add(randLmt, big1)
@@ -311,6 +306,13 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	}
 	res := <-resChan
 	return res.s, res.p, res.err
+}
+
+func randLmtExp(e int) *big.Int {
+	if e < randLmtThreshold {
+		return big3
+	}
+	return big2
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
