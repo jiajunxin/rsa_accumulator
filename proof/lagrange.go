@@ -15,9 +15,9 @@ const (
 	squareNum         = 4
 	randLmtThreshold0 = 32
 	randLmtThreshold1 = 64
-	randLmtThreshold2 = 256
-	randLmtThreshold3 = 512
-	randLmtThreshold4 = 1024
+	randLmtThreshold2 = 128
+	randLmtThreshold3 = 256
+	randLmtThreshold4 = 512
 )
 
 var (
@@ -43,7 +43,7 @@ var (
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
 	numCPU  = runtime.NumCPU()
-	pCache  = newPrimeCache(1792)
+	pCache  = newPrimeCache(256)
 	ss      = newSquareCache(0)
 	giCache = make(map[int]*comp.GaussianInt)
 )
@@ -287,26 +287,34 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
 	// then construct k based on the random number
 	// and check the validity of the trails
-	randLmt := setInitRandLmt(n)
-	//randLmt := new(big.Int).Sqrt(n)
-	randLmt.Rsh(randLmt, 1)
-	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
-	randLmt.Add(randLmt, big1)
 	// p = M * n * k - 1, pre-p = M * n
 	preP := new(big.Int).Mul(primeProd, n)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var (
-		mul  = big.NewInt(int64(2 * numCPU)) // 2 * numCPU
-		adds []*big.Int
-	)
-	for i := 0; i <= numCPU; i++ {
-		adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
-	}
 	resChan := make(chan findSResult)
-	for _, add := range adds {
-		go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
+	randLmtBitLen := n.BitLen()
+	if randLmtBitLen < randLmtThreshold4 {
+		randLmt := setInitRandLmt(n)
+		//randLmt := new(big.Int).Sqrt(n)
+		randLmt.Rsh(randLmt, 1)
+		randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
+		randLmt.Add(randLmt, big1)
+
+		var (
+			mul  = big.NewInt(int64(2 * numCPU)) // 2 * numCPU
+			adds []*big.Int
+		)
+		for i := 0; i <= numCPU; i++ {
+			adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
+		}
+		for _, add := range adds {
+			go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
+		}
+	} else {
+		bl := setRandBitLen(randLmtBitLen)
+		for i := 0; i < numCPU; i++ {
+			go findLargeSRoutine(ctx, bl, preP, resChan)
+		}
 	}
 	res := <-resChan
 	return res.s, res.p, res.err
@@ -328,12 +336,16 @@ func setInitRandLmt(n *big.Int) *big.Int {
 		return nq
 	}
 	nq.Sqrt(nq)
-	if bitLen < randLmtThreshold4 {
-		return nq
-	}
-	nq.Sqrt(nq)
-	//return new(big.Int).Rsh(n, 2)
+	//if bitLen < randLmtThreshold4 {
+	//	return nq
+	//}
+	//nq.Sqrt(nq)
+	//nq.Sqrt(nq)
 	return nq
+}
+
+func setRandBitLen(bitLen int) int {
+	return bitLen / 8
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
@@ -371,17 +383,55 @@ type findSResult struct {
 }
 
 func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
-	var err error
 	// choose k' in [0, randLmt)
-	k := iPool.Get().(*big.Int)
-	defer iPool.Put(k)
-	if k, err = crand.Int(crand.Reader, randLmt); err != nil {
+	k, err := crand.Int(crand.Reader, randLmt)
+	if err != nil {
 		return nil, nil, false, err
 	}
 	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
 	k.Add(k, add)
+	return determineSAndP(k, preP)
+}
 
+func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- findSResult) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			s, p, ok, err := pickLargeS(randBitLen, preP)
+			if err != nil {
+				select {
+				case resChan <- findSResult{err: err}:
+					return
+				default:
+					return
+				}
+			}
+			if !ok {
+				continue
+			}
+			ctx.Done()
+			select {
+			case resChan <- findSResult{s: s, p: p}:
+				return
+			default:
+				return
+			}
+		}
+	}
+}
+
+func pickLargeS(randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+	k, err := crand.Prime(crand.Reader, randBitLen)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	return determineSAndP(k, preP)
+}
+
+func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
 	p := iPool.Get().(*big.Int)
 	defer iPool.Put(p)
@@ -392,9 +442,8 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	pMinus1.Sub(p, big1)
 
 	// choose u from [1, p - 1]
-	u := iPool.Get().(*big.Int)
-	defer iPool.Put(u)
-	if u, err = crand.Int(crand.Reader, pMinus1); err != nil {
+	u, err := crand.Int(crand.Reader, pMinus1)
+	if err != nil {
 		return nil, nil, false, err
 	}
 	u.Add(u, big1)
