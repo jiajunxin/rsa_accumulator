@@ -49,7 +49,25 @@ func main() {
 			panic("verification failed")
 		}
 	}
-	fmt.Printf("average: %f\n", totalTime/float64(*tries))
+	//fmt.Printf("average: %f\n", totalTime/float64(*tries))
+	//u := big.NewInt(123)
+	//x := big.NewInt(2)
+	//w := new(big.Int).Exp(u, x, nil)
+	//g := new(big.Int)
+	//g.SetString(accumulator.G2048String, 10)
+	//h := new(big.Int)
+	//h.SetString(accumulator.H2048String, 10)
+	//n := new(big.Int)
+	//n.SetString(accumulator.N2048String, 10)
+	//pp := proof.NewPublicParameters(n, g, h)
+	//prover := proof.NewExpProver(pp)
+	//verifier := proof.NewExpVerifier(pp)
+	//pf, err := prover.Prove(u, w, x)
+	//handleError(err)
+	//ok, err := verifier.Verify(pf, u, w)
+	//handleError(err)
+	//fmt.Println(ok)
+	//return
 }
 
 func handleError(err error) {

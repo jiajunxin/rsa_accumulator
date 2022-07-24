@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	challengeStatement = "c = (g^x)(h^r), x is non-negative"
-	sha256ResultLen    = 32
-	commitLen          = sha256ResultLen * 5
+	rpChallengeStatement = "c = (g^x)(h^r), x is non-negative"
+	sha256ResultLen      = 32
+	commitLen            = sha256ResultLen * 5
 )
 
 var rpB = big.NewInt(4096) // bound B
@@ -26,7 +26,9 @@ var rpB = big.NewInt(4096) // bound B
 type RPProof struct {
 	// c = (g^x)(h^r)
 	c *big.Int
-	// commitment of x, containing c1, c2, c3, c4, ci = (g^xi)(h^ri), x = x1^2 + x2^2 + x3^2 + x4^2
+	// commitment of x,
+	// containing c1, c2, c3, c4, ci = (g^xi)(h^ri),
+	// x = x1^2 + x2^2 + x3^2 + x4^2
 	commitX [squareNum]*big.Int
 	// the commitment delta
 	commitment RPCommitment
@@ -57,7 +59,7 @@ type RPChallenge struct {
 // NewRPChallenge generates a new challenge for range proof
 func NewRPChallenge(pp *PublicParameters, c4 [squareNum]*big.Int) *RPChallenge {
 	return &RPChallenge{
-		statement: challengeStatement,
+		statement: rpChallengeStatement,
 		g:         pp.G,
 		h:         pp.H,
 		n:         pp.N,
@@ -193,9 +195,18 @@ func (r *RPProver) CommitX() ([squareNum]*big.Int, error) {
 		return [squareNum]*big.Int{}, err
 	}
 	r.randR4 = rc
-	c4 := fs.RPCommit(r.pp, rc)
+	c4 := newRPCommitFromFS(r.pp, rc, fs)
 	r.commitFSX = c4
 	return c4, nil
+}
+
+// newRPCommitFromFS generates a range proof commitment for a given integer
+func newRPCommitFromFS(pp *PublicParameters, coins rpRandCoins, fs FourSquare) (cList [squareNum]*big.Int) {
+	for i := 0; i < squareNum; i++ {
+		cList[i] = new(big.Int).Exp(pp.G, fs[i], pp.N)
+		cList[i].Mul(cList[i], new(big.Int).Exp(pp.H, coins[i], pp.N))
+	}
+	return
 }
 
 // ComposeCommitment composes the commitment for range proof
