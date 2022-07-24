@@ -18,6 +18,7 @@ const (
 	randLmtThreshold2 = 128
 	randLmtThreshold3 = 256
 	randLmtThreshold4 = 512
+	randLmtThreshold5 = 1024
 )
 
 var (
@@ -345,7 +346,10 @@ func setInitRandLmt(n *big.Int) *big.Int {
 }
 
 func setRandBitLen(bitLen int) int {
-	return bitLen / 8
+	if bitLen < randLmtThreshold5 {
+		return bitLen / 8
+	}
+	return bitLen / 16
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
