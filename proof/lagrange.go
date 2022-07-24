@@ -15,6 +15,9 @@ const (
 	squareNum         = 4
 	randLmtThreshold0 = 32
 	randLmtThreshold1 = 64
+	randLmtThreshold2 = 256
+	randLmtThreshold3 = 512
+	randLmtThreshold4 = 1024
 )
 
 var (
@@ -284,8 +287,8 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
 	// then construct k based on the random number
 	// and check the validity of the trails
-	//randLmt := new(big.Int).Exp(n, big.NewInt(1), nil)
-	randLmt := new(big.Int).Exp(n, randLmtExp(n.BitLen()), nil)
+	randLmt := setInitRandLmt(n)
+	//randLmt := new(big.Int).Sqrt(n)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
 	randLmt.Add(randLmt, big1)
@@ -309,14 +312,28 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	return res.s, res.p, res.err
 }
 
-func randLmtExp(e int) *big.Int {
-	if e < randLmtThreshold0 {
-		return big3
+func setInitRandLmt(n *big.Int) *big.Int {
+	bitLen := n.BitLen()
+	if bitLen < randLmtThreshold0 {
+		return new(big.Int).Exp(n, big3, nil)
 	}
-	if e < randLmtThreshold1 {
-		return big2
+	if bitLen < randLmtThreshold1 {
+		return new(big.Int).Exp(n, big2, nil)
 	}
-	return big1
+	if bitLen < randLmtThreshold2 {
+		return new(big.Int).Set(n)
+	}
+	nq := new(big.Int).Sqrt(n)
+	if bitLen < randLmtThreshold3 {
+		return nq
+	}
+	nq.Sqrt(nq)
+	if bitLen < randLmtThreshold4 {
+		return nq
+	}
+	nq.Sqrt(nq)
+	//return new(big.Int).Rsh(n, 2)
+	return nq
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
