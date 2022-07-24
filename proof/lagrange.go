@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	squareNum        = 4
-	randLmtThreshold = 32
+	squareNum         = 4
+	randLmtThreshold0 = 32
+	randLmtThreshold1 = 64
 )
 
 var (
@@ -283,7 +284,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
 	// then construct k based on the random number
 	// and check the validity of the trails
-	//randLmt := new(big.Int).Exp(n, big.NewInt(3), nil)
+	//randLmt := new(big.Int).Exp(n, big.NewInt(1), nil)
 	randLmt := new(big.Int).Exp(n, randLmtExp(n.BitLen()), nil)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
@@ -309,10 +310,13 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 }
 
 func randLmtExp(e int) *big.Int {
-	if e < randLmtThreshold {
+	if e < randLmtThreshold0 {
 		return big3
 	}
-	return big2
+	if e < randLmtThreshold1 {
+		return big2
+	}
+	return big1
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
