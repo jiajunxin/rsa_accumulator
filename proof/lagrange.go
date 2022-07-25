@@ -15,10 +15,6 @@ const (
 	squareNum         = 4
 	randLmtThreshold0 = 32
 	randLmtThreshold1 = 64
-	randLmtThreshold2 = 128
-	randLmtThreshold3 = 256
-	randLmtThreshold4 = 512
-	randLmtThreshold5 = 1024
 )
 
 var (
@@ -294,7 +290,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	defer cancel()
 	resChan := make(chan findSResult)
 	randLmtBitLen := n.BitLen()
-	if randLmtBitLen < randLmtThreshold4 {
+	if randLmtBitLen < randLmtThreshold1 {
 		randLmt := setInitRandLmt(n)
 		//randLmt := new(big.Int).Sqrt(n)
 		randLmt.Rsh(randLmt, 1)
@@ -312,7 +308,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 			go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
 		}
 	} else {
-		bl := setRandBitLen(randLmtBitLen)
+		bl := setInitRandBitLen(randLmtBitLen)
 		for i := 0; i < numCPU; i++ {
 			go findLargeSRoutine(ctx, bl, preP, resChan)
 		}
@@ -329,27 +325,12 @@ func setInitRandLmt(n *big.Int) *big.Int {
 	if bitLen < randLmtThreshold1 {
 		return new(big.Int).Exp(n, big2, nil)
 	}
-	if bitLen < randLmtThreshold2 {
-		return new(big.Int).Set(n)
-	}
-	nq := new(big.Int).Sqrt(n)
-	if bitLen < randLmtThreshold3 {
-		return nq
-	}
-	nq.Sqrt(nq)
-	//if bitLen < randLmtThreshold4 {
-	//	return nq
-	//}
-	//nq.Sqrt(nq)
-	//nq.Sqrt(nq)
-	return nq
+	return new(big.Int).Set(n)
 }
 
-func setRandBitLen(bitLen int) int {
-	if bitLen < randLmtThreshold5 {
-		return bitLen / 8
-	}
-	return bitLen / 16
+func setInitRandBitLen(bitLen int) int {
+	lenF := 20 + 2*math.Log(float64(bitLen))
+	return int(math.Round(lenF))
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
