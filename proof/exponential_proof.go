@@ -1,58 +1,54 @@
+// Package proof exponentiation proof
+// Protocol ZKPoKE for R_{PoKE}
+// Paper: Batching Techniques for Accumulators with Applications to IOPs and Stateless Blockchains
+// Link: https://eprint.iacr.org/2018/1188.pdf
 package proof
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
-	"crypto/sha256"
 	"math/big"
+
+	"github.com/rsa_accumulator/accumulator"
 )
 
 const (
 	epChallengeStatement = "u^x = w, x is an integer"
 )
 
-var (
-	l *big.Int // the prime number in [0, 2^lambda) selected for the challenge
-)
-
-func init() {
-	l = new(big.Int)
-	l.SetString("340281674686685377371099874248096651943", 10)
-}
-
-type EPProof struct {
+// ExponentiationProof represents the proof for proof of exponentiation
+type ExponentiationProof struct {
 	witness  *big.Int
-	commit   *EPCommitment
-	response *EPResponse
+	commit   *epCommitment
+	response *epResponse
 }
 
-type EPChallenge struct {
+type epChallenge struct {
 	statement  string        // the statement for the challenge
 	g, h, n    *big.Int      // public parameters: G, H, N
-	l          *big.Int      // the prime number in [0, 2^lambda)
-	commitment *EPCommitment // the commitment of by the prover
+	commitment *epCommitment // the commitment of by the prover
 }
 
-// NewEPChallenge generates a new challenge for proof of exponentiation
-func NewEPChallenge(pp *PublicParameters, commitment *EPCommitment) *EPChallenge {
-	return &EPChallenge{
+// newEPChallenge generates a new challenge for proof of exponentiation
+func newEPChallenge(pp *PublicParameters, commitment *epCommitment) *epChallenge {
+	return &epChallenge{
 		statement:  epChallengeStatement,
 		g:          pp.G,
 		h:          pp.H,
 		n:          pp.N,
-		l:          l,
 		commitment: commitment,
 	}
 }
 
 // Serialize generates the serialized data for proof of exponentiation challenge in byte format
-func (e *EPChallenge) serialize() []byte {
+func (e *epChallenge) serialize() []byte {
 	var buf bytes.Buffer
+	defer buf.Reset()
 	buf.WriteString(e.statement)
 	buf.WriteString(e.g.String())
 	buf.WriteString(e.h.String())
 	buf.WriteString(e.n.String())
-	buf.WriteString(e.l.String())
 	buf.WriteString(e.commitment.z.String())
 	buf.WriteString(e.commitment.aG.String())
 	buf.WriteString(e.commitment.aU.String())
@@ -60,18 +56,25 @@ func (e *EPChallenge) serialize() []byte {
 }
 
 // sha256 generates the SHA256 hash of the proof of exponentiation challenge
-func (e *EPChallenge) sha256() []byte {
-	hashF := sha256.New()
+func (e *epChallenge) sha256() []byte {
+	hashF := crypto.SHA256.New()
+	defer hashF.Reset()
 	hashF.Write(e.serialize())
-	return hashF.Sum(nil)
+	sha256Result := hashF.Sum(nil)
+	return sha256Result
 }
 
-// sha256BigInt serializes the proof of exponentiation challenge to bytes,
+// bigInt serializes the proof of exponentiation challenge to bytes,
 // generates the SHA256 hash of the byte data,
 // and convert the hash to big integer
-func (e *EPChallenge) sha256BigInt() *big.Int {
+func (e *epChallenge) bigInt() *big.Int {
 	hashVal := e.sha256()
 	return new(big.Int).SetBytes(hashVal)
+}
+
+func (e *epChallenge) bigIntPrime() *big.Int {
+	hashVal := e.sha256()
+	return accumulator.HashToPrime(hashVal)
 }
 
 // ExpProver is the prover for proof of exponentiation
@@ -98,22 +101,22 @@ func NewExpProver(pp *PublicParameters) *ExpProver {
 }
 
 // Prove generates the proof for proof of exponentiation
-func (e *ExpProver) Prove(u, w, x *big.Int) (*EPProof, error) {
+func (e *ExpProver) Prove(u, x *big.Int) (*ExponentiationProof, error) {
 	e.u = new(big.Int).Set(u)
 	e.x = new(big.Int).Set(x)
-	challenge, err := e.Challenge()
+	challenge, err := e.challenge()
 	if err != nil {
 		return nil, err
 	}
-	commitment, err := e.Commit(u, x)
+	commitment, err := e.commit(u, x)
 	if err != nil {
 		return nil, err
 	}
-	response, err := e.Response(challenge)
+	response, err := e.response(challenge)
 	if err != nil {
 		return nil, err
 	}
-	return &EPProof{
+	return &ExponentiationProof{
 		witness:  x,
 		commit:   commitment,
 		response: response,
@@ -134,8 +137,8 @@ func (e *ExpProver) chooseRand() (*big.Int, error) {
 	return num, nil
 }
 
-// Commit generates a commitment provided by the prover
-func (e *ExpProver) Commit(u, x *big.Int) (*EPCommitment, error) {
+// commit generates a commitment provided by the prover
+func (e *ExpProver) commit(u, x *big.Int) (*epCommitment, error) {
 	e.u = new(big.Int).Set(u)
 	e.x = new(big.Int).Set(x)
 	// choose random k, rho_x, rho_y from [-B, B]
@@ -158,25 +161,26 @@ func (e *ExpProver) Commit(u, x *big.Int) (*EPCommitment, error) {
 	aG := com(e.pp, e.k, e.rhoK)
 	// A_u =u^k
 	aU := new(big.Int).Exp(u, e.k, e.pp.N)
-	return &EPCommitment{
+	return &epCommitment{
 		z:  z,
 		aG: aG,
 		aU: aU,
 	}, nil
 }
 
-// Challenge generates the challenge for proof of exponentiation
-func (e *ExpProver) Challenge() (*EPChallenge, error) {
-	commit, err := e.Commit(e.u, e.x)
+// challenge generates the challenge for proof of exponentiation
+func (e *ExpProver) challenge() (*epChallenge, error) {
+	commit, err := e.commit(e.u, e.x)
 	if err != nil {
 		return nil, err
 	}
-	return NewEPChallenge(e.pp, commit), nil
+	return newEPChallenge(e.pp, commit), nil
 }
 
-// Response generates the response for proof of exponentiation
-func (e *ExpProver) Response(challenge *EPChallenge) (*EPResponse, error) {
-	c := challenge.sha256BigInt()
+// response generates the response for proof of exponentiation
+func (e *ExpProver) response(challenge *epChallenge) (*epResponse, error) {
+	c := challenge.bigInt()
+	l := challenge.bigIntPrime()
 	// s_x = k + c*x
 	sX := new(big.Int).Mul(c, e.x)
 	sX.Add(sX, e.k)
@@ -185,15 +189,15 @@ func (e *ExpProver) Response(challenge *EPChallenge) (*EPResponse, error) {
 	sRho.Add(sRho, e.rhoK)
 	// q_x * l  + r_x = s_x
 	// q_rho * l + r_rho = s_rho
-	qX := new(big.Int).Div(sX, challenge.l)
-	rX := new(big.Int).Mod(sX, challenge.l)
-	qRho := new(big.Int).Div(sRho, challenge.l)
-	rRho := new(big.Int).Mod(sRho, challenge.l)
+	qX := new(big.Int).Div(sX, l)
+	rX := new(big.Int).Mod(sX, l)
+	qRho := new(big.Int).Div(sRho, l)
+	rRho := new(big.Int).Mod(sRho, l)
 	// Q_g = Com(q_x; q_rho) = (g^q_x)(h^q_rho)
 	qG := com(e.pp, qX, qRho)
 	// Q_u =u^q_x
 	qU := new(big.Int).Exp(e.u, qX, e.pp.N)
-	return &EPResponse{
+	return &epResponse{
 		qG:   qG,
 		qU:   qU,
 		rX:   rX,
@@ -203,10 +207,7 @@ func (e *ExpProver) Response(challenge *EPChallenge) (*EPResponse, error) {
 
 // ExpVerifier is the verifier for proof of exponentiation
 type ExpVerifier struct {
-	pp         *PublicParameters
-	l          *big.Int
-	c          *big.Int
-	commitment *EPCommitment
+	pp *PublicParameters
 }
 
 // NewExpVerifier creates a new verifier of proof of exponentiation
@@ -216,90 +217,57 @@ func NewExpVerifier(pp *PublicParameters) *ExpVerifier {
 	}
 }
 
-func (e *ExpVerifier) Verify(proof *EPProof, u, w *big.Int) (bool, error) {
-	e.l = new(big.Int).Set(l)
-	e.SetCommitment(proof.commit)
-	challenge := e.Challenge()
-	e.c = challenge.sha256BigInt()
-	return e.VerifyResponse(u, w, proof.response)
+// Verify checks the proof of exponentiation
+func (e *ExpVerifier) Verify(proof *ExponentiationProof, u, w *big.Int) (bool, error) {
+	challenge := e.challenge(proof.commit)
+	c := challenge.bigInt()
+	l := challenge.bigIntPrime()
+	return e.VerifyResponse(c, l, u, w, proof.response, proof.commit)
 }
 
-// SetCommitment sets the commitment of the verifier
-func (e *ExpVerifier) SetCommitment(commitment *EPCommitment) {
-	e.commitment = commitment
-}
-
-// Challenge generates a challenge for the verifier
-func (e *ExpVerifier) Challenge() *EPChallenge {
-	challenge := NewEPChallenge(e.pp, e.commitment)
+// challenge generates a challenge for the verifier
+func (e *ExpVerifier) challenge(commit *epCommitment) *epChallenge {
+	challenge := newEPChallenge(e.pp, commit)
 	return challenge
 }
 
-//// Challenge generates a challenge for the verifier
-//func (e *ExpVerifier) Challenge() (*EPChallenge2, error) {
-//	// choose random c in [0, 2^lambda]
-//	r := new(big.Int).Lsh(big1, securityParam)
-//	r.Add(r, big1)
-//	c, err := rand.Int(rand.Reader, r)
-//	if err != nil {
-//		return nil, err
-//	}
-//	e.c = c
-//	// get a random primes less than 2^lambda
-//	p, err := rand.Prime(rand.Reader, securityParam)
-//	if err != nil {
-//		return nil, err
-//	}
-//	e.l = p
-//	return &EPChallenge2{
-//		c: c,
-//		l: p,
-//	}, nil
-//}
-
 // VerifyResponse verifies the response of the verifier
-func (e *ExpVerifier) VerifyResponse(u, w *big.Int, response *EPResponse) (bool, error) {
-	// check if r_x, r_rho in [l]
-	if response.rX.Cmp(e.l) >= 0 || response.rRho.Cmp(e.l) >= 0 {
+func (e *ExpVerifier) VerifyResponse(c, l, u, w *big.Int, response *epResponse, commit *epCommitment) (bool, error) {
+	// check if r_x, r_rho in [left]
+	if response.rX.Cmp(l) >= 0 || response.rRho.Cmp(l) >= 0 {
 		return false, nil
 	}
-	// Q_g^l * Com(r_x; r_rho) = A_g * z^c
-	l := new(big.Int).Exp(response.qG, e.l, e.pp.N)
-	l.Mul(l, com(e.pp, response.rX, response.rRho))
-	l.Mod(l, e.pp.N)
-	r := new(big.Int).Set(e.commitment.aG)
-	r.Mul(r, new(big.Int).Exp(e.commitment.z, e.c, e.pp.N))
-	r.Mod(l, e.pp.N)
-	if l.Cmp(r) != 0 {
+	// Q_g^left * Com(r_x; r_rho) = A_g * z^c
+	left := new(big.Int).Exp(response.qG, l, e.pp.N)
+	left.Mul(left, com(e.pp, response.rX, response.rRho))
+	left.Mod(left, e.pp.N)
+	right := new(big.Int).Set(commit.aG)
+	right.Mul(right, new(big.Int).Exp(commit.z, c, e.pp.N))
+	right.Mod(left, e.pp.N)
+	if left.Cmp(right) != 0 {
 		return false, nil
 	}
-	// Q_u^l * u^r_x = A_u * w^c
-	l = new(big.Int).Exp(response.qU, e.l, e.pp.N)
-	l.Mul(l, new(big.Int).Exp(u, response.rX, e.pp.N))
-	l.Mod(l, e.pp.N)
-	r = new(big.Int).Set(e.commitment.aU)
-	r.Mul(r, new(big.Int).Exp(w, e.c, e.pp.N))
-	r.Mod(l, e.pp.N)
-	if l.Cmp(r) != 0 {
+	// Q_u^left * u^r_x = A_u * w^c
+	left = new(big.Int).Exp(response.qU, l, e.pp.N)
+	left.Mul(left, new(big.Int).Exp(u, response.rX, e.pp.N))
+	left.Mod(left, e.pp.N)
+	right = new(big.Int).Set(commit.aU)
+	right.Mul(right, new(big.Int).Exp(w, c, e.pp.N))
+	right.Mod(left, e.pp.N)
+	if left.Cmp(right) != 0 {
 		return false, nil
 	}
 	return true, nil
 }
 
-// EPCommitment is the commitment for proof of exponentiation sent by the prover
-type EPCommitment struct {
+// epCommitment is the commitment for proof of exponentiation sent by the prover
+type epCommitment struct {
 	z  *big.Int // z = Com(x;rhoX)
 	aG *big.Int
 	aU *big.Int
 }
 
-//// EPChallenge2 is the challenge for proof of exponentiation sent by the verifier
-//type EPChallenge2 struct {
-//	c *big.Int
-//	l *big.Int
-//}
-
-type EPResponse struct {
+type epResponse struct {
 	qG   *big.Int
 	qU   *big.Int
 	rX   *big.Int

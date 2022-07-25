@@ -13,12 +13,7 @@ import (
 )
 
 func main() {
-	//for i := 0; i < 100; i++ {
-	//	x, err := rand.Prime(rand.Reader, 40)
-	//	handleError(err)
-	//	fmt.Println(x)
-	//}
-	bitLen := flag.Int("bit", 896, "bit length of the modulus")
+	bitLen := flag.Int("bit", 1792, "bit length of the modulus")
 	tries := flag.Int("try", 200, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -57,24 +52,6 @@ func main() {
 		}
 	}
 	fmt.Printf("average: %f\n", totalTime/float64(*tries))
-	//u := big.NewInt(123)
-	//x := big.NewInt(2)
-	//w := new(big.Int).Exp(u, x, nil)
-	//g := new(big.Int)
-	//g.SetString(accumulator.G2048String, 10)
-	//h := new(big.Int)
-	//h.SetString(accumulator.H2048String, 10)
-	//n := new(big.Int)
-	//n.SetString(accumulator.N2048String, 10)
-	//pp := proof.NewPublicParameters(n, g, h)
-	//prover := proof.NewExpProver(pp)
-	//verifier := proof.NewExpVerifier(pp)
-	//pf, err := prover.Prove(u, w, x)
-	//handleError(err)
-	//ok, err := verifier.Verify(pf, u, w)
-	//handleError(err)
-	//fmt.Println(ok)
-	//return
 }
 
 func handleError(err error) {
