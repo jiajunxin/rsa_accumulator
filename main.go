@@ -2,78 +2,37 @@ package main
 
 import (
 	"crypto/rand"
-	"flag"
-	"fmt"
 	"math/big"
-	"os"
-	"strconv"
-	"time"
 
+	"github.com/rsa_accumulator/accumulator"
 	"github.com/rsa_accumulator/proof"
 )
 
 func main() {
-	bitLen := flag.Int("bit", 1792, "bit length of the modulus")
-	tries := flag.Int("try", 200, "number of tries")
-	flag.Parse()
-	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	n := new(big.Int)
+	n.SetString(accumulator.N2048String, 10)
+	g := new(big.Int)
+	g.SetString(accumulator.G2048String, 10)
+	h := new(big.Int)
+	h.SetString(accumulator.H2048String, 10)
+	r, err := rand.Int(rand.Reader, n)
 	handleError(err)
-	defer func(f *os.File) {
-		err := f.Close()
-		handleError(err)
-	}(f)
-
-	var totalTime float64
-	for i := 0; i < *tries; i++ {
-		_, err = f.WriteString(time.Now().String() + "\n")
-		handleError(err)
-		target := randOddGen(*bitLen)
-		//target := randGen(*bitLen)
-		handleError(err)
-		_, err = f.WriteString(fmt.Sprintf("%d\n", target.BitLen()))
-		handleError(err)
-		_, err = f.WriteString(target.String() + "\n")
-		handleError(err)
-		start := time.Now()
-		//fs, err := proof.UnconditionalLagrangeFourSquares(target)
-		fs, err := proof.LagrangeFourSquares(target)
-		handleError(err)
-		currTime := time.Now()
-		timeInterval := currTime.Sub(start)
-		fmt.Println("No.", i, ":", timeInterval)
-		totalTime += timeInterval.Seconds()
-		secondsStr := fmt.Sprintf("%f", timeInterval.Seconds())
-		_, err = f.WriteString(secondsStr + "\n")
-		handleError(err)
-		if ok := proof.Verify(target, fs); !ok {
-			fmt.Println(target)
-			fmt.Println(fs)
-			panic("verification failed")
-		}
+	pp := proof.NewPublicParameters(n, g, h)
+	x := big.NewInt(100)
+	prover := proof.NewRPProver(pp, r, x)
+	pf, err := prover.Prove()
+	handleError(err)
+	verifier := proof.NewRPVerifier(pp)
+	ok := verifier.Verify(pf)
+	if !ok {
+		panic("verification failed")
+	} else {
+		println("verification succeeded")
 	}
-	fmt.Printf("average: %f\n", totalTime/float64(*tries))
 }
 
 func handleError(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func randOddGen(bitLen int) *big.Int {
-	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen-2))
-	target, err := rand.Int(rand.Reader, randLmt)
-	target.Lsh(target, 1)
-	handleError(err)
-	target.Add(target, big.NewInt(1))
-	target.Add(target, new(big.Int).Lsh(big.NewInt(1), uint(bitLen-1)))
-	return target
-}
-
-func randGen(bitLen int) *big.Int {
-	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen))
-	randLmt.Sub(randLmt, big.NewInt(1))
-	target, err := rand.Int(rand.Reader, randLmt)
-	handleError(err)
-	return target
 }

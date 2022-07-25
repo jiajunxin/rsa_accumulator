@@ -3,7 +3,7 @@ package complex
 import "math/big"
 
 const (
-	roundingDelta = 0.4999999
+	roundingDelta = 0.4999999999
 )
 
 var (

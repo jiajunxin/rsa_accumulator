@@ -29,7 +29,7 @@ type RangeProof struct {
 	// commitment of x,
 	// containing c1, c2, c3, c4, ci = (g^xi)(h^ri),
 	// x = x1^2 + x2^2 + x3^2 + x4^2
-	commitX [squareNum]*big.Int
+	commitX FourNum
 	// the commitment delta
 	commitment rpCommitment
 	// the response to the challenge
@@ -37,7 +37,7 @@ type RangeProof struct {
 }
 
 // NewRangeProof generates a new proof for range proof
-func NewRangeProof(c *big.Int, commitX [squareNum]*big.Int, commitment rpCommitment, response *rpResponse) *RangeProof {
+func NewRangeProof(c *big.Int, commitX FourNum, commitment rpCommitment, response *rpResponse) *RangeProof {
 	return &RangeProof{
 		c:          c,
 		commitX:    commitX,
@@ -51,13 +51,13 @@ type rpCommitment [commitLen]byte
 
 // rpChallenge is the challenge for range proof
 type rpChallenge struct {
-	statement string              // the statement for the challenge
-	g, h, n   *big.Int            // public parameters: G, H, N
-	c4        [squareNum]*big.Int // commitment of x containing c1, c2, c3, c4
+	statement string   // the statement for the challenge
+	g, h, n   *big.Int // public parameters: G, H, N
+	c4        FourNum  // commitment of x containing c1, c2, c3, c4
 }
 
 // newRPChallenge generates a new challenge for range proof
-func newRPChallenge(pp *PublicParameters, c4 [squareNum]*big.Int) *rpChallenge {
+func newRPChallenge(pp *PublicParameters, c4 FourNum) *rpChallenge {
 	return &rpChallenge{
 		statement: rpChallengeStatement,
 		g:         pp.G,
@@ -84,8 +84,8 @@ func (r *rpChallenge) serialize() []byte {
 func (r *rpChallenge) sha256() []byte {
 	hashF := crypto.SHA256.New()
 	hashF.Write(r.serialize())
-	sha256Result := hashF.Sum(nil)
-	return sha256Result
+	hashResult := hashF.Sum(nil)
+	return hashResult
 }
 
 // bigInt serializes the range proof challenge to bytes, generates the SHA256 hash of the byte data,
@@ -97,20 +97,20 @@ func (r *rpChallenge) bigInt() *big.Int {
 
 // rpResponse is the response sent by the prover after receiving verifier's challenge
 type rpResponse struct {
-	Z4 [squareNum]*big.Int
-	T4 [squareNum]*big.Int
+	Z4 FourNum
+	T4 FourNum
 	T  *big.Int
 }
 
 // newRPCommitment generates a new commitment for range proof
-func newRPCommitment(d4 [squareNum]*big.Int, d *big.Int) rpCommitment {
-	var dByteList [squareNum][]byte
-	for i := 0; i < squareNum; i++ {
+func newRPCommitment(d4 FourNum, d *big.Int) rpCommitment {
+	var dByteList [4][]byte
+	for i := 0; i < 4; i++ {
 		dByteList[i] = d4[i].Bytes()
 	}
 	dBytes := d.Bytes()
 	hashF := crypto.SHA256.New()
-	var sha256List [squareNum][]byte
+	var sha256List [4][]byte
 	for i, dByte := range dByteList {
 		hashF.Write(dByte)
 		sha256List[i] = hashF.Sum(nil)
@@ -125,9 +125,6 @@ func newRPCommitment(d4 [squareNum]*big.Int, d *big.Int) rpCommitment {
 	return commitment
 }
 
-// commitX is the commitment for non-negative integer x
-type commitX [squareNum]*big.Int
-
 // RPProver refers to the Prover in zero-knowledge integer range proof
 type RPProver struct {
 	pp          *PublicParameters // public parameters
@@ -135,11 +132,11 @@ type RPProver struct {
 	r           *big.Int          // r
 	sp          *big.Int          // security parameter, kappa
 	C           *big.Int          // c = (g^x)(h^r)
-	fourSquareX FourSquare        // Lagrange four square of x: x = x1^2 + x2^2 + x3^2 + x4^2
-	commitFSX   commitX           // commitment of four square of x: c1, c2, c3, c4, ci = (g^xi)(h^ri)
-	randM4      rpRandCoins       // random coins: m1, m2, m3, m4, mi is in [0, 2^(B/2 + 2kappa)]
-	randR4      rpRandCoins       // random coins: r1, r2, r3, r4, ri is in [0, n]
-	randS4      rpRandCoins       // random coins: s1, s2, s3, s4, si is in [0, 2^(2kappa)*n]
+	fourSquareX FourNum           // Lagrange four square of x: x = x1^2 + x2^2 + x3^2 + x4^2
+	commitFSX   FourNum           // commitment of four square of x: c1, c2, c3, c4, ci = (g^xi)(h^ri)
+	randM4      fourRandCoins     // random coins: m1, m2, m3, m4, mi is in [0, 2^(B/2 + 2kappa)]
+	randR4      fourRandCoins     // random coins: r1, r2, r3, r4, ri is in [0, n]
+	randS4      fourRandCoins     // random coins: s1, s2, s3, s4, si is in [0, 2^(2kappa)*n]
 	randS       *big.Int          // random coin s in [0, 2^(B/2 + 2kappa)*n]
 }
 
@@ -167,11 +164,11 @@ func (r *RPProver) calC() *big.Int {
 
 // Prove generates the proof for range proof
 func (r *RPProver) Prove() (*RangeProof, error) {
-	cx, err := r.composeCommitmentForX()
+	cx, err := r.commitForX()
 	if err != nil {
 		return nil, err
 	}
-	commitment, err := r.composeCommitment()
+	commitment, err := r.commit()
 	if err != nil {
 		return nil, err
 	}
@@ -182,18 +179,18 @@ func (r *RPProver) Prove() (*RangeProof, error) {
 	return NewRangeProof(r.C, cx, commitment, response), nil
 }
 
-// composeCommitmentForX generates the commitment for x
-func (r *RPProver) composeCommitmentForX() (commitX, error) {
+// commitForX generates the commitment for x
+func (r *RPProver) commitForX() (FourNum, error) {
 	// calculate lagrange four squares for x
 	fs, err := LagrangeFourSquares(r.x)
 	if err != nil {
-		return [squareNum]*big.Int{}, err
+		return FourNum{}, err
 	}
 	r.fourSquareX = fs
 	// calculate commitment for x
-	rc, err := newRPRandCoins(r.pp.N)
+	rc, err := new4RandCoins(r.pp.N)
 	if err != nil {
-		return [squareNum]*big.Int{}, err
+		return FourNum{}, err
 	}
 	r.randR4 = rc
 	c4 := newRPCommitFromFS(r.pp, rc, fs)
@@ -202,17 +199,16 @@ func (r *RPProver) composeCommitmentForX() (commitX, error) {
 }
 
 // newRPCommitFromFS generates a range proof commitment for a given integer
-func newRPCommitFromFS(pp *PublicParameters, coins rpRandCoins, fs FourSquare) commitX {
-	var cList commitX
-	for i := 0; i < squareNum; i++ {
+func newRPCommitFromFS(pp *PublicParameters, coins fourRandCoins, fs FourNum) (cList FourNum) {
+	for i := 0; i < 4; i++ {
 		cList[i] = new(big.Int).Exp(pp.G, fs[i], pp.N)
 		cList[i].Mul(cList[i], new(big.Int).Exp(pp.H, coins[i], pp.N))
 	}
-	return cList
+	return
 }
 
-// composeCommitment composes the commitment for range proof
-func (r *RPProver) composeCommitment() (rpCommitment, error) {
+// commit composes the commitment for range proof
+func (r *RPProver) commit() (rpCommitment, error) {
 	// pick m1, m2, m3, m4, mi is in [0, 2^(B/2 + 2kappa)]
 	mLmt := big.NewInt(2)
 	//powMLmt := new(big.Int).Set(rpB)
@@ -225,7 +221,7 @@ func (r *RPProver) composeCommitment() (rpCommitment, error) {
 	powMLmtPart.Mul(powMLmtPart, big2)
 	powMLmt.Add(powMLmt, powMLmtPart)
 	mLmt.Exp(mLmt, powMLmt, nil)
-	m4, err := newRPRandCoins(mLmt)
+	m4, err := new4RandCoins(mLmt)
 	if err != nil {
 		return rpCommitment{}, err
 	}
@@ -237,7 +233,7 @@ func (r *RPProver) composeCommitment() (rpCommitment, error) {
 	defer iPool.Put(powSLmt)
 	sLmt.Exp(sLmt, powSLmt, nil)
 	sLmt.Mul(sLmt, r.pp.N)
-	s4, err := newRPRandCoins(sLmt)
+	s4, err := new4RandCoins(sLmt)
 	if err != nil {
 		return rpCommitment{}, err
 	}
@@ -258,9 +254,9 @@ func (r *RPProver) composeCommitment() (rpCommitment, error) {
 }
 
 // calD4 calculates d1, d2, d3, d4, di = (g^mi)(h^si) mod n
-func calD4(pp *PublicParameters, m, s rpRandCoins) [squareNum]*big.Int {
-	var d4 [squareNum]*big.Int
-	for i := 0; i < squareNum; i++ {
+func calD4(pp *PublicParameters, m, s fourRandCoins) FourNum {
+	var d4 FourNum
+	for i := 0; i < 4; i++ {
 		d4[i] = calDi(pp.G, pp.H, m[i], s[i], pp.N)
 	}
 	return d4
@@ -278,19 +274,19 @@ func calDi(g, h, mi, si, n *big.Int) *big.Int {
 }
 
 // calD calculates d = product of (ci^mi)(h^s) mod n
-func calD(s, h, n *big.Int, c commitX, m rpRandCoins) *big.Int {
+func calD(s, h, n *big.Int, c FourNum, m fourRandCoins) *big.Int {
 	// h^s
 	//hPowS := new(big.Int).Exp(h, s, n)
 	hPowS := iPool.Get().(*big.Int).Exp(h, s, n)
 	defer iPool.Put(hPowS)
 	// ci^mi
-	var cPowM4 [squareNum]*big.Int
-	for i := 0; i < squareNum; i++ {
+	var cPowM4 FourNum
+	for i := 0; i < 4; i++ {
 		cPowM4[i] = new(big.Int).Exp(c[i], m[i], n)
 	}
 	// product of ci^mi
 	d := big.NewInt(1)
-	for i := 0; i < squareNum; i++ {
+	for i := 0; i < 4; i++ {
 		d.Mul(d, cPowM4[i])
 		d.Mod(d, n)
 	}
@@ -308,13 +304,13 @@ func (r *RPProver) calChallengeBigInt() *big.Int {
 // response generates the response for verifier's challenge
 func (r *RPProver) response() (*rpResponse, error) {
 	c := r.calChallengeBigInt()
-	var z4 [squareNum]*big.Int
-	for i := 0; i < squareNum; i++ {
+	var z4 FourNum
+	for i := 0; i < 4; i++ {
 		z4[i] = new(big.Int).Mul(c, r.fourSquareX[i])
 		z4[i].Add(z4[i], r.randM4[i])
 	}
-	var t4 [squareNum]*big.Int
-	for i := 0; i < squareNum; i++ {
+	var t4 FourNum
+	for i := 0; i < 4; i++ {
 		t4[i] = new(big.Int).Mul(c, r.randR4[i])
 		t4[i].Add(t4[i], r.randS4[i])
 	}
@@ -322,7 +318,7 @@ func (r *RPProver) response() (*rpResponse, error) {
 	sumXR := big.NewInt(0)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	for i := 0; i < squareNum; i++ {
+	for i := 0; i < 4; i++ {
 		sumXR.Add(sumXR, opt.Mul(r.fourSquareX[i], r.randR4[i]))
 	}
 	t := new(big.Int).Sub(r.r, sumXR)
@@ -342,7 +338,7 @@ type RPVerifier struct {
 	sp         *big.Int          // security parameters
 	C          *big.Int          // C, (g^x)(h^r)
 	commitment rpCommitment      // commitment, delta = H(d1, d2, d3, d4, d)
-	commitFSX  [squareNum]*big.Int
+	commitFSX  FourNum
 }
 
 // NewRPVerifier generates a new range proof verifier
@@ -374,7 +370,7 @@ func (r *RPVerifier) setCommitment(c rpCommitment) {
 
 // setCommitForX sets the commitment of x to the verifier
 // Commitment of x: c1, c2, c3, c4, ci = (g^x1=i)(h^ri)
-func (r *RPVerifier) setCommitForX(c4 [squareNum]*big.Int) {
+func (r *RPVerifier) setCommitForX(c4 FourNum) {
 	r.commitFSX = c4
 }
 
@@ -388,13 +384,13 @@ func (r *RPVerifier) challenge() *big.Int {
 func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	c := r.challenge()
 	// the first 4 parameters: (g^zi)(h^ti)(ci^(-e)) mod n
-	var firstFourParams [squareNum]*big.Int
+	var firstFourParams FourNum
 	//negC := new(big.Int).Neg(c)
 	negC := iPool.Get().(*big.Int).Neg(c)
 	defer iPool.Put(negC)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	for i := 0; i < squareNum; i++ {
+	for i := 0; i < 4; i++ {
 		firstFourParams[i] = new(big.Int).Exp(r.pp.G, response.Z4[i], r.pp.N)
 		firstFourParams[i].Mul(
 			firstFourParams[i],
@@ -415,7 +411,7 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	defer iPool.Put(hPowT)
 	//product of (ci^zi)(h^t)(c^(-e)) mod n
 	prodParam := big.NewInt(1)
-	for i := 0; i < squareNum; i++ {
+	for i := 0; i < 4; i++ {
 		prodParam.Mul(
 			prodParam,
 			opt.Exp(r.commitFSX[i], response.Z4[i], r.pp.N),
@@ -428,8 +424,8 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	prodParam.Mod(prodParam, r.pp.N)
 
 	hashF := sha256.New()
-	var sha256List [squareNum][]byte
-	for i := 0; i < squareNum; i++ {
+	var sha256List [4][]byte
+	for i := 0; i < 4; i++ {
 		hashF.Write(firstFourParams[i].Bytes())
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
@@ -437,19 +433,19 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	hashF.Write(prodParam.Bytes())
 	h := hashF.Sum(nil)
 	var commitment rpCommitment
-	for i := 0; i < squareNum; i++ {
+	for i := 0; i < 4; i++ {
 		copy(commitment[i*sha256ResultLen:(i+1)*sha256ResultLen], sha256List[i])
 	}
 	copy(commitment[commitLen-sha256ResultLen:], h)
 	return commitment == r.commitment
 }
 
-// rpRandCoins is the random coins used in range proof
-type rpRandCoins [squareNum]*big.Int
+// fourRandCoins is the random coins used in range proof
+type fourRandCoins FourNum
 
-// newRPRandCoins creates a new random coins for range proof
-func newRPRandCoins(n *big.Int) (coins rpRandCoins, err error) {
-	for i := 0; i < squareNum; i++ {
+// new4RandCoins creates a new random coins for range proof
+func new4RandCoins(n *big.Int) (coins fourRandCoins, err error) {
+	for i := 0; i < 4; i++ {
 		coins[i], err = freshRandCoin(n)
 		if err != nil {
 			return

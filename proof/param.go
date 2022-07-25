@@ -22,3 +22,60 @@ func NewPublicParameters(n, g, h *big.Int) *PublicParameters {
 		H: h,
 	}
 }
+
+// FourNum is the 4-number big integer group
+type FourNum [4]*big.Int
+
+// NewFourNum creates a new 4-number group, in descending order
+func NewFourNum(w1 *big.Int, w2 *big.Int, w3 *big.Int, w4 *big.Int) FourNum {
+	w1.Abs(w1)
+	w2.Abs(w2)
+	w3.Abs(w3)
+	w4.Abs(w4)
+	// sort the four big integers in descending order
+	if w1.Cmp(w2) == -1 {
+		w1, w2 = w2, w1
+	}
+	if w1.Cmp(w3) == -1 {
+		w1, w3 = w3, w1
+	}
+	if w1.Cmp(w4) == -1 {
+		w1, w4 = w4, w1
+	}
+	if w2.Cmp(w3) == -1 {
+		w2, w3 = w3, w2
+	}
+	if w2.Cmp(w4) == -1 {
+		w2, w4 = w4, w2
+	}
+	if w3.Cmp(w4) == -1 {
+		w3, w4 = w4, w3
+	}
+	return FourNum{w1, w2, w3, w4}
+}
+
+// Mul multiplies all the 4 numbers by n
+func (f *FourNum) Mul(n *big.Int) {
+	for i := 0; i < 4; i++ {
+		f[i].Mul(f[i], n)
+	}
+}
+
+// Div divides all the 4 numbers by n
+func (f *FourNum) Div(n *big.Int) {
+	for i := 0; i < 4; i++ {
+		f[i].Div(f[i], n)
+	}
+}
+
+// String stringnifies the FourNum object
+func (f *FourNum) String() string {
+	res := "{"
+	for i := 0; i < 3; i++ {
+		res += f[i].String()
+		res += ", "
+	}
+	res += f[3].String()
+	res += "}"
+	return res
+}

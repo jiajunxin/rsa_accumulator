@@ -164,9 +164,14 @@ func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
 	return quotient
 }
 
-// IsZero returns true if the Gaussian integer is zero
+// IsZero returns true if the Gaussian integer is equal to zero
 func (g *GaussianInt) IsZero() bool {
 	return g.R.Sign() == 0 && g.I.Sign() == 0
+}
+
+// IsOne returns true if the Gaussian integer is equal to one
+func (g *GaussianInt) IsOne() bool {
+	return g.R.Sign() == 1 && g.I.Sign() == 0
 }
 
 // CmpNorm compares the norm of two Gaussian integers
