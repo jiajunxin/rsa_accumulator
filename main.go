@@ -19,7 +19,7 @@ func main() {
 	//	fmt.Println(x)
 	//}
 	bitLen := flag.Int("bit", 500, "bit length of the modulus")
-	tries := flag.Int("try", 200, "number of tries")
+	tries := flag.Int("try", 500, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	handleError(err)
@@ -32,8 +32,8 @@ func main() {
 	for i := 0; i < *tries; i++ {
 		_, err = f.WriteString(time.Now().String() + "\n")
 		handleError(err)
-		//target := randOddGen(*bitLen)
-		target := randGen(*bitLen)
+		target := randOddGen(*bitLen)
+		//target := randGen(*bitLen)
 		handleError(err)
 		_, err = f.WriteString(fmt.Sprintf("%d\n", target.BitLen()))
 		handleError(err)

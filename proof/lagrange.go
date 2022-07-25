@@ -6,7 +6,9 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"math/rand"
 	"runtime"
+	"time"
 
 	comp "github.com/rsa_accumulator/complex"
 )
@@ -39,10 +41,10 @@ var (
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
-	numCPU  = runtime.NumCPU()
-	pCache  = newPrimeCache(32)
-	ss      = newSquareCache(0)
-	giCache = make(map[int]*comp.GaussianInt)
+	numRoutine = runtime.NumCPU()
+	pCache     = newPrimeCache(32)
+	ss         = newSquareCache(0)
+	giCache    = make(map[int]*comp.GaussianInt)
 )
 
 // ResetGaussianIntCache resets the Gaussian integer cache
@@ -289,7 +291,7 @@ func ResetPrimeCache() {
 }
 
 func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
-	// use goroutines to choose a random number between [0, n^5 / 2 / numCPU]
+	// use goroutines to choose a random number between [0, n^5 / 2 / numRoutine]
 	// then construct k based on the random number
 	// and check the validity of the trails
 	// p = M * n * k - 1, pre-p = M * n
@@ -302,14 +304,14 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 		randLmt := setInitRandLmt(n)
 		//randLmt := new(big.Int).Sqrt(n)
 		randLmt.Rsh(randLmt, 1)
-		randLmt.Div(randLmt, big.NewInt(int64(numCPU)))
+		randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
 		randLmt.Add(randLmt, big1)
 
 		var (
-			mul  = big.NewInt(int64(2 * numCPU)) // 2 * numCPU
+			mul  = big.NewInt(int64(2 * numRoutine)) // 2 * numRoutine
 			adds []*big.Int
 		)
-		for i := 0; i <= numCPU; i++ {
+		for i := 0; i <= numRoutine; i++ {
 			adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
 		}
 		for _, add := range adds {
@@ -317,7 +319,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 		}
 	} else {
 		bl := setInitRandBitLen(randLmtBitLen)
-		for i := 0; i < numCPU; i++ {
+		for i := 0; i < numRoutine; i++ {
 			go findLargeSRoutine(ctx, bl, preP, resChan)
 		}
 	}
@@ -342,12 +344,13 @@ func setInitRandBitLen(bitLen int) int {
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
+	rg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickS(mul, add, randLmt, preP)
+			s, p, ok, err := pickS(rg, mul, add, randLmt, preP)
 			if err != nil {
 				select {
 				case resChan <- findSResult{err: err}:
@@ -375,7 +378,7 @@ type findSResult struct {
 	err  error
 }
 
-func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func pickS(rg *rand.Rand, mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// choose k' in [0, randLmt)
 	k, err := crand.Int(crand.Reader, randLmt)
 	if err != nil {
@@ -384,16 +387,17 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
 	k.Add(k, add)
-	return determineSAndP(k, preP)
+	return determineSAndP(rg, k, preP)
 }
 
 func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- findSResult) {
+	rg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickLargeS(randBitLen, preP)
+			s, p, ok, err := pickLargeS(rg, randBitLen, preP)
 			if err != nil {
 				select {
 				case resChan <- findSResult{err: err}:
@@ -416,15 +420,15 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 	}
 }
 
-func pickLargeS(randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func pickLargeS(rg *rand.Rand, randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	k, err := crand.Prime(crand.Reader, randBitLen)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	return determineSAndP(k, preP)
+	return determineSAndP(rg, k, preP)
 }
 
-func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
 	p := iPool.Get().(*big.Int)
 	defer iPool.Put(p)
@@ -434,10 +438,9 @@ func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// choose u from [1, p - 1]
 	// here we can pick u in [0, p)
 	// if u is 0, then the accepting condition will not pass
-	u, err := crand.Int(crand.Reader, p)
-	if err != nil {
-		return nil, nil, false, err
-	}
+	u := iPool.Get().(*big.Int)
+	defer iPool.Put(u)
+	u.Rand(rg, p)
 
 	// test if s^2 = -1 (mod p)
 	// if so, continue to the next step, otherwise, repeat this step
@@ -571,7 +574,7 @@ func initTrail(n *big.Int) (x, y, p, r1, s *big.Int, primes []*big.Int, err erro
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan initTrailResult)
-	for i := 0; i < numCPU; i++ {
+	for i := 0; i < numRoutine; i++ {
 		go initTrailRoutine(ctx, n, primes, resChan)
 	}
 	res := <-resChan
