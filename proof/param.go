@@ -1,6 +1,9 @@
 package proof
 
-import "math/big"
+import (
+	"crypto/rand"
+	"math/big"
+)
 
 const (
 	// security parameter for range proof and proof of exponentiation
@@ -78,4 +81,27 @@ func (f *FourNum) String() string {
 	res += f[3].String()
 	res += "}"
 	return res
+}
+
+// newFourRandCoins creates a new random coins for range proof
+func newFourRandCoins(n *big.Int) (coins FourNum, err error) {
+	for i := 0; i < 4; i++ {
+		coins[i], err = freshRandCoin(n)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+// freshRandCoin creates a new fresh random coin in [0, n]
+func freshRandCoin(n *big.Int) (*big.Int, error) {
+	lmt := iPool.Get().(*big.Int).Set(n)
+	defer iPool.Put(lmt)
+	lmt.Add(lmt, big1)
+	res, err := rand.Int(rand.Reader, lmt)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }

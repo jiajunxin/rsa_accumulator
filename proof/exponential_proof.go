@@ -19,7 +19,7 @@ const (
 
 // ExponentiationProof represents the proof for proof of exponentiation
 type ExponentiationProof struct {
-	witness  *big.Int
+	witness  *big.Int // witness x in Z, u^x = w
 	commit   *epCommitment
 	response *epResponse
 }
@@ -233,10 +233,10 @@ func (e *ExpVerifier) challenge(commit *epCommitment) *epChallenge {
 
 // VerifyResponse verifies the response of the verifier
 func (e *ExpVerifier) VerifyResponse(c, l, u, w *big.Int, response *epResponse, commit *epCommitment) (bool, error) {
-	// check if r_x, r_rho in [left]
-	if response.rX.Cmp(l) >= 0 || response.rRho.Cmp(l) >= 0 {
-		return false, nil
-	}
+	//// check if r_x, r_rho in [left]
+	//if response.rX.Cmp(l) >= 0 || response.rRho.Cmp(l) >= 0 {
+	//	return false, nil
+	//}
 	// Q_g^left * Com(r_x; r_rho) = A_g * z^c
 	left := new(big.Int).Exp(response.qG, l, e.pp.N)
 	left.Mul(left, com(e.pp, response.rX, response.rRho))

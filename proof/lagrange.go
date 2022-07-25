@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	randLmtThreshold0 = 32
-	randLmtThreshold1 = 64
+	randLmtThreshold0 = 16
+	randLmtThreshold1 = 32
+	randLmtThreshold2 = 64
 	preComputeLmt     = 20
 )
 
@@ -100,6 +101,7 @@ func LagrangeFourSquares(n *big.Int) (FourNum, error) {
 				break
 			}
 		}
+		//fmt.Println(gcd)
 		hurwitzGCRD, err = denouement(nc, gcd)
 		if err != nil {
 			return FourNum{}, err
@@ -119,16 +121,23 @@ func LagrangeFourSquares(n *big.Int) (FourNum, error) {
 }
 
 func isValidGaussianIntGCD(gcd *comp.GaussianInt) bool {
-	if gcd.R.Cmp(big1) == 0 && gcd.I.Sign() == 0 {
+	absR := iPool.Get().(*big.Int)
+	defer iPool.Put(absR)
+	absR.Abs(gcd.R)
+	absI := iPool.Get().(*big.Int)
+	defer iPool.Put(absI)
+	absI.Abs(gcd.I)
+	rCmp1 := absR.Cmp(big1)
+	rSign := absR.Sign()
+	iCmp1 := absI.Cmp(big1)
+	iSign := absI.Sign()
+	if rCmp1 == 0 && iSign == 0 {
 		return false
 	}
-	if gcd.I.Cmp(big1) == 0 && gcd.R.Sign() == 0 {
+	if rSign == 0 && iCmp1 == 0 {
 		return false
 	}
-	if gcd.R.Cmp(bigNeg1) == 0 && gcd.I.Sign() == 0 {
-		return false
-	}
-	if gcd.I.Cmp(bigNeg1) == 0 && gcd.R.Sign() == 0 {
+	if rCmp1 == 0 && iCmp1 == 0 {
 		return false
 	}
 	return true
@@ -204,7 +213,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	defer cancel()
 	resChan := make(chan findSResult)
 	randLmtBitLen := n.BitLen()
-	if randLmtBitLen < randLmtThreshold1 {
+	if randLmtBitLen < randLmtThreshold2 {
 		randLmt := setInitRandLmt(n)
 		//randLmt := new(big.Int).Sqrt(n)
 		randLmt.Rsh(randLmt, 1)
@@ -234,9 +243,12 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 func setInitRandLmt(n *big.Int) *big.Int {
 	bitLen := n.BitLen()
 	if bitLen < randLmtThreshold0 {
-		return new(big.Int).Exp(n, big3, nil)
+		return new(big.Int).Exp(n, big4, nil)
 	}
 	if bitLen < randLmtThreshold1 {
+		return new(big.Int).Exp(n, big3, nil)
+	}
+	if bitLen < randLmtThreshold2 {
 		return new(big.Int).Exp(n, big2, nil)
 	}
 	return new(big.Int).Set(n)

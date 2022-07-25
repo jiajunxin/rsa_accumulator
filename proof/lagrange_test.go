@@ -44,7 +44,7 @@ func Test_preCompute(t *testing.T) {
 			args: args{
 				n: &big2Pow20,
 			},
-			want:    big.NewInt(9699690),
+			want:    big.NewInt(30030),
 			wantErr: false,
 		},
 		{
@@ -52,7 +52,7 @@ func Test_preCompute(t *testing.T) {
 			args: args{
 				n: &big2Pow32,
 			},
-			want:    big.NewInt(200560490130),
+			want:    big.NewInt(9699690),
 			wantErr: false,
 		},
 	}
@@ -120,7 +120,7 @@ func TestVerify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs := [squareNum]*big.Int{
+			fs := [4]*big.Int{
 				tt.args.w1,
 				tt.args.w2,
 				tt.args.w3,
