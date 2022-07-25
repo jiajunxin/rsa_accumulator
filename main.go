@@ -18,8 +18,8 @@ func main() {
 	//	handleError(err)
 	//	fmt.Println(x)
 	//}
-	bitLen := flag.Int("bit", 500, "bit length of the modulus")
-	tries := flag.Int("try", 500, "number of tries")
+	bitLen := flag.Int("bit", 896, "bit length of the modulus")
+	tries := flag.Int("try", 200, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	handleError(err)

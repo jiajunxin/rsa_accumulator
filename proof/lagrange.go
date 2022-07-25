@@ -17,11 +17,12 @@ const (
 	squareNum         = 4
 	randLmtThreshold0 = 32
 	randLmtThreshold1 = 64
+	preComputeLmt     = 20
 )
 
 var (
 	// precomputed Hurwitz GCRDs for small integers
-	precomputedHurwitzGCRDs = [9]*comp.HurwitzInt{
+	precomputedHurwitzGCRDs = [preComputeLmt + 1]*comp.HurwitzInt{
 		// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
 		comp.NewHurwitzInt(big0, big0, big0, big0, false),
 		// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
@@ -40,11 +41,36 @@ var (
 		comp.NewHurwitzInt(big2, big1, big1, big1, false),
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
+		// 9's precomputed Hurwitz GCRD: 2, 2, 1, 0
+		comp.NewHurwitzInt(big2, big2, big1, big0, false),
+		// 10's precomputed Hurwitz GCRD: 2, 2, 1, 1
+		comp.NewHurwitzInt(big2, big2, big1, big1, false),
+		// 11's precomputed Hurwitz GCRD: 3, 1, 1, 0
+		comp.NewHurwitzInt(big3, big1, big1, big0, false),
+		// 12's precomputed Hurwitz GCRD: 3, 1, 1, 1
+		comp.NewHurwitzInt(big3, big1, big1, big1, false),
+		// 13's precomputed Hurwitz GCRD: 3, 2, 0, 0
+		comp.NewHurwitzInt(big3, big2, big0, big0, false),
+		// 14's precomputed Hurwitz GCRD: 3, 2, 1, 0
+		comp.NewHurwitzInt(big3, big2, big1, big0, false),
+		// 15's precomputed Hurwitz GCRD: 3, 2, 1, 1
+		comp.NewHurwitzInt(big3, big2, big1, big1, false),
+		// 16's precomputed Hurwitz GCRD: 4, 0, 0, 0
+		comp.NewHurwitzInt(big4, big0, big0, big0, false),
+		// 17's precomputed Hurwitz GCRD: 4, 1, 0, 0
+		comp.NewHurwitzInt(big4, big1, big0, big0, false),
+		// 18's precomputed Hurwitz GCRD: 4, 1, 1, 0
+		comp.NewHurwitzInt(big4, big1, big1, big0, false),
+		// 19's precomputed Hurwitz GCRD: 4, 1, 1, 1
+		comp.NewHurwitzInt(big4, big1, big1, big1, false),
+		// 20's precomputed Hurwitz GCRD: 4, 2, 0, 0
+		comp.NewHurwitzInt(big4, big2, big0, big0, false),
 	}
-	numRoutine = runtime.NumCPU()
-	pCache     = newPrimeCache(32)
-	ss         = newSquareCache(0)
-	giCache    = make(map[int]*comp.GaussianInt)
+	bigPreComputeLmt = big.NewInt(preComputeLmt)
+	numRoutine       = runtime.NumCPU()
+	pCache           = newPrimeCache(32)
+	ss               = newSquareCache(0)
+	giCache          = make(map[int]*comp.GaussianInt)
 )
 
 // ResetGaussianIntCache resets the Gaussian integer cache
@@ -121,7 +147,7 @@ func LagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	nc, e := divideN(n)
 	var hurwitzGCRD *comp.HurwitzInt
 
-	if nc.Cmp(big8) <= 0 {
+	if nc.Cmp(bigPreComputeLmt) <= 0 {
 		hurwitzGCRD = precomputedHurwitzGCRDs[nc.Int64()]
 	} else {
 		primeProd, err := preCompute(nc)
@@ -191,7 +217,7 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	if n.Cmp(big8) <= 0 {
 		return nil, errors.New("n should be larger than 8")
 	}
-	logN := log2(n)
+	logN := log(n)
 	if logN <= pCache.max {
 		prod, err := pCache.findPrimeProd(logN)
 		if err != nil {
@@ -521,26 +547,26 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourSquare, error) {
 		} else {
 			gcd := giPool.Get().(*comp.GaussianInt)
 			defer giPool.Put(gcd)
-			gopt1 := giPool.Get().(*comp.GaussianInt)
-			defer giPool.Put(gopt1)
-			gopt2 := giPool.Get().(*comp.GaussianInt)
-			defer giPool.Put(gopt2)
-			gopt1.Update(p, big0)
-			gopt2.Update(s, big1)
-			gcd.GCD(gopt1, gopt2)
+			gOpt1 := giPool.Get().(*comp.GaussianInt)
+			defer giPool.Put(gOpt1)
+			gOpt2 := giPool.Get().(*comp.GaussianInt)
+			defer giPool.Put(gOpt2)
+			gOpt1.Update(p, big0)
+			gOpt2.Update(s, big1)
+			gcd.GCD(gOpt1, gOpt2)
 			up = gcd.R
 			vp = gcd.I
 		}
 		uvi := comp.NewGaussianInt(u, v)
 		uPvPI := comp.NewGaussianInt(up, vp)
 		zwi := new(comp.GaussianInt).Prod(uvi, uPvPI)
-		hopt1 := hiPool.Get().(*comp.HurwitzInt)
-		defer hiPool.Put(hopt1)
-		hopt1.Update(n, big0, big0, big0, false)
-		hopt2 := hiPool.Get().(*comp.HurwitzInt)
-		defer hiPool.Put(hopt2)
-		hopt2.Update(x, y, zwi.R, zwi.I, false)
-		hurwitzGCRD = new(comp.HurwitzInt).GCRD(hopt1, hopt2)
+		hOpt1 := hiPool.Get().(*comp.HurwitzInt)
+		defer hiPool.Put(hOpt1)
+		hOpt1.Update(n, big0, big0, big0, false)
+		hOpt2 := hiPool.Get().(*comp.HurwitzInt)
+		defer hiPool.Put(hOpt2)
+		hOpt2.Update(x, y, zwi.R, zwi.I, false)
+		hurwitzGCRD = new(comp.HurwitzInt).GCRD(hOpt1, hOpt2)
 	}
 
 	// if x'^2 + Y'^2 + Z'^2 + W'^2 = n'
@@ -699,15 +725,15 @@ func computeUV(r1, n *big.Int, primes []*big.Int) (u, v *big.Int, err error) {
 	defer iPool.Put(opt)
 	mod := iPool.Get().(*big.Int)
 	defer iPool.Put(mod)
-	gopt := giPool.Get().(*comp.GaussianInt)
-	defer giPool.Put(gopt)
+	gOpt := giPool.Get().(*comp.GaussianInt)
+	defer giPool.Put(gOpt)
 	for _, prime := range primes {
 		x, y := ss.findXY(prime)
-		gopt.Update(x, y)
+		gOpt.Update(x, y)
 		// determine vl
 		opt.Set(prime)
 		for mod.Mod(r1, opt).Cmp(big0) == 0 {
-			uvi.Prod(uvi, gopt)
+			uvi.Prod(uvi, gOpt)
 			opt.Mul(opt, prime)
 		}
 	}
