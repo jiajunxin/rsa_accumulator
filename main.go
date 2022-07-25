@@ -13,7 +13,12 @@ import (
 )
 
 func main() {
-	bitLen := flag.Int("bit", 1792, "bit length of the modulus")
+	//for i := 0; i < 100; i++ {
+	//	x, err := rand.Prime(rand.Reader, 40)
+	//	handleError(err)
+	//	fmt.Println(x)
+	//}
+	bitLen := flag.Int("bit", 500, "bit length of the modulus")
 	tries := flag.Int("try", 200, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -27,7 +32,8 @@ func main() {
 	for i := 0; i < *tries; i++ {
 		_, err = f.WriteString(time.Now().String() + "\n")
 		handleError(err)
-		target := randOddGen(*bitLen)
+		//target := randOddGen(*bitLen)
+		target := randGen(*bitLen)
 		handleError(err)
 		_, err = f.WriteString(fmt.Sprintf("%d\n", target.BitLen()))
 		handleError(err)
@@ -45,6 +51,8 @@ func main() {
 		_, err = f.WriteString(secondsStr + "\n")
 		handleError(err)
 		if ok := proof.Verify(target, fs); !ok {
+			fmt.Println(target)
+			fmt.Println(fs)
 			panic("verification failed")
 		}
 	}
@@ -82,5 +90,13 @@ func randOddGen(bitLen int) *big.Int {
 	handleError(err)
 	target.Add(target, big.NewInt(1))
 	target.Add(target, new(big.Int).Lsh(big.NewInt(1), uint(bitLen-1)))
+	return target
+}
+
+func randGen(bitLen int) *big.Int {
+	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen))
+	randLmt.Sub(randLmt, big.NewInt(1))
+	target, err := rand.Int(rand.Reader, randLmt)
+	handleError(err)
 	return target
 }

@@ -40,7 +40,7 @@ var (
 		comp.NewHurwitzInt(big2, big2, big0, big0, false),
 	}
 	numCPU  = runtime.NumCPU()
-	pCache  = newPrimeCache(256)
+	pCache  = newPrimeCache(32)
 	ss      = newSquareCache(0)
 	giCache = make(map[int]*comp.GaussianInt)
 )
@@ -161,6 +161,9 @@ func divideN(n *big.Int) (*big.Int, int) {
 
 // gaussian1PlusIPow calculates Gaussian integer (1 + i)^e
 func gaussian1PlusIPow(e int) *comp.GaussianInt {
+	if e == 0 {
+		return comp.NewGaussianInt(big1, big0)
+	}
 	if gi, ok := giCache[e]; ok {
 		return gi
 	}
@@ -169,9 +172,10 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 	gaussian1PlusI.Update(big1, big1)
 
 	gaussianProd := comp.NewGaussianInt(big1, big0)
-	for e > 0 {
+	idx := e
+	for idx > 0 {
 		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
-		e--
+		idx--
 	}
 	gi := new(comp.GaussianInt)
 	gi.Update(gaussianProd.R, gaussianProd.I)
@@ -234,7 +238,11 @@ func newPrimeCache(lmt int) *primeCache {
 
 func (p *primeCache) checkAddPrime(n int, prod, opt *big.Int) {
 	isPrime := true
+	sqrtN := int(math.Sqrt(float64(n)))
 	for _, prime := range p.l {
+		if sqrtN < prime {
+			break
+		}
 		if n%prime == 0 && n != prime {
 			isPrime = false
 			break
@@ -422,34 +430,34 @@ func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	defer iPool.Put(p)
 	p.Mul(preP, k)
 	p.Sub(p, big1)
-	pMinus1 := iPool.Get().(*big.Int)
-	defer iPool.Put(pMinus1)
-	pMinus1.Sub(p, big1)
 
 	// choose u from [1, p - 1]
-	u, err := crand.Int(crand.Reader, pMinus1)
+	// here we can pick u in [0, p)
+	// if u is 0, then the accepting condition will not pass
+	u, err := crand.Int(crand.Reader, p)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	u.Add(u, big1)
-
-	// compute s = u^((p - 1) / 4) mod p
-	powU := iPool.Get().(*big.Int)
-	defer iPool.Put(powU)
-	powU.Rsh(pMinus1, 2)
-	s := iPool.Get().(*big.Int)
-	defer iPool.Put(s)
-	s.Exp(u, powU, p)
 
 	// test if s^2 = -1 (mod p)
 	// if so, continue to the next step, otherwise, repeat this step
+	pMinus1 := iPool.Get().(*big.Int)
+	defer iPool.Put(pMinus1)
+	pMinus1.Sub(p, big1)
+	powU := iPool.Get().(*big.Int)
+	defer iPool.Put(powU)
+	powU.Rsh(pMinus1, 1)
+
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	if opt.Exp(s, big2, p).Cmp(pMinus1) != 0 {
+	if opt.Exp(u, powU, p).Cmp(pMinus1) != 0 {
 		return nil, nil, false, nil
 	}
 
-	return new(big.Int).Set(s), new(big.Int).Set(p), true, nil
+	// compute s = u^((p - 1) / 4) mod p
+	powU.Rsh(powU, 1)
+	s := new(big.Int).Exp(u, powU, p)
+	return s, new(big.Int).Set(p), true, nil
 }
 
 func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
@@ -481,7 +489,7 @@ func denouement(n, s, p *big.Int) (*comp.HurwitzInt, error) {
 }
 
 // UnconditionalLagrangeFourSquares calculates the Lagrange four squares for a given non-positive integer
-// the method doesn't rely on the Extended Riemann Hypothesis (ERH
+// the method doesn't rely on the Extended Riemann Hypothesis (ERH)
 func UnconditionalLagrangeFourSquares(n *big.Int) (FourSquare, error) {
 	if n.Sign() == 0 {
 		res := NewFourSquare(precomputedHurwitzGCRDs[0].ValInt())
