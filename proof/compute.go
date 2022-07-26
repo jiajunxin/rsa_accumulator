@@ -1,16 +1,12 @@
 package proof
 
 import (
-	"math"
 	"math/big"
 
 	comp "github.com/rsa_accumulator/complex"
 )
 
-const (
-	log10Base2    = 3.32192809489
-	preComputeLmt = 20
-)
+const preComputeLmt = 20
 
 var (
 	big0 = big.NewInt(0)
@@ -70,10 +66,4 @@ var (
 
 func log2(n *big.Int) int {
 	return n.BitLen() - 1
-}
-
-func log10(n *big.Int) int {
-	log2 := log2(n)
-	lnF := math.Round(float64(log2) / log10Base2)
-	return int(lnF)
 }

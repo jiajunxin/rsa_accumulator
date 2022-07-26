@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	randLmtThreshold = 64
+	randLmtThreshold = 16
 )
 
 var (
@@ -145,18 +145,14 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 }
 
 // preCompute determine the primes not exceeding log n and compute their product
-// the function only handles positive integers larger than 8
+// the function only handles positive integers larger than pre-computed range (20)
 func preCompute(n *big.Int) (*big.Int, error) {
 	if n.Cmp(bigPreComputeLmt) <= 0 {
 		return nil, fmt.Errorf("n should be larger than %d", preComputeLmt)
 	}
-	logN := log10(n)
+	logN := log2(n)
 	if logN <= pCache.max {
-		prod, err := pCache.findPrimeProd(logN)
-		if err != nil {
-			return nil, err
-		}
-		return prod, nil
+		return pCache.findPrimeProd(logN), nil
 	}
 	prod := iPool.Get().(*big.Int)
 	defer iPool.Put(prod)
@@ -215,7 +211,7 @@ func setInitRandLmt(n *big.Int) *big.Int {
 	exp := iPool.Get().(*big.Int)
 	defer iPool.Put(exp)
 	exp.SetInt64(4)
-	bitLen >>= 4 // bitLen / 16
+	bitLen >>= 2 // bitLen / 4
 	for bitLen > 1 {
 		exp.Sub(exp, big1)
 		bitLen >>= 1
@@ -321,7 +317,8 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	p.Sub(p, big1)
 
 	// we want to find a prime number p,
-	// so perform probably_prime checking to reject number which is not prime potentially
+	// so perform probably_prime checking to reject number which is not prime potentially,
+	// quick restart if p is not probability prime
 	if !p.ProbablyPrime(0) {
 		return nil, nil, false, nil
 	}
@@ -333,8 +330,6 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	// to reduce the probability of picking up a prime number, we only choose even numbers
 	u := iPool.Get().(*big.Int)
 	defer iPool.Put(u)
-	//halfP := iPool.Get().(*big.Int)
-	//defer iPool.Put(halfP)
 	u.Rsh(p, 1)
 	u.Rand(rg, u)
 	u.Lsh(u, 1)

@@ -1,7 +1,6 @@
 package proof
 
 import (
-	"errors"
 	"math"
 	"math/big"
 	"sync"
@@ -42,7 +41,7 @@ type primeCache struct {
 }
 
 // findPrimeProd finds the product of primes less than log n using binary search
-func (p *primeCache) findPrimeProd(logN int) (*big.Int, error) {
+func (p *primeCache) findPrimeProd(logN int) *big.Int {
 	var (
 		l int
 		r = len(p.l) - 1
@@ -51,11 +50,11 @@ func (p *primeCache) findPrimeProd(logN int) (*big.Int, error) {
 		mid := (l-r)/2 + r
 		pll := p.l[mid]
 		if mid == len(p.l)-1 {
-			return p.m[pll], nil
+			return p.m[pll]
 		}
 		plr := p.l[mid+1]
 		if pll < logN && plr >= logN {
-			return p.m[pll], nil
+			return p.m[pll]
 		}
 		if pll >= logN {
 			r = mid - 1
@@ -63,7 +62,7 @@ func (p *primeCache) findPrimeProd(logN int) (*big.Int, error) {
 			l = mid + 1
 		}
 	}
-	return nil, errors.New("precomputed primes not found")
+	return big.NewInt(2)
 }
 
 func newPrimeCache(lmt int) *primeCache {
