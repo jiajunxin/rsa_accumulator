@@ -3,7 +3,7 @@ package proof
 import (
 	"context"
 	crand "crypto/rand"
-	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
@@ -36,23 +36,38 @@ func LagrangeFourSquares(n *big.Int) (FourInt, error) {
 	if nc.Cmp(bigPreComputeLmt) <= 0 {
 		hurwitzGCRD = precomputedHurwitzGCRDs[nc.Int64()]
 	} else {
-		primeProd, err := preCompute(nc)
-		if err != nil {
-			return FourInt{}, err
-		}
 		var gcd *comp.GaussianInt
-		for {
-			s, p, err := randTrails(nc, primeProd)
+		nBitLen := nc.BitLen()
+		if nBitLen < randLmtThreshold {
+			primeProd, err := preCompute(nc)
 			if err != nil {
 				return FourInt{}, err
 			}
-			gcd = gaussianIntGCD(s, p)
-			// continue if the GCD is valid
-			if isValidGaussianIntGCD(gcd) {
-				break
+			for {
+				s, p, err := randTrails(nc, primeProd)
+				if err != nil {
+					return FourInt{}, err
+				}
+				gcd = gaussianIntGCD(s, p)
+				// continue if the GCD is valid
+				if isValidGaussianIntGCD(gcd) {
+					break
+				}
+			}
+		} else {
+			for {
+				s, p, err := randLargeTrails(nc, nBitLen)
+				if err != nil {
+					return FourInt{}, err
+				}
+				gcd = gaussianIntGCD(s, p)
+				// continue if the GCD is valid
+				if isValidGaussianIntGCD(gcd) {
+					break
+				}
 			}
 		}
-		//fmt.Println(gcd)
+		var err error
 		hurwitzGCRD, err = denouement(nc, gcd)
 		if err != nil {
 			return FourInt{}, err
@@ -132,10 +147,10 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 // preCompute determine the primes not exceeding log n and compute their product
 // the function only handles positive integers larger than 8
 func preCompute(n *big.Int) (*big.Int, error) {
-	if n.Cmp(big8) <= 0 {
-		return nil, errors.New("n should be larger than 8")
+	if n.Cmp(bigPreComputeLmt) <= 0 {
+		return nil, fmt.Errorf("n should be larger than %d", preComputeLmt)
 	}
-	logN := log(n)
+	logN := log10(n)
 	if logN <= pCache.max {
 		prod, err := pCache.findPrimeProd(logN)
 		if err != nil {
@@ -163,29 +178,33 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan findSResult)
-	randLmtBitLen := n.BitLen()
-	if randLmtBitLen < randLmtThreshold {
-		randLmt := setInitRandLmt(n)
-		//randLmt := new(big.Int).Sqrt(n)
-		randLmt.Rsh(randLmt, 1)
-		randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
-		randLmt.Add(randLmt, big1)
+	randLmt := setInitRandLmt(n)
+	randLmt.Rsh(randLmt, 1)
+	randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
+	randLmt.Add(randLmt, big1)
+	var (
+		mul  = big.NewInt(int64(2 * numRoutine)) // 2 * numRoutine
+		adds []*big.Int
+	)
+	for i := 0; i <= numRoutine; i++ {
+		adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
+	}
+	for _, add := range adds {
+		go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
+	}
+	res := <-resChan
+	return res.s, res.p, res.err
+}
 
-		var (
-			mul  = big.NewInt(int64(2 * numRoutine)) // 2 * numRoutine
-			adds []*big.Int
-		)
-		for i := 0; i <= numRoutine; i++ {
-			adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
-		}
-		for _, add := range adds {
-			go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
-		}
-	} else {
-		bl := setInitRandBitLen(randLmtBitLen)
-		for i := 0; i < numRoutine; i++ {
-			go findLargeSRoutine(ctx, bl, preP, resChan)
-		}
+func randLargeTrails(n *big.Int, bitLen int) (*big.Int, *big.Int, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	resChan := make(chan findSResult)
+	bl := setInitRandBitLen(bitLen)
+	preP := big.NewInt(210) // 2 * 3 * 5 * 7
+	preP.Mul(preP, n)
+	for i := 0; i < numRoutine; i++ {
+		go findLargeSRoutine(ctx, bl, preP, resChan)
 	}
 	res := <-resChan
 	return res.s, res.p, res.err
