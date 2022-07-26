@@ -322,7 +322,7 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 
 	// we want to find a prime number p,
 	// so perform probably_prime checking to reject number which is not prime potentially
-	if !p.ProbablyPrime(3) {
+	if !p.ProbablyPrime(0) {
 		return nil, nil, false, nil
 	}
 
@@ -330,9 +330,14 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	// here we can pick u in [0, p)
 	// if u is 0, then the accepting condition will not pass
 	// use normal rand source to prevent acquiring crypto rand reader mutex
+	// to reduce the probability of picking up a prime number, we only choose even numbers
 	u := iPool.Get().(*big.Int)
 	defer iPool.Put(u)
-	u.Rand(rg, p)
+	//halfP := iPool.Get().(*big.Int)
+	//defer iPool.Put(halfP)
+	u.Rsh(p, 1)
+	u.Rand(rg, u)
+	u.Lsh(u, 1)
 
 	// test if s^2 = -1 (mod p)
 	// if so, continue to the next step, otherwise, repeat this step
