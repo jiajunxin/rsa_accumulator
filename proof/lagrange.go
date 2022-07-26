@@ -14,69 +14,20 @@ import (
 )
 
 const (
-	randLmtThreshold0 = 16
-	randLmtThreshold1 = 32
-	randLmtThreshold2 = 64
-	preComputeLmt     = 20
+	randLmtThreshold = 64
 )
 
 var (
-	// precomputed Hurwitz GCRDs for small integers
-	precomputedHurwitzGCRDs = [preComputeLmt + 1]*comp.HurwitzInt{
-		// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
-		comp.NewHurwitzInt(big0, big0, big0, big0, false),
-		// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
-		comp.NewHurwitzInt(big1, big0, big0, big0, false),
-		// 2's precomputed Hurwitz GCRD: 1, 1, 0, 0
-		comp.NewHurwitzInt(big1, big1, big0, big0, false),
-		// 3's precomputed Hurwitz GCRD: 1, 1, 1, 0
-		comp.NewHurwitzInt(big1, big1, big1, big0, false),
-		// 4's precomputed Hurwitz GCRD: 2, 0, 0, 0
-		comp.NewHurwitzInt(big2, big0, big0, big0, false),
-		// 5's precomputed Hurwitz GCRD: 2, 1, 0, 0
-		comp.NewHurwitzInt(big2, big1, big0, big0, false),
-		// 6's precomputed Hurwitz GCRD: 2, 1, 1, 0
-		comp.NewHurwitzInt(big2, big1, big1, big0, false),
-		// 7's precomputed Hurwitz GCRD: 2, 1, 1, 1
-		comp.NewHurwitzInt(big2, big1, big1, big1, false),
-		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
-		comp.NewHurwitzInt(big2, big2, big0, big0, false),
-		// 9's precomputed Hurwitz GCRD: 2, 2, 1, 0
-		comp.NewHurwitzInt(big2, big2, big1, big0, false),
-		// 10's precomputed Hurwitz GCRD: 2, 2, 1, 1
-		comp.NewHurwitzInt(big2, big2, big1, big1, false),
-		// 11's precomputed Hurwitz GCRD: 3, 1, 1, 0
-		comp.NewHurwitzInt(big3, big1, big1, big0, false),
-		// 12's precomputed Hurwitz GCRD: 3, 1, 1, 1
-		comp.NewHurwitzInt(big3, big1, big1, big1, false),
-		// 13's precomputed Hurwitz GCRD: 3, 2, 0, 0
-		comp.NewHurwitzInt(big3, big2, big0, big0, false),
-		// 14's precomputed Hurwitz GCRD: 3, 2, 1, 0
-		comp.NewHurwitzInt(big3, big2, big1, big0, false),
-		// 15's precomputed Hurwitz GCRD: 3, 2, 1, 1
-		comp.NewHurwitzInt(big3, big2, big1, big1, false),
-		// 16's precomputed Hurwitz GCRD: 4, 0, 0, 0
-		comp.NewHurwitzInt(big4, big0, big0, big0, false),
-		// 17's precomputed Hurwitz GCRD: 4, 1, 0, 0
-		comp.NewHurwitzInt(big4, big1, big0, big0, false),
-		// 18's precomputed Hurwitz GCRD: 4, 1, 1, 0
-		comp.NewHurwitzInt(big4, big1, big1, big0, false),
-		// 19's precomputed Hurwitz GCRD: 4, 1, 1, 1
-		comp.NewHurwitzInt(big4, big1, big1, big1, false),
-		// 20's precomputed Hurwitz GCRD: 4, 2, 0, 0
-		comp.NewHurwitzInt(big4, big2, big0, big0, false),
-	}
-	bigPreComputeLmt = big.NewInt(preComputeLmt)
-	numRoutine       = runtime.NumCPU()
+	numRoutine = runtime.NumCPU()
 )
 
 // LagrangeFourSquares calculates the Lagrange four squares representation of a positive integer
 // Paper: Finding the Four Squares in Lagrange’s Theorem
 // Link: http://pollack.uga.edu/finding4squares.pdf (page 6)
 // The input should be an odd positive integer no less than 9
-func LagrangeFourSquares(n *big.Int) (FourNum, error) {
+func LagrangeFourSquares(n *big.Int) (FourInt, error) {
 	if n.Sign() == 0 {
-		res := NewFourNum(precomputedHurwitzGCRDs[0].ValInt())
+		res := NewFourInt(precomputedHurwitzGCRDs[0].ValInt())
 		return res, nil
 	}
 	nc, e := divideN(n)
@@ -87,13 +38,13 @@ func LagrangeFourSquares(n *big.Int) (FourNum, error) {
 	} else {
 		primeProd, err := preCompute(nc)
 		if err != nil {
-			return FourNum{}, err
+			return FourInt{}, err
 		}
 		var gcd *comp.GaussianInt
 		for {
 			s, p, err := randTrails(nc, primeProd)
 			if err != nil {
-				return FourNum{}, err
+				return FourInt{}, err
 			}
 			gcd = gaussianIntGCD(s, p)
 			// continue if the GCD is valid
@@ -104,7 +55,7 @@ func LagrangeFourSquares(n *big.Int) (FourNum, error) {
 		//fmt.Println(gcd)
 		hurwitzGCRD, err = denouement(nc, gcd)
 		if err != nil {
-			return FourNum{}, err
+			return FourInt{}, err
 		}
 	}
 
@@ -116,8 +67,8 @@ func LagrangeFourSquares(n *big.Int) (FourNum, error) {
 	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
 	w1, w2, w3, w4 := hurwitzProd.ValInt()
-	fs := NewFourNum(w1, w2, w3, w4)
-	return fs, nil
+	fi := NewFourInt(w1, w2, w3, w4)
+	return fi, nil
 }
 
 func isValidGaussianIntGCD(gcd *comp.GaussianInt) bool {
@@ -213,7 +164,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	defer cancel()
 	resChan := make(chan findSResult)
 	randLmtBitLen := n.BitLen()
-	if randLmtBitLen < randLmtThreshold2 {
+	if randLmtBitLen < randLmtThreshold {
 		randLmt := setInitRandLmt(n)
 		//randLmt := new(big.Int).Sqrt(n)
 		randLmt.Rsh(randLmt, 1)
@@ -242,16 +193,15 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 
 func setInitRandLmt(n *big.Int) *big.Int {
 	bitLen := n.BitLen()
-	if bitLen < randLmtThreshold0 {
-		return new(big.Int).Exp(n, big4, nil)
+	exp := iPool.Get().(*big.Int)
+	defer iPool.Put(exp)
+	exp.SetInt64(4)
+	bitLen >>= 4 // bitLen / 16
+	for bitLen > 1 {
+		exp.Sub(exp, big1)
+		bitLen >>= 1
 	}
-	if bitLen < randLmtThreshold1 {
-		return new(big.Int).Exp(n, big3, nil)
-	}
-	if bitLen < randLmtThreshold2 {
-		return new(big.Int).Exp(n, big2, nil)
-	}
-	return new(big.Int).Set(n)
+	return new(big.Int).Exp(n, exp, nil)
 }
 
 func setInitRandBitLen(bitLen int) int {
@@ -412,12 +362,12 @@ func denouement(n *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
 
 // Verify checks if the four-square sum is equal to the original integer
 // i.e. target = w1^2 + w2^2 + w3^2 + w4^2
-func Verify(target *big.Int, fs FourNum) bool {
+func Verify(target *big.Int, fi FourInt) bool {
 	sum := iPool.Get().(*big.Int)
 	defer iPool.Put(sum)
 	sum.Set(big0)
 	for i := 0; i < 4; i++ {
-		sum.Add(sum, new(big.Int).Mul(fs[i], fs[i]))
+		sum.Add(sum, new(big.Int).Mul(fi[i], fi[i]))
 	}
 	return sum.Cmp(target) == 0
 }

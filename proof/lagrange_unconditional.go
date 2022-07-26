@@ -11,9 +11,9 @@ import (
 
 // UnconditionalLagrangeFourSquares calculates the Lagrange four squares for a given non-positive integer
 // the method doesn't rely on the Extended Riemann Hypothesis (ERH)
-func UnconditionalLagrangeFourSquares(n *big.Int) (FourNum, error) {
+func UnconditionalLagrangeFourSquares(n *big.Int) (FourInt, error) {
 	if n.Sign() == 0 {
-		res := NewFourNum(precomputedHurwitzGCRDs[0].ValInt())
+		res := NewFourInt(precomputedHurwitzGCRDs[0].ValInt())
 		return res, nil
 	}
 	nc, e := divideN(n)
@@ -24,12 +24,12 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourNum, error) {
 	} else {
 		x, y, p, r1, s, primes, err := initTrail(nc)
 		if err != nil {
-			return FourNum{}, err
+			return FourInt{}, err
 		}
 		// compute u, v
 		u, v, err := computeUV(r1, nc, primes)
 		if err != nil {
-			return FourNum{}, err
+			return FourInt{}, err
 		}
 		var up, vp *big.Int
 		// compute U -> up, V -> vp
@@ -69,7 +69,7 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourNum, error) {
 	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
 	w1, w2, w3, w4 := hurwitzProd.ValInt()
-	fs := NewFourNum(w1, w2, w3, w4)
+	fs := NewFourInt(w1, w2, w3, w4)
 	return fs, nil
 }
 
@@ -237,11 +237,11 @@ func computeUV(r1, n *big.Int, primes []*big.Int) (u, v *big.Int, err error) {
 func computeSquares(n *big.Int) (*squareCache, error) {
 	lmt := log2(n)
 	lmt = int(math.Sqrt(float64(lmt)))
-	for i := ss.max; i <= lmt; i++ {
+	for i := sCache.max; i <= lmt; i++ {
 		bigI := big.NewInt(int64(i))
 		sq := new(big.Int).Mul(bigI, bigI)
-		ss.add(bigI, sq)
-		ss.max = i
+		sCache.add(bigI, sq)
+		sCache.max = i
 	}
-	return ss, nil
+	return sCache, nil
 }

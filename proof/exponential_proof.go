@@ -126,7 +126,9 @@ func (e *ExpProver) Prove(u, x *big.Int) (*ExponentiationProof, error) {
 // chooseRand chooses a random number in [-B, B]
 func (e *ExpProver) chooseRand() (*big.Int, error) {
 	// random number should be generated in [0, 2B]
-	randRange := new(big.Int).Lsh(e.b, 1)
+	randRange := iPool.Get().(*big.Int)
+	defer iPool.Put(randRange)
+	randRange.Lsh(e.b, 1)
 	randRange.Add(randRange, big1)
 	num, err := rand.Int(rand.Reader, randRange)
 	if err != nil {
@@ -182,16 +184,24 @@ func (e *ExpProver) response(challenge *epChallenge) (*epResponse, error) {
 	c := challenge.bigInt()
 	l := challenge.bigIntPrime()
 	// s_x = k + c*x
-	sX := new(big.Int).Mul(c, e.x)
+	sX := iPool.Get().(*big.Int)
+	defer iPool.Put(sX)
+	sX.Mul(c, e.x)
 	sX.Add(sX, e.k)
 	// s_rho = rho_k + c*rho_x
-	sRho := new(big.Int).Mul(e.rhoX, c)
+	sRho := iPool.Get().(*big.Int)
+	defer iPool.Put(sRho)
+	sRho.Mul(e.rhoX, c)
 	sRho.Add(sRho, e.rhoK)
 	// q_x * l  + r_x = s_x
 	// q_rho * l + r_rho = s_rho
-	qX := new(big.Int).Div(sX, l)
+	qX := iPool.Get().(*big.Int)
+	defer iPool.Put(qX)
+	qX.Div(sX, l)
 	rX := new(big.Int).Mod(sX, l)
-	qRho := new(big.Int).Div(sRho, l)
+	qRho := iPool.Get().(*big.Int)
+	defer iPool.Put(qRho)
+	qRho.Div(sRho, l)
 	rRho := new(big.Int).Mod(sRho, l)
 	// Q_g = Com(q_x; q_rho) = (g^q_x)(h^q_rho)
 	qG := com(e.pp, qX, qRho)
@@ -238,20 +248,24 @@ func (e *ExpVerifier) VerifyResponse(c, l, u, w *big.Int, response *epResponse, 
 	//	return false, nil
 	//}
 	// Q_g^left * Com(r_x; r_rho) = A_g * z^c
-	left := new(big.Int).Exp(response.qG, l, e.pp.N)
+	left := iPool.Get().(*big.Int)
+	defer iPool.Put(left)
+	left.Exp(response.qG, l, e.pp.N)
 	left.Mul(left, com(e.pp, response.rX, response.rRho))
 	left.Mod(left, e.pp.N)
-	right := new(big.Int).Set(commit.aG)
+	right := iPool.Get().(*big.Int)
+	defer iPool.Put(right)
+	right.Set(commit.aG)
 	right.Mul(right, new(big.Int).Exp(commit.z, c, e.pp.N))
 	right.Mod(left, e.pp.N)
 	if left.Cmp(right) != 0 {
 		return false, nil
 	}
 	// Q_u^left * u^r_x = A_u * w^c
-	left = new(big.Int).Exp(response.qU, l, e.pp.N)
+	left.Exp(response.qU, l, e.pp.N)
 	left.Mul(left, new(big.Int).Exp(u, response.rX, e.pp.N))
 	left.Mod(left, e.pp.N)
-	right = new(big.Int).Set(commit.aU)
+	right.Set(commit.aU)
 	right.Mul(right, new(big.Int).Exp(w, c, e.pp.N))
 	right.Mod(left, e.pp.N)
 	if left.Cmp(right) != 0 {
@@ -277,7 +291,9 @@ type epResponse struct {
 // com calculates (g^x)(h^r)
 func com(pp *PublicParameters, x, r *big.Int) *big.Int {
 	res := new(big.Int).Exp(pp.G, x, pp.N)
-	res.Mul(res, new(big.Int).Exp(pp.H, r, pp.N))
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	res.Mul(res, opt.Exp(pp.H, r, pp.N))
 	res.Mod(res, pp.N)
 	return res
 }

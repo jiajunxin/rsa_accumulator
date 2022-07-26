@@ -22,20 +22,48 @@ var (
 	hiPool = sync.Pool{
 		New: func() interface{} { return new(comp.HurwitzInt) },
 	}
-	pCache  = newPrimeCache(32)
+	// cache for precomputed prime numbers and prime number products
+	pCache = newPrimeCache(32)
+	// cache for computed Gaussian integers
 	giCache = make(map[int]*comp.GaussianInt)
-	ss      = newSquareCache(0)
+	// cache for precomputed square numbers
+	sCache = newSquareCache(0)
 )
 
-// ResetGaussianIntCache resets the Gaussian integer cache
-func ResetGaussianIntCache() {
-	giCache = make(map[int]*comp.GaussianInt)
+// ResetPrimeCache resets the prime cache
+func ResetPrimeCache() {
+	pCache = newPrimeCache(0)
 }
 
 type primeCache struct {
 	l   []int            // list of prime numbers
 	m   map[int]*big.Int // map of prime numbers and the products
 	max int              // the largest prime number included
+}
+
+// findPrimeProd finds the product of primes less than log n using binary search
+func (p *primeCache) findPrimeProd(logN int) (*big.Int, error) {
+	var (
+		l int
+		r = len(p.l) - 1
+	)
+	for l <= r {
+		mid := (l-r)/2 + r
+		pll := p.l[mid]
+		if mid == len(p.l)-1 {
+			return p.m[pll], nil
+		}
+		plr := p.l[mid+1]
+		if pll < logN && plr >= logN {
+			return p.m[pll], nil
+		}
+		if pll >= logN {
+			r = mid - 1
+		} else {
+			l = mid + 1
+		}
+	}
+	return nil, errors.New("precomputed primes not found")
 }
 
 func newPrimeCache(lmt int) *primeCache {
@@ -83,10 +111,32 @@ func (p *primeCache) checkAddPrime(n int, prod, opt *big.Int) {
 	p.max = n
 }
 
+// ResetGaussianIntCache resets the Gaussian integer cache
+func ResetGaussianIntCache() {
+	giCache = make(map[int]*comp.GaussianInt)
+}
+
+// CacheGaussianInt caches (1+i)^n, n <= e
+func CacheGaussianInt(e int) {
+	giCache = make(map[int]*comp.GaussianInt)
+	gaussianProd := giPool.Get().(*comp.GaussianInt)
+	defer giPool.Put(gaussianProd)
+	gaussianProd.Update(big1, big0)
+	for i := 0; i <= e; i++ {
+		giCache[i] = gaussianProd.Copy()
+		gaussianProd.Prod(gaussianProd, gaussianProd)
+	}
+}
+
 // CacheSquareNums caches the square numbers of x, x <= sqrt(bit length)
 func CacheSquareNums(bitLen int) {
 	lmt := int(math.Sqrt(float64(bitLen)))
-	ss = newSquareCache(lmt)
+	sCache = newSquareCache(lmt)
+}
+
+// ResetSquareCache resets the cache for square numbers
+func ResetSquareCache() {
+	sCache = newSquareCache(0)
 }
 
 type squareCache struct {
@@ -133,34 +183,4 @@ func (s *squareCache) findXY(n *big.Int) (x, y *big.Int) {
 		}
 	}
 	return
-}
-
-// findPrimeProd finds the product of primes less than log n using binary search
-func (p *primeCache) findPrimeProd(logN int) (*big.Int, error) {
-	var (
-		l int
-		r = len(p.l) - 1
-	)
-	for l <= r {
-		mid := (l-r)/2 + r
-		pll := p.l[mid]
-		if mid == len(p.l)-1 {
-			return p.m[pll], nil
-		}
-		plr := p.l[mid+1]
-		if pll < logN && plr >= logN {
-			return p.m[pll], nil
-		}
-		if pll >= logN {
-			r = mid - 1
-		} else {
-			l = mid + 1
-		}
-	}
-	return nil, errors.New("precomputed primes not found")
-}
-
-// ResetPrimeCache resets the prime cache
-func ResetPrimeCache() {
-	pCache = newPrimeCache(0)
 }
