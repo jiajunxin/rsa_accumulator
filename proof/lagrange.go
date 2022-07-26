@@ -320,9 +320,16 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	p.Mul(preP, k)
 	p.Sub(p, big1)
 
+	// we want to find a prime number p,
+	// so perform probably_prime checking to reject number which is not prime potentially
+	if !p.ProbablyPrime(3) {
+		return nil, nil, false, nil
+	}
+
 	// choose u from [1, p - 1]
 	// here we can pick u in [0, p)
 	// if u is 0, then the accepting condition will not pass
+	// use normal rand source to prevent acquiring crypto rand reader mutex
 	u := iPool.Get().(*big.Int)
 	defer iPool.Put(u)
 	u.Rand(rg, p)
