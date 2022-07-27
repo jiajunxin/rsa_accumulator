@@ -103,8 +103,8 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 	if e == 0 {
 		return comp.NewGaussianInt(big1, big0)
 	}
-	if gi, ok := giCache[e]; ok {
-		return gi
+	if gi, ok := giCache.Load(e); ok {
+		return gi.(*comp.GaussianInt)
 	}
 	gaussian1PlusI := giPool.Get().(*comp.GaussianInt).Update(big1, big1)
 	defer giPool.Put(gaussian1PlusI)
@@ -116,7 +116,7 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 		idx--
 	}
 	gi := new(comp.GaussianInt).Update(gaussianProd.R, gaussianProd.I)
-	giCache[e] = gi
+	giCache.Store(e, gi)
 	return gaussianProd
 }
 
@@ -130,7 +130,8 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	if logN <= pCache.max {
 		return pCache.findPrimeProd(logN), nil
 	}
-	prod := iPool.Get().(*big.Int).Set(pCache.m[pCache.max])
+	pm, _ := pCache.m.Load(pCache.max)
+	prod := iPool.Get().(*big.Int).Set(pm.(*big.Int))
 	defer iPool.Put(prod)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
@@ -352,8 +353,10 @@ func denouement(n *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
 func Verify(target *big.Int, fi FourInt) bool {
 	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
 	for i := 0; i < 4; i++ {
-		sum.Add(sum, new(big.Int).Mul(fi[i], fi[i]))
+		sum.Add(sum, opt.Mul(fi[i], fi[i]))
 	}
 	return sum.Cmp(target) == 0
 }

@@ -22,9 +22,9 @@ var (
 		New: func() interface{} { return new(comp.HurwitzInt) },
 	}
 	// cache for precomputed prime numbers and prime number products
-	pCache = newPrimeCache(32)
+	pCache = newPrimeCache(16)
 	// cache for computed Gaussian integers
-	giCache = make(map[int]*comp.GaussianInt)
+	giCache = sync.Map{}
 	// cache for precomputed square numbers
 	sCache = newSquareCache(0)
 )
@@ -35,9 +35,9 @@ func ResetPrimeCache() {
 }
 
 type primeCache struct {
-	l   []int            // list of prime numbers
-	m   map[int]*big.Int // map of prime numbers and the products
-	max int              // the largest prime number included
+	l   []int    // list of prime numbers
+	m   sync.Map // map of prime numbers and the products
+	max int      // the largest prime number included
 }
 
 // findPrimeProd finds the product of primes less than log n using binary search
@@ -50,11 +50,13 @@ func (p *primeCache) findPrimeProd(logN int) *big.Int {
 		mid := (l-r)/2 + r
 		pll := p.l[mid]
 		if mid == len(p.l)-1 {
-			return p.m[pll]
+			bi, _ := p.m.Load(pll)
+			return bi.(*big.Int)
 		}
 		plr := p.l[mid+1]
 		if pll < logN && plr >= logN {
-			return p.m[pll]
+			bi, _ := p.m.Load(pll)
+			return bi.(*big.Int)
 		}
 		if pll >= logN {
 			r = mid - 1
@@ -68,14 +70,14 @@ func (p *primeCache) findPrimeProd(logN int) *big.Int {
 func newPrimeCache(lmt int) *primeCache {
 	ps := &primeCache{
 		l:   []int{1, 2, 3, 5, 7},
-		m:   make(map[int]*big.Int),
+		m:   sync.Map{},
 		max: 7,
 	}
-	ps.m[1] = big.NewInt(1)
-	ps.m[2] = big.NewInt(2)
-	ps.m[3] = big.NewInt(6)
-	ps.m[5] = big.NewInt(30)
-	ps.m[7] = big.NewInt(210)
+	ps.m.Store(1, big.NewInt(1))
+	ps.m.Store(2, big.NewInt(2))
+	ps.m.Store(3, big.NewInt(6))
+	ps.m.Store(5, big.NewInt(30))
+	ps.m.Store(7, big.NewInt(210))
 
 	prod := iPool.Get().(*big.Int).SetInt64(210)
 	defer iPool.Put(prod)
@@ -105,22 +107,22 @@ func (p *primeCache) checkAddPrime(n int, prod, opt *big.Int) {
 	p.l = append(p.l, n)
 	opt.SetInt64(int64(n))
 	prod.Mul(prod, opt)
-	p.m[n] = new(big.Int).Set(prod)
+	p.m.Store(n, new(big.Int).Set(prod))
 	p.max = n
 }
 
 // ResetGaussianIntCache resets the Gaussian integer cache
 func ResetGaussianIntCache() {
-	giCache = make(map[int]*comp.GaussianInt)
+	giCache = sync.Map{}
 }
 
 // CacheGaussianInt caches (1+i)^n, n <= e
 func CacheGaussianInt(e int) {
-	giCache = make(map[int]*comp.GaussianInt)
+	giCache = sync.Map{}
 	gaussianProd := giPool.Get().(*comp.GaussianInt).Update(big1, big0)
 	defer giPool.Put(gaussianProd)
 	for i := 0; i <= e; i++ {
-		giCache[i] = gaussianProd.Copy()
+		giCache.Store(i, gaussianProd.Copy())
 		gaussianProd.Prod(gaussianProd, gaussianProd)
 	}
 }
