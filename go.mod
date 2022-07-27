@@ -1,6 +1,6 @@
 module github.com/rsa_accumulator
 
-go 1.17
+go 1.18
 
 require github.com/iden3/go-iden3-crypto v0.0.13
 

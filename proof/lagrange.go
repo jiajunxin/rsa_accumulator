@@ -302,7 +302,8 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 }
 
 func pickLargeS(rg *rand.Rand, randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
-	k, err := crand.Prime(crand.Reader, randBitLen)
+	k, err := probPrime(crand.Reader, randBitLen)
+	//k, err := crand.Prime(crand.Reader, randBitLen)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -318,7 +319,7 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 
 	// we want to find a prime number p,
 	// so perform probably_prime checking to reject number which is not prime potentially,
-	// quick restart if p is not probability prime
+	// quick restart if p cannot pass Baillie-PSW test
 	if !p.ProbablyPrime(0) {
 		return nil, nil, false, nil
 	}
@@ -345,7 +346,8 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	if opt.Exp(u, powU, p).Cmp(pMinus1) != 0 {
+	opt.Exp(u, powU, p)
+	if opt.Cmp(pMinus1) != 0 {
 		return nil, nil, false, nil
 	}
 
