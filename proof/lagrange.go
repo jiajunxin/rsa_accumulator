@@ -87,12 +87,10 @@ func LagrangeFourSquares(n *big.Int) (FourInt, error) {
 }
 
 func isValidGaussianIntGCD(gcd *comp.GaussianInt) bool {
-	absR := iPool.Get().(*big.Int)
+	absR := iPool.Get().(*big.Int).Abs(gcd.R)
 	defer iPool.Put(absR)
-	absR.Abs(gcd.R)
-	absI := iPool.Get().(*big.Int)
+	absI := iPool.Get().(*big.Int).Abs(gcd.I)
 	defer iPool.Put(absI)
-	absI.Abs(gcd.I)
 	rCmp1 := absR.Cmp(big1)
 	rSign := absR.Sign()
 	iCmp1 := absI.Cmp(big1)
@@ -128,9 +126,8 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 	if gi, ok := giCache[e]; ok {
 		return gi
 	}
-	gaussian1PlusI := giPool.Get().(*comp.GaussianInt)
+	gaussian1PlusI := giPool.Get().(*comp.GaussianInt).Update(big1, big1)
 	defer giPool.Put(gaussian1PlusI)
-	gaussian1PlusI.Update(big1, big1)
 
 	gaussianProd := comp.NewGaussianInt(big1, big0)
 	idx := e
@@ -138,8 +135,7 @@ func gaussian1PlusIPow(e int) *comp.GaussianInt {
 		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
 		idx--
 	}
-	gi := new(comp.GaussianInt)
-	gi.Update(gaussianProd.R, gaussianProd.I)
+	gi := new(comp.GaussianInt).Update(gaussianProd.R, gaussianProd.I)
 	giCache[e] = gi
 	return gaussianProd
 }
@@ -154,11 +150,10 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	if logN <= pCache.max {
 		return pCache.findPrimeProd(logN), nil
 	}
-	prod := iPool.Get().(*big.Int)
+	prod := iPool.Get().(*big.Int).Set(pCache.m[pCache.max])
 	defer iPool.Put(prod)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	prod.Set(pCache.m[pCache.max])
 	for idx := pCache.max + 2; idx < logN; idx += 2 {
 		pCache.checkAddPrime(idx, prod, opt)
 	}
@@ -170,7 +165,8 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	// then construct k based on the random number
 	// and check the validity of the trails
 	// p = M * n * k - 1, pre-p = M * n
-	preP := new(big.Int).Mul(primeProd, n)
+	preP := iPool.Get().(*big.Int).Mul(primeProd, n)
+	defer iPool.Put(preP)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan findSResult)
@@ -178,10 +174,10 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
 	randLmt.Add(randLmt, big1)
-	var (
-		mul  = big.NewInt(int64(2 * numRoutine)) // 2 * numRoutine
-		adds []*big.Int
-	)
+
+	mul := iPool.Get().(*big.Int).SetInt64(int64(2 * numRoutine)) // 2 * numRoutine
+	defer iPool.Put(mul)
+	var adds []*big.Int
 	for i := 0; i <= numRoutine; i++ {
 		adds = append(adds, big.NewInt(int64(2*i+1))) // 2i+1
 	}
@@ -197,7 +193,8 @@ func randLargeTrails(n *big.Int, bitLen int) (*big.Int, *big.Int, error) {
 	defer cancel()
 	resChan := make(chan findSResult)
 	bl := setInitRandBitLen(bitLen)
-	preP := big.NewInt(210) // 2 * 3 * 5 * 7
+	preP := iPool.Get().(*big.Int).SetInt64(210) // 2 * 3 * 5 * 7
+	defer iPool.Put(preP)
 	preP.Mul(preP, n)
 	for i := 0; i < numRoutine; i++ {
 		go findLargeSRoutine(ctx, bl, preP, resChan)
@@ -208,9 +205,8 @@ func randLargeTrails(n *big.Int, bitLen int) (*big.Int, *big.Int, error) {
 
 func setInitRandLmt(n *big.Int) *big.Int {
 	bitLen := n.BitLen()
-	exp := iPool.Get().(*big.Int)
+	exp := iPool.Get().(*big.Int).SetInt64(4)
 	defer iPool.Put(exp)
-	exp.SetInt64(4)
 	bitLen >>= 2 // bitLen / 4
 	for bitLen > 1 {
 		exp.Sub(exp, big1)
@@ -312,9 +308,8 @@ func pickLargeS(rg *rand.Rand, randBitLen int, preP *big.Int) (*big.Int, *big.In
 
 func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
-	p := iPool.Get().(*big.Int)
+	p := iPool.Get().(*big.Int).Mul(preP, k)
 	defer iPool.Put(p)
-	p.Mul(preP, k)
 	p.Sub(p, big1)
 
 	// we want to find a prime number p,
@@ -329,24 +324,20 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	// if u is 0, then the accepting condition will not pass
 	// use normal rand source to prevent acquiring crypto rand reader mutex
 	// to reduce the probability of picking up a prime number, we only choose even numbers
-	u := iPool.Get().(*big.Int)
+	u := iPool.Get().(*big.Int).Rsh(p, 1)
 	defer iPool.Put(u)
-	u.Rsh(p, 1)
 	u.Rand(rg, u)
 	u.Lsh(u, 1)
 
 	// test if s^2 = -1 (mod p)
 	// if so, continue to the next step, otherwise, repeat this step
-	pMinus1 := iPool.Get().(*big.Int)
+	pMinus1 := iPool.Get().(*big.Int).Sub(p, big1)
 	defer iPool.Put(pMinus1)
-	pMinus1.Sub(p, big1)
-	powU := iPool.Get().(*big.Int)
+	powU := iPool.Get().(*big.Int).Rsh(pMinus1, 1)
 	defer iPool.Put(powU)
-	powU.Rsh(pMinus1, 1)
 
-	opt := iPool.Get().(*big.Int)
+	opt := iPool.Get().(*big.Int).Exp(u, powU, p)
 	defer iPool.Put(opt)
-	opt.Exp(u, powU, p)
 	if opt.Cmp(pMinus1) != 0 {
 		return nil, nil, false, nil
 	}
@@ -360,13 +351,11 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 func gaussianIntGCD(s, p *big.Int) *comp.GaussianInt {
 	// compute A + Bi := gcd(s + i, p)
 	// Gaussian integer: s + i
-	gaussianInt := giPool.Get().(*comp.GaussianInt)
+	gaussianInt := giPool.Get().(*comp.GaussianInt).Update(s, big1)
 	defer giPool.Put(gaussianInt)
-	gaussianInt.Update(s, big1)
 	// Gaussian integer: p
-	gaussianP := giPool.Get().(*comp.GaussianInt)
+	gaussianP := giPool.Get().(*comp.GaussianInt).Update(p, big0)
 	defer giPool.Put(gaussianP)
-	gaussianP.Update(p, big0)
 	// compute gcd(s + i, p)
 	gcd := new(comp.GaussianInt)
 	gcd.GCD(gaussianInt, gaussianP)
@@ -376,13 +365,11 @@ func gaussianIntGCD(s, p *big.Int) *comp.GaussianInt {
 func denouement(n *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
 	// compute gcrd(A + Bi + j, n), normalized to have integer component
 	// Hurwitz integer: A + Bi + j
-	hurwitzInt := hiPool.Get().(*comp.HurwitzInt)
+	hurwitzInt := hiPool.Get().(*comp.HurwitzInt).Update(gcd.R, gcd.I, big1, big0, false)
 	defer hiPool.Put(hurwitzInt)
-	hurwitzInt.Update(gcd.R, gcd.I, big1, big0, false)
 	// Hurwitz integer: n
-	hurwitzN := hiPool.Get().(*comp.HurwitzInt)
+	hurwitzN := hiPool.Get().(*comp.HurwitzInt).Update(n, big0, big0, big0, false)
 	defer hiPool.Put(hurwitzN)
-	hurwitzN.Update(n, big0, big0, big0, false)
 	gcrd := new(comp.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
 
 	return gcrd, nil
@@ -391,9 +378,8 @@ func denouement(n *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
 // Verify checks if the four-square sum is equal to the original integer
 // i.e. target = w1^2 + w2^2 + w3^2 + w4^2
 func Verify(target *big.Int, fi FourInt) bool {
-	sum := iPool.Get().(*big.Int)
+	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
-	sum.Set(big0)
 	for i := 0; i < 4; i++ {
 		sum.Add(sum, new(big.Int).Mul(fi[i], fi[i]))
 	}

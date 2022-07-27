@@ -77,11 +77,10 @@ func newPrimeCache(lmt int) *primeCache {
 	ps.m[5] = big.NewInt(30)
 	ps.m[7] = big.NewInt(210)
 
-	prod := iPool.Get().(*big.Int)
+	prod := iPool.Get().(*big.Int).SetInt64(210)
 	defer iPool.Put(prod)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	prod.SetInt64(210)
 	for idx := 9; idx <= lmt; idx += 2 {
 		ps.checkAddPrime(idx, prod, opt)
 	}
@@ -118,9 +117,8 @@ func ResetGaussianIntCache() {
 // CacheGaussianInt caches (1+i)^n, n <= e
 func CacheGaussianInt(e int) {
 	giCache = make(map[int]*comp.GaussianInt)
-	gaussianProd := giPool.Get().(*comp.GaussianInt)
+	gaussianProd := giPool.Get().(*comp.GaussianInt).Update(big1, big0)
 	defer giPool.Put(gaussianProd)
-	gaussianProd.Update(big1, big0)
 	for i := 0; i <= e; i++ {
 		giCache[i] = gaussianProd.Copy()
 		gaussianProd.Prod(gaussianProd, gaussianProd)

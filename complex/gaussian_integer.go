@@ -58,7 +58,7 @@ func (g *GaussianInt) Set(a *GaussianInt) *GaussianInt {
 }
 
 // Update updates the Gaussian integer with the given real and imaginary parts
-func (g *GaussianInt) Update(r, i *big.Int) {
+func (g *GaussianInt) Update(r, i *big.Int) *GaussianInt {
 	if g.R == nil {
 		g.R = new(big.Int)
 	}
@@ -67,6 +67,7 @@ func (g *GaussianInt) Update(r, i *big.Int) {
 		g.I = new(big.Int)
 	}
 	g.I.Set(i)
+	return g
 }
 
 // Add adds two Gaussian integers
@@ -135,18 +136,14 @@ func (g *GaussianInt) Copy() *GaussianInt {
 // the remainder is stored in the Gaussian integer that calls the method
 // the quotient is returned as a new Gaussian integer
 func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
-	bConj := giPool.Get().(*GaussianInt)
+	bConj := giPool.Get().(*GaussianInt).Conj(b)
 	defer giPool.Put(bConj)
-	bConj.Conj(b)
-	numerator := giPool.Get().(*GaussianInt)
+	numerator := giPool.Get().(*GaussianInt).Prod(a, bConj)
 	defer giPool.Put(numerator)
-	numerator.Prod(a, bConj)
-	denominator := giPool.Get().(*GaussianInt)
+	denominator := giPool.Get().(*GaussianInt).Prod(b, bConj)
 	defer giPool.Put(denominator)
-	denominator.Prod(b, bConj)
-	deFloat := fPool.Get().(*big.Float)
+	deFloat := fPool.Get().(*big.Float).SetInt(denominator.R)
 	defer fPool.Put(deFloat)
-	deFloat.SetInt(denominator.R)
 
 	realScalar := fPool.Get().(*big.Float).SetInt(numerator.R)
 	defer fPool.Put(realScalar)
@@ -155,8 +152,12 @@ func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
 	defer fPool.Put(imagScalar)
 	imagScalar.Quo(imagScalar, deFloat)
 
-	rsInt := roundFloat(realScalar)
-	isInt := roundFloat(imagScalar)
+	rsInt := iPool.Get().(*big.Int)
+	defer iPool.Put(rsInt)
+	roundFloat(realScalar, rsInt)
+	isInt := iPool.Get().(*big.Int)
+	defer iPool.Put(isInt)
+	roundFloat(imagScalar, isInt)
 	quotient := NewGaussianInt(rsInt, isInt)
 	opt := giPool.Get().(*GaussianInt)
 	defer giPool.Put(opt)
@@ -182,12 +183,10 @@ func (g *GaussianInt) CmpNorm(a *GaussianInt) int {
 // GCD calculates the greatest common divisor of two Gaussian integers using Euclidean algorithm
 // the result is stored in the Gaussian integer that calls the method and returned
 func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
-	ac := giPool.Get().(*GaussianInt)
+	ac := giPool.Get().(*GaussianInt).Set(a)
 	defer giPool.Put(ac)
-	ac.Set(a)
-	bc := giPool.Get().(*GaussianInt)
+	bc := giPool.Get().(*GaussianInt).Set(b)
 	defer giPool.Put(bc)
-	bc.Set(b)
 
 	if ac.CmpNorm(bc) < 0 {
 		ac, bc = bc, ac
@@ -198,7 +197,7 @@ func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
 		remainder.Div(ac, bc)
 		if remainder.IsZero() {
 			g.Set(bc)
-			return bc
+			return new(GaussianInt).Set(bc)
 		}
 		ac.Set(bc)
 		bc.Set(remainder)
