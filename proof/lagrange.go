@@ -154,7 +154,7 @@ func randTrails(n, primeProd *big.Int) *comp.GaussianInt {
 	randLmt := setInitRandLmt(n)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
-	randLmt.Add(randLmt, big1)
+	//randLmt.Add(randLmt, big1)
 
 	mul := iPool.Get().(*big.Int).SetInt64(int64(2 * numRoutine)) // 2 * numRoutine
 	defer iPool.Put(mul)
@@ -173,9 +173,8 @@ func randLargeTrails(n *big.Int, bitLen int) *comp.GaussianInt {
 	defer cancel()
 	resChan := make(chan *comp.GaussianInt)
 	bl := setInitRandBitLen(bitLen)
-	preP := iPool.Get().(*big.Int).SetInt64(2310) // 2 * 3 * 5 * 7 * 11
+	preP := iPool.Get().(*big.Int).Mul(tinyPrimeProd, n)
 	defer iPool.Put(preP)
-	preP.Mul(preP, n)
 	for i := 0; i < numRoutine; i++ {
 		go findLargeSRoutine(ctx, bl, preP, resChan)
 	}

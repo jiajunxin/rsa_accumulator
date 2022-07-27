@@ -64,6 +64,7 @@ var (
 		comp.NewHurwitzInt(big4, big2, big0, big0, false),
 	}
 	bigPreComputeLmt = big.NewInt(preComputeLmt)
+	tinyPrimeProd    = big.NewInt(2310) // 2 * 3 * 5 * 7 * 11
 )
 
 func log2(n *big.Int) int {
