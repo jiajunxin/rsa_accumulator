@@ -43,29 +43,9 @@ func LagrangeFourSquares(n *big.Int) (FourInt, error) {
 			if err != nil {
 				return FourInt{}, err
 			}
-			for {
-				s, p, err := randTrails(nc, primeProd)
-				if err != nil {
-					return FourInt{}, err
-				}
-				gcd = gaussianIntGCD(s, p)
-				// continue if the GCD is valid
-				if isValidGaussianIntGCD(gcd) {
-					break
-				}
-			}
+			gcd = randTrails(nc, primeProd)
 		} else {
-			for {
-				s, p, err := randLargeTrails(nc, nBitLen)
-				if err != nil {
-					return FourInt{}, err
-				}
-				gcd = gaussianIntGCD(s, p)
-				// continue if the GCD is valid
-				if isValidGaussianIntGCD(gcd) {
-					break
-				}
-			}
+			gcd = randLargeTrails(nc, nBitLen)
 		}
 		var err error
 		hurwitzGCRD, err = denouement(nc, gcd)
@@ -160,7 +140,7 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	return new(big.Int).Set(prod), nil
 }
 
-func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
+func randTrails(n, primeProd *big.Int) *comp.GaussianInt {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numRoutine]
 	// then construct k based on the random number
 	// and check the validity of the trails
@@ -169,7 +149,7 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	defer iPool.Put(preP)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	resChan := make(chan findSResult)
+	resChan := make(chan *comp.GaussianInt)
 	randLmt := setInitRandLmt(n)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
@@ -184,14 +164,13 @@ func randTrails(n, primeProd *big.Int) (*big.Int, *big.Int, error) {
 	for _, add := range adds {
 		go findSRoutine(ctx, add, mul, randLmt, preP, resChan)
 	}
-	res := <-resChan
-	return res.s, res.p, res.err
+	return <-resChan
 }
 
-func randLargeTrails(n *big.Int, bitLen int) (*big.Int, *big.Int, error) {
+func randLargeTrails(n *big.Int, bitLen int) *comp.GaussianInt {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	resChan := make(chan findSResult)
+	resChan := make(chan *comp.GaussianInt)
 	bl := setInitRandBitLen(bitLen)
 	preP := iPool.Get().(*big.Int).SetInt64(210) // 2 * 3 * 5 * 7
 	defer iPool.Put(preP)
@@ -199,8 +178,7 @@ func randLargeTrails(n *big.Int, bitLen int) (*big.Int, *big.Int, error) {
 	for i := 0; i < numRoutine; i++ {
 		go findLargeSRoutine(ctx, bl, preP, resChan)
 	}
-	res := <-resChan
-	return res.s, res.p, res.err
+	return <-resChan
 }
 
 func setInitRandLmt(n *big.Int) *big.Int {
@@ -220,7 +198,7 @@ func setInitRandBitLen(bitLen int) int {
 	return int(math.Round(lenF))
 }
 
-func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- findSResult) {
+func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- *comp.GaussianInt) {
 	rg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
@@ -229,30 +207,25 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 		default:
 			s, p, ok, err := pickS(rg, mul, add, randLmt, preP)
 			if err != nil {
-				select {
-				case resChan <- findSResult{err: err}:
-					return
-				default:
-					return
-				}
+				panic(err)
 			}
 			if !ok {
 				continue
 			}
+			gcd := gaussianIntGCD(s, p)
+			if !isValidGaussianIntGCD(gcd) {
+				continue
+			}
+			fmt.Println("findSRoutine:", s, p)
 			ctx.Done()
 			select {
-			case resChan <- findSResult{s: s, p: p}:
+			case resChan <- gcd:
 				return
 			default:
 				return
 			}
 		}
 	}
-}
-
-type findSResult struct {
-	s, p *big.Int
-	err  error
 }
 
 func pickS(rg *rand.Rand, mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
@@ -267,7 +240,7 @@ func pickS(rg *rand.Rand, mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int,
 	return determineSAndP(rg, k, preP)
 }
 
-func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- findSResult) {
+func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- *comp.GaussianInt) {
 	rg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
@@ -276,19 +249,18 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 		default:
 			s, p, ok, err := pickLargeS(rg, randBitLen, preP)
 			if err != nil {
-				select {
-				case resChan <- findSResult{err: err}:
-					return
-				default:
-					return
-				}
+				panic(err)
 			}
 			if !ok {
 				continue
 			}
+			gcd := gaussianIntGCD(s, p)
+			if !isValidGaussianIntGCD(gcd) {
+				continue
+			}
 			ctx.Done()
 			select {
-			case resChan <- findSResult{s: s, p: p}:
+			case resChan <- gcd:
 				return
 			default:
 				return
