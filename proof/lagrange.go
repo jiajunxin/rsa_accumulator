@@ -217,7 +217,6 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 			if !isValidGaussianIntGCD(gcd) {
 				continue
 			}
-			fmt.Println("findSRoutine:", s, p)
 			ctx.Done()
 			select {
 			case resChan <- gcd:
