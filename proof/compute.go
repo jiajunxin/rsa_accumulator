@@ -102,7 +102,6 @@ func probPrime(rand io.Reader, bits int) (p *big.Int, err error) {
 
 	bigMod := new(big.Int)
 
-	//for {
 	_, err = io.ReadFull(rand, bytes)
 	if err != nil {
 		return nil, err
