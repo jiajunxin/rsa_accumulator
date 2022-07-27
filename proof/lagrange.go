@@ -173,7 +173,7 @@ func randLargeTrails(n *big.Int, bitLen int) *comp.GaussianInt {
 	defer cancel()
 	resChan := make(chan *comp.GaussianInt)
 	bl := setInitRandBitLen(bitLen)
-	preP := iPool.Get().(*big.Int).SetInt64(30) // 2 * 3 * 5
+	preP := iPool.Get().(*big.Int).SetInt64(2310) // 2 * 3 * 5 * 7 * 11
 	defer iPool.Put(preP)
 	preP.Mul(preP, n)
 	for i := 0; i < numRoutine; i++ {
