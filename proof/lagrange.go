@@ -270,7 +270,7 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 }
 
 func pickLargeS(rg *rand.Rand, randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
-	k, err := probPrime(crand.Reader, randBitLen)
+	k, err := probPrime(randBitLen)
 	//k, err := crand.Prime(crand.Reader, randBitLen)
 	if err != nil {
 		return nil, nil, false, err
@@ -312,6 +312,11 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	for i := 0; i < maxUFindingIter; i++ {
 		u.Rand(rg, halfP)
 		u.Lsh(u, 1)
+		//u, err := crand.Int(crand.Reader, halfP)
+		//if err != nil {
+		//	return nil, nil, false, err
+		//}
+		//u.Lsh(u, 1)
 
 		// test if s^2 = -1 (mod p)
 		// if so, continue to the next step, otherwise, repeat this step

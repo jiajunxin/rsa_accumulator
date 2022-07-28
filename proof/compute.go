@@ -2,8 +2,9 @@ package proof
 
 import (
 	"errors"
-	"io"
 	"math/big"
+	"math/rand"
+	"time"
 
 	comp "github.com/rsa_accumulator/complex"
 )
@@ -67,6 +68,10 @@ var (
 	tinyPrimeProd    = big.NewInt(210) // 2 * 3 * 5 * 7
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func log2(n *big.Int) int {
 	return n.BitLen() - 1
 }
@@ -89,7 +94,7 @@ var smallPrimesProduct = new(big.Int).SetUint64(16294579238595022365)
 
 // probPrime is modified crypto/rand Prime function for our use cases
 // it returns error for any error returned by rand.Read or if bits < 2.
-func probPrime(rand io.Reader, bits int) (p *big.Int, err error) {
+func probPrime(bits int) (p *big.Int, err error) {
 	if bits < 2 {
 		err = errors.New("bit size must be at least 2")
 		return
@@ -107,10 +112,14 @@ func probPrime(rand io.Reader, bits int) (p *big.Int, err error) {
 
 	idx := 0
 	for {
-		_, err = io.ReadFull(rand, bytes)
+		_, err = rand.Read(bytes)
 		if err != nil {
-			return nil, err
+			return
 		}
+		//_, err = io.ReadFull(rand, bytes)
+		//if err != nil {
+		//	return nil, err
+		//}
 
 		// Clear bits in the first byte to make sure the candidate has a size <= bits.
 		bytes[0] &= uint8(int(1<<b) - 1)
