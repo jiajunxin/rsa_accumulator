@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	randLmtThreshold = 16
+	randLmtThreshold      = 16
+	maxFindingUIterations = 3
 )
 
 var (
@@ -290,27 +291,34 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 		return nil, nil, false, nil
 	}
 
-	// choose u from [1, p - 1]
-	// here we can pick u in [0, p)
-	// if u is 0, then the accepting condition will not pass
-	// use normal rand source to prevent acquiring crypto rand reader mutex
-	// to reduce the probability of picking up a prime number, we only choose even numbers
-	u := iPool.Get().(*big.Int).Rsh(p, 1)
-	defer iPool.Put(u)
-	u.Rand(rg, u)
-	u.Lsh(u, 1)
-
-	// test if s^2 = -1 (mod p)
-	// if so, continue to the next step, otherwise, repeat this step
 	pMinus1 := iPool.Get().(*big.Int).Sub(p, big1)
 	defer iPool.Put(pMinus1)
 	powU := iPool.Get().(*big.Int).Rsh(pMinus1, 1)
 	defer iPool.Put(powU)
 
-	opt := iPool.Get().(*big.Int).Exp(u, powU, p)
+	halfP := iPool.Get().(*big.Int).Rsh(p, 1)
+	defer iPool.Put(halfP)
+	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	if opt.Cmp(pMinus1) != 0 {
-		return nil, nil, false, nil
+	u := iPool.Get().(*big.Int)
+	defer iPool.Put(u)
+
+	// choose u from [1, p - 1]
+	// here we can pick u in [0, p)
+	// if u is 0, then the accepting condition will not pass
+	// use normal rand source to prevent acquiring crypto rand reader mutex
+	// to reduce the probability of picking up a prime number, we only choose even numbers
+	for i := 0; i < maxFindingUIterations; i++ {
+		u.Rand(rg, halfP)
+		u.Lsh(u, 1)
+
+		// test if s^2 = -1 (mod p)
+		// if so, continue to the next step, otherwise, repeat this step
+		opt.Exp(u, powU, p)
+		if opt.Cmp(pMinus1) == 0 {
+			//return nil, nil, false, nil
+			break
+		}
 	}
 
 	// compute s = u^((p - 1) / 4) mod p

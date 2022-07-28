@@ -26,7 +26,6 @@ func main() {
 	//randLmt := new(big.Int).Lsh(big.NewInt(1), uint(*bitLen))
 	var totalTime float64
 	for i := 0; i < *tries; i++ {
-		fmt.Println(i)
 		_, err = f.WriteString(time.Now().String() + "\n")
 		handleError(err)
 		target := randOddGen(*bitLen)
@@ -42,7 +41,7 @@ func main() {
 		handleError(err)
 		currTime := time.Now()
 		timeInterval := currTime.Sub(start)
-		fmt.Println(timeInterval)
+		fmt.Println(i, timeInterval)
 		totalTime += timeInterval.Seconds()
 		secondsStr := fmt.Sprintf("%f", timeInterval.Seconds())
 		_, err = f.WriteString(secondsStr + "\n")
