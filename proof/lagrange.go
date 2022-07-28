@@ -273,8 +273,7 @@ func pickLargeS(ctx context.Context, randBitLen int, preP *big.Int) (*big.Int, *
 
 func determineSAndP(ctx context.Context, k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
-	p := iPool.Get().(*big.Int).Mul(preP, k)
-	defer iPool.Put(p)
+	p := new(big.Int).Mul(preP, k)
 	p.Sub(p, big1)
 
 	// we want to find a prime number p,
@@ -284,16 +283,9 @@ func determineSAndP(ctx context.Context, k, preP *big.Int) (*big.Int, *big.Int, 
 		return nil, nil, false, nil
 	}
 
-	pMinus1 := iPool.Get().(*big.Int).Sub(p, big1)
-	defer iPool.Put(pMinus1)
-	powU := iPool.Get().(*big.Int).Rsh(pMinus1, 1)
-	defer iPool.Put(powU)
-
-	halfP := iPool.Get().(*big.Int).Div(p, big.NewInt(30030))
-	//halfP := iPool.Get().(*big.Int).Rsh(p, 1)
-	defer iPool.Put(halfP)
-	opt := iPool.Get().(*big.Int)
-	defer iPool.Put(opt)
+	pMinus1 := new(big.Int).Sub(p, big1)
+	powU := new(big.Int).Rsh(pMinus1, 1)
+	halfP := new(big.Int).Rsh(p, 1)
 	u := iPool.Get().(*big.Int)
 	defer iPool.Put(u)
 
@@ -338,7 +330,7 @@ func determineSAndP(ctx context.Context, k, preP *big.Int) (*big.Int, *big.Int, 
 	newPowU := iPool.Get().(*big.Int).Rsh(powU, 1)
 	defer iPool.Put(newPowU)
 	s := new(big.Int).Exp(u, newPowU, p)
-	return s, new(big.Int).Set(p), true, nil
+	return s, p, true, nil
 }
 
 func findURoutine(ctx context.Context, halfP, powU, p, pMinus1 *big.Int, res chan<- *big.Int) {
