@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	randLmtThreshold      = 16
-	maxFindingUIterations = 3
+	randLmtThreshold = 16
+	maxUFindingIter  = 5
 )
 
 var (
@@ -309,7 +309,7 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	// use normal rand source to prevent acquiring crypto rand reader mutex
 	// to reduce the probability of picking up a prime number, we only choose even numbers
 	findValidU := false
-	for i := 0; i < maxFindingUIterations; i++ {
+	for i := 0; i < maxUFindingIter; i++ {
 		u.Rand(rg, halfP)
 		u.Lsh(u, 1)
 
