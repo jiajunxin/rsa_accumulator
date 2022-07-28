@@ -2,15 +2,13 @@ package proof
 
 import (
 	"context"
-	crand "crypto/rand"
 	"fmt"
 	"math"
 	"math/big"
-	"math/rand"
 	"runtime"
-	"time"
 
 	comp "github.com/rsa_accumulator/complex"
+	"lukechampine.com/frand"
 )
 
 const (
@@ -200,13 +198,12 @@ func setInitRandBitLen(bitLen int) int {
 }
 
 func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- *comp.GaussianInt) {
-	rg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickS(rg, mul, add, randLmt, preP)
+			s, p, ok, err := pickS(mul, add, randLmt, preP)
 			if err != nil {
 				panic(err)
 			}
@@ -228,26 +225,22 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 	}
 }
 
-func pickS(rg *rand.Rand, mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// choose k' in [0, randLmt)
-	k, err := crand.Int(crand.Reader, randLmt)
-	if err != nil {
-		return nil, nil, false, err
-	}
+	k := frand.BigIntn(randLmt)
 	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
 	k.Add(k, add)
-	return determineSAndP(rg, k, preP)
+	return determineSAndP(k, preP)
 }
 
 func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- *comp.GaussianInt) {
-	rg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickLargeS(rg, randBitLen, preP)
+			s, p, ok, err := pickLargeS(randBitLen, preP)
 			if err != nil {
 				panic(err)
 			}
@@ -269,16 +262,16 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 	}
 }
 
-func pickLargeS(rg *rand.Rand, randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func pickLargeS(randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	k, err := probPrime(randBitLen)
 	//k, err := crand.Prime(crand.Reader, randBitLen)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	return determineSAndP(rg, k, preP)
+	return determineSAndP(k, preP)
 }
 
-func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
 	p := iPool.Get().(*big.Int).Mul(preP, k)
 	defer iPool.Put(p)
@@ -310,7 +303,8 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	// to reduce the probability of picking up a prime number, we only choose even numbers
 	findValidU := false
 	for i := 0; i < maxUFindingIter; i++ {
-		u.Rand(rg, halfP)
+		//u.Rand(rg, halfP)
+		u = frand.BigIntn(halfP)
 		u.Lsh(u, 1)
 		//u, err := crand.Int(crand.Reader, halfP)
 		//if err != nil {

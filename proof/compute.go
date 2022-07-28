@@ -3,10 +3,9 @@ package proof
 import (
 	"errors"
 	"math/big"
-	"math/rand"
-	"time"
 
 	comp "github.com/rsa_accumulator/complex"
+	"lukechampine.com/frand"
 )
 
 const preComputeLmt = 20
@@ -68,10 +67,6 @@ var (
 	tinyPrimeProd    = big.NewInt(210) // 2 * 3 * 5 * 7
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func log2(n *big.Int) int {
 	return n.BitLen() - 1
 }
@@ -112,7 +107,7 @@ func probPrime(bits int) (p *big.Int, err error) {
 
 	idx := 0
 	for {
-		_, err = rand.Read(bytes)
+		_, err = frand.Read(bytes)
 		if err != nil {
 			return
 		}
