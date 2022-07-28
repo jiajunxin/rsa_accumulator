@@ -13,7 +13,7 @@ import (
 
 const (
 	randLmtThreshold = 16
-	maxUFindingIter  = 5
+	maxUFindingIter  = 10
 )
 
 var (
@@ -203,7 +203,7 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickS(mul, add, randLmt, preP)
+			s, p, ok, err := pickS(ctx, mul, add, randLmt, preP)
 			if err != nil {
 				panic(err)
 			}
@@ -225,13 +225,13 @@ func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan
 	}
 }
 
-func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func pickS(ctx context.Context, mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// choose k' in [0, randLmt)
 	k := frand.BigIntn(randLmt)
 	// construct k, k = k' * mul + add
 	k.Mul(k, mul)
 	k.Add(k, add)
-	return determineSAndP(k, preP)
+	return determineSAndP(ctx, k, preP)
 }
 
 func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- *comp.GaussianInt) {
@@ -240,7 +240,7 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickLargeS(randBitLen, preP)
+			s, p, ok, err := pickLargeS(ctx, randBitLen, preP)
 			if err != nil {
 				panic(err)
 			}
@@ -262,16 +262,16 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 	}
 }
 
-func pickLargeS(randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func pickLargeS(ctx context.Context, randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	k, err := probPrime(randBitLen)
 	//k, err := crand.Prime(crand.Reader, randBitLen)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	return determineSAndP(k, preP)
+	return determineSAndP(ctx, k, preP)
 }
 
-func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+func determineSAndP(ctx context.Context, k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// p = {Product of primes} * n * k - 1 = preP * k - 1
 	p := iPool.Get().(*big.Int).Mul(preP, k)
 	defer iPool.Put(p)
@@ -289,7 +289,8 @@ func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	powU := iPool.Get().(*big.Int).Rsh(pMinus1, 1)
 	defer iPool.Put(powU)
 
-	halfP := iPool.Get().(*big.Int).Rsh(p, 1)
+	halfP := iPool.Get().(*big.Int).Div(p, big.NewInt(30030))
+	//halfP := iPool.Get().(*big.Int).Rsh(p, 1)
 	defer iPool.Put(halfP)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
@@ -301,34 +302,67 @@ func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	// if u is 0, then the accepting condition will not pass
 	// use normal rand source to prevent acquiring crypto rand reader mutex
 	// to reduce the probability of picking up a prime number, we only choose even numbers
-	findValidU := false
-	for i := 0; i < maxUFindingIter; i++ {
-		//u.Rand(rg, halfP)
-		u = frand.BigIntn(halfP)
-		u.Lsh(u, 1)
-		//u, err := crand.Int(crand.Reader, halfP)
-		//if err != nil {
-		//	return nil, nil, false, err
-		//}
-		//u.Lsh(u, 1)
+	//findValidU := false
+	//for i := 0; i < maxUFindingIter; i++ {
+	//	//u.Rand(rg, halfP)
+	//	u = frand.BigIntn(halfP)
+	//	//u.Lsh(u, 1)
+	//	u.Mul(u, big.NewInt(30030))
+	//	//u, err := crand.Int(crand.Reader, halfP)
+	//	//if err != nil {
+	//	//	return nil, nil, false, err
+	//	//}
+	//	//u.Lsh(u, 1)
+	//
+	//	// test if s^2 = -1 (mod p)
+	//	// if so, continue to the next step, otherwise, repeat this step
+	//	opt.Exp(u, powU, p)
+	//	if opt.Cmp(pMinus1) == 0 {
+	//		findValidU = true
+	//		//return nil, nil, false, nil
+	//		break
+	//	}
+	//}
+	//if !findValidU {
+	//	return nil, nil, false, nil
+	//}
+	uCTX, cancel := context.WithCancel(ctx)
+	defer cancel()
+	res := make(chan *big.Int)
+	for i := 0; i < numRoutine; i++ {
+		go findURoutine(uCTX, halfP, powU, p, pMinus1, res)
+	}
 
-		// test if s^2 = -1 (mod p)
-		// if so, continue to the next step, otherwise, repeat this step
-		opt.Exp(u, powU, p)
-		if opt.Cmp(pMinus1) == 0 {
-			findValidU = true
-			//return nil, nil, false, nil
-			break
+	u = <-res
+	// compute s = u^((p - 1) / 4) mod p
+	newPowU := iPool.Get().(*big.Int).Rsh(powU, 1)
+	defer iPool.Put(newPowU)
+	s := new(big.Int).Exp(u, newPowU, p)
+	return s, new(big.Int).Set(p), true, nil
+}
+
+func findURoutine(ctx context.Context, halfP, powU, p, pMinus1 *big.Int, res chan<- *big.Int) {
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			u := frand.BigIntn(halfP)
+			u.Lsh(u, 1)
+			opt.Exp(u, powU, p)
+			if opt.Cmp(pMinus1) == 0 {
+				ctx.Done()
+				select {
+				case res <- u:
+					return
+				default:
+					return
+				}
+			}
 		}
 	}
-	if !findValidU {
-		return nil, nil, false, nil
-	}
-
-	// compute s = u^((p - 1) / 4) mod p
-	powU.Rsh(powU, 1)
-	s := new(big.Int).Exp(u, powU, p)
-	return s, new(big.Int).Set(p), true, nil
 }
 
 func gaussianIntGCD(s, p *big.Int) *comp.GaussianInt {
