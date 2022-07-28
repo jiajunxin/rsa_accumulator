@@ -308,6 +308,7 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 	// if u is 0, then the accepting condition will not pass
 	// use normal rand source to prevent acquiring crypto rand reader mutex
 	// to reduce the probability of picking up a prime number, we only choose even numbers
+	findValidU := false
 	for i := 0; i < maxFindingUIterations; i++ {
 		u.Rand(rg, halfP)
 		u.Lsh(u, 1)
@@ -316,9 +317,13 @@ func determineSAndP(rg *rand.Rand, k, preP *big.Int) (*big.Int, *big.Int, bool, 
 		// if so, continue to the next step, otherwise, repeat this step
 		opt.Exp(u, powU, p)
 		if opt.Cmp(pMinus1) == 0 {
+			findValidU = true
 			//return nil, nil, false, nil
 			break
 		}
+	}
+	if !findValidU {
+		return nil, nil, false, nil
 	}
 
 	// compute s = u^((p - 1) / 4) mod p
