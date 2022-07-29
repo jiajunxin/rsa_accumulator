@@ -263,10 +263,9 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 }
 
 func pickLargeS(randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
-	k, err := probPrime(randBitLen - 1)
-	if err != nil {
-		return nil, nil, false, err
-	}
+	opt := iPool.Get().(*big.Int).Lsh(big1, uint(randBitLen-1))
+	defer iPool.Put(opt)
+	k := frand.BigIntn(opt)
 	k.Lsh(k, 1)
 	k.Add(k, big1)
 	return determineSAndP(k, preP)
