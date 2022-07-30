@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	bitLen := flag.Int("bit", 896, "bit length of the modulus")
+	bitLen := flag.Int("bit", 1792, "bit length of the modulus")
 	tries := flag.Int("try", 100, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
