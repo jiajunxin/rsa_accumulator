@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	largeIntThreshold = new(big.Int).Lsh(big1, 1500)
+	largeIntThreshold = new(big.Int).Lsh(big1, 500)
 )
 
 // LargeLagrangeFourSquares finds the Lagrange four square solution for a very large integer
