@@ -45,13 +45,18 @@ func LargeLagrangeFourSquares(n *big.Int) (FourInt, error) {
 }
 
 func largeRandTrails(nc *big.Int) (*comp.GaussianInt, *big.Int) {
-	preP := iPool.Get().(*big.Int).Lsh(nc, 1)
+	preP := iPool.Get().(*big.Int).Mul(nc, smallPrimesProduct)
 	defer iPool.Put(preP)
+	preP.Lsh(preP, 1)
+	//preP.Mul(preP, big.NewInt(11))
+	//preP.Mul(preP, big.NewInt(13))
+	//preP.Mul(preP, big.NewInt(17))
+	//preP.Mul(preP, big.NewInt(19))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan largeFindResult)
-	prePBitLen := preP.BitLen()
-	randLmt := iPool.Get().(*big.Int).Lsh(big1, uint(prePBitLen/2))
+	//nBitLen := nc.BitLen()
+	randLmt := iPool.Get().(*big.Int).Lsh(big1, 25)
 	defer iPool.Put(randLmt)
 	for i := 0; i < numRoutine; i++ {
 		go largeFindSRoutine(ctx, randLmt, preP, resChan)
@@ -59,6 +64,11 @@ func largeRandTrails(nc *big.Int) (*comp.GaussianInt, *big.Int) {
 	res := <-resChan
 	return res.gcd, res.l
 }
+
+//func setRandLmtBitLen(bitLen int) uint {
+//	lmtF := 9.18 + 2*math.Log(float64(bitLen))
+//	return uint(lmtF)
+//}
 
 type largeFindResult struct {
 	gcd *comp.GaussianInt
@@ -96,24 +106,28 @@ func largeFindSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan
 }
 
 func largePickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error) {
-	l = frand.BigIntn(randLmt)
-	l.Or(l, big1)
-	lSq := iPool.Get().(*big.Int).Mul(l, l)
-	defer iPool.Put(lSq)
-	p = new(big.Int).Set(preP)
-	p.Sub(p, lSq)
-	if p.Cmp(big0) <= 0 {
-		return nil, nil, nil, false, nil
+	for {
+		//l, err = crand.Prime(crand.Reader, randLmt.BitLen())
+		l, err = prime(randLmt.BitLen())
+		if err != nil {
+			return nil, nil, nil, false, err
+		}
+		if new(big.Int).Mod(l, big4).Cmp(big1) == 0 {
+			break
+		}
 	}
+
+	p = new(big.Int).Set(preP)
+	p.Sub(p, l)
 	if !p.ProbablyPrime(0) {
 		return nil, nil, nil, false, nil
 	}
 
-	mod := iPool.Get().(*big.Int)
-	defer iPool.Put(mod)
-	if mod.Mod(p, big4).Cmp(big1) != 0 {
-		return nil, nil, nil, false, nil
-	}
+	//mod := iPool.Get().(*big.Int)
+	//defer iPool.Put(mod)
+	//if mod.Mod(p, big4).Cmp(big1) != 0 {
+	//	return nil, nil, nil, false, nil
+	//}
 	pMinus1 := iPool.Get().(*big.Int).Sub(p, big1)
 	defer iPool.Put(pMinus1)
 	powU := iPool.Get().(*big.Int).Set(pMinus1).Rsh(pMinus1, 1)
@@ -150,14 +164,53 @@ func largePickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error
 }
 
 func largeDenouement(n, l *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
-	// compute gcrd(A + Bi + Lj, n), normalized to have integer component
-	// Hurwitz integer: A + Bi + Lj
-	hurwitzInt := hiPool.Get().(*comp.HurwitzInt).Update(gcd.R, gcd.I, l, big0, false)
-	defer hiPool.Put(hurwitzInt)
+	halfL := iPool.Get().(*big.Int).Rsh(l, 1)
+	defer iPool.Put(halfL)
+	u := iPool.Get().(*big.Int)
+	defer iPool.Put(u)
+	lMinus1 := iPool.Get().(*big.Int).Sub(l, big1)
+	defer iPool.Put(lMinus1)
+	powU := iPool.Get().(*big.Int).Set(lMinus1).Rsh(lMinus1, 1)
+	defer iPool.Put(powU)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	s := iPool.Get().(*big.Int)
+	defer iPool.Put(s)
+	var lGCD *comp.GaussianInt
+	for {
+		powU.Rsh(lMinus1, 1)
+		for {
+			u = frand.BigIntn(halfL)
+			u.Lsh(u, 1)
+
+			// test if s^2 = -1 (mod l)
+			// if so, continue to the next step, otherwise, repeat this step
+			opt.Exp(u, powU, l)
+			if opt.Cmp(lMinus1) == 0 {
+				break
+			}
+		}
+		powU.Rsh(powU, 1)
+		s.Exp(u, powU, l)
+		lGCD = gaussianIntGCD(s, l)
+		if isValidGaussianIntGCD(lGCD) {
+			break
+		}
+	}
+
+	// compute gcrd(A + Bi + Cj + Dk, n), normalized to have integer component
+	// Hurwitz integer: A + Bi + Cj + Dk
+	//fmt.Println(gcd)
+	//fmt.Println(lGCD)
+	hurwitzInt := comp.NewHurwitzInt(gcd.R, gcd.I, lGCD.R, lGCD.I, false)
+	//defer hiPool.Put(hurwitzInt)
+	//fmt.Println(hurwitzInt)
 	// Hurwitz integer: n
 	hurwitzN := hiPool.Get().(*comp.HurwitzInt).Update(n, big0, big0, big0, false)
 	defer hiPool.Put(hurwitzN)
+	//fmt.Println(hurwitzN)
 	gcrd := new(comp.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
+	//fmt.Println(gcrd)
 
 	return gcrd, nil
 }
