@@ -13,10 +13,7 @@ import (
 )
 
 func main() {
-	//hi := comp.NewHurwitzInt(big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4), false)
-	//fmt.Println(hi)
-	//return
-	bitLen := flag.Int("bit", 1792, "bit length of the modulus")
+	bitLen := flag.Int("bit", 1000, "bit length of the modulus")
 	tries := flag.Int("try", 100, "number of tries")
 	flag.Parse()
 	f, err := os.OpenFile("test_"+strconv.Itoa(*bitLen)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -97,8 +94,8 @@ func randOddGen(bitLen int) *big.Int {
 	return target
 }
 
-//func randGen(randLmt *big.Int) *big.Int {
-//	x, err := rand.Int(rand.Reader, randLmt)
-//	handleError(err)
-//	return x
-//}
+func randGen(randLmt *big.Int) *big.Int {
+	x, err := rand.Int(rand.Reader, randLmt)
+	handleError(err)
+	return x
+}
