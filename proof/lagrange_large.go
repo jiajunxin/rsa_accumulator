@@ -97,10 +97,14 @@ func largeFindSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan
 
 func largePickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error) {
 	l = frand.BigIntn(randLmt)
+	l.Or(l, big1)
 	lSq := iPool.Get().(*big.Int).Mul(l, l)
 	defer iPool.Put(lSq)
 	p = new(big.Int).Set(preP)
 	p.Sub(p, lSq)
+	if p.Cmp(big0) <= 0 {
+		return nil, nil, nil, false, nil
+	}
 	if !p.ProbablyPrime(0) {
 		return nil, nil, nil, false, nil
 	}
