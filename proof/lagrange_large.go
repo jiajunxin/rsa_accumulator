@@ -93,7 +93,8 @@ func largeFindSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan
 
 func largePickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error) {
 	l = frand.BigIntn(randLmt)
-	l.Or(l, big1)
+	l.Lsh(l, 1)
+	l.Add(l, big1)
 	lSq := iPool.Get().(*big.Int).Mul(l, l)
 	defer iPool.Put(lSq)
 	p = new(big.Int).Sub(preP, lSq)
