@@ -104,14 +104,9 @@ func largePickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error
 		return nil, nil, nil, false, nil
 	}
 
-	mod := iPool.Get().(*big.Int).Mod(p, big4)
-	defer iPool.Put(mod)
-	if mod.Cmp(big1) != 0 {
-		return nil, nil, nil, false, nil
-	}
 	pMinus1 := iPool.Get().(*big.Int).Sub(p, big1)
 	defer iPool.Put(pMinus1)
-	powU := iPool.Get().(*big.Int).Set(pMinus1).Rsh(pMinus1, 1)
+	powU := iPool.Get().(*big.Int).Rsh(pMinus1, 1)
 	defer iPool.Put(powU)
 	halfP := iPool.Get().(*big.Int).Rsh(p, 1)
 	defer iPool.Put(halfP)
@@ -131,11 +126,13 @@ func largePickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error
 			break
 		}
 	}
+	if !found {
+		return nil, nil, nil, false, nil
+	}
 
 	// compute s = u^((p - 1) / 4) mod p
 	powU.Rsh(powU, 1)
 	s = new(big.Int).Exp(u, powU, p)
-	found = true
 	return
 }
 
