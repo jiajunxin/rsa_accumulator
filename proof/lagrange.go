@@ -174,8 +174,10 @@ func randLargeTrails(n *big.Int, bitLen int) *comp.GaussianInt {
 	bl := setInitRandBitLen(bitLen)
 	preP := iPool.Get().(*big.Int).Mul(tinyPrimeProd, n)
 	defer iPool.Put(preP)
+	randLmt := iPool.Get().(*big.Int).Lsh(big1, uint(bl))
+	defer iPool.Put(randLmt)
 	for i := 0; i < numRoutine; i++ {
-		go findLargeSRoutine(ctx, bl, preP, resChan)
+		go findLargeSRoutine(ctx, randLmt, preP, resChan)
 	}
 	return <-resChan
 }
@@ -234,13 +236,13 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	return determineSAndP(k, preP)
 }
 
-func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resChan chan<- *comp.GaussianInt) {
+func findLargeSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan<- *comp.GaussianInt) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			s, p, ok, err := pickLargeS(randBitLen, preP)
+			s, p, ok, err := pickLargeS(randLmt, preP)
 			if err != nil {
 				panic(err)
 			}
@@ -262,10 +264,8 @@ func findLargeSRoutine(ctx context.Context, randBitLen int, preP *big.Int, resCh
 	}
 }
 
-func pickLargeS(randBitLen int, preP *big.Int) (*big.Int, *big.Int, bool, error) {
-	opt := iPool.Get().(*big.Int).Lsh(big1, uint(randBitLen))
-	defer iPool.Put(opt)
-	k := frand.BigIntn(opt)
+func pickLargeS(randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
+	k := frand.BigIntn(randLmt)
 	k.Or(k, big1)
 	return determineSAndP(k, preP)
 }
