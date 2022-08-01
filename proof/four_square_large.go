@@ -41,13 +41,13 @@ func LargeLagrangeFourSquares(n *big.Int) (FourInt, error) {
 }
 
 func largeRandTrails(nc *big.Int) (*comp.GaussianInt, *big.Int) {
-	preP := iPool.Get().(*big.Int).Lsh(nc, 1)
+	preP := iPool.Get().(*big.Int).Mul(nc, tinyPrimeProd)
 	defer iPool.Put(preP)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan largeFindResult)
 	prePBitLen := preP.BitLen()
-	randLmt := iPool.Get().(*big.Int).Lsh(big1, uint(prePBitLen/2))
+	randLmt := iPool.Get().(*big.Int).Lsh(big1, uint(float32(prePBitLen)/4.5))
 	defer iPool.Put(randLmt)
 	for i := 0; i < numRoutine; i++ {
 		go largeFindSRoutine(ctx, randLmt, preP, resChan)
@@ -80,9 +80,7 @@ func largeFindSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan
 			}
 			ctx.Done()
 			select {
-			case resChan <- largeFindResult{
-				gcd: gcd, l: l,
-			}:
+			case resChan <- largeFindResult{gcd: gcd, l: l}:
 				return
 			default:
 				return
