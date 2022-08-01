@@ -351,9 +351,9 @@ func denouement(n *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
 	return gcrd, nil
 }
 
-// Verify checks if the four-square sum is equal to the original integer
+// VerifyFS checks if the four-square sum is equal to the original integer
 // i.e. target = w1^2 + w2^2 + w3^2 + w4^2
-func Verify(target *big.Int, fi FourInt) bool {
+func VerifyFS(target *big.Int, fi FourInt) bool {
 	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
 	opt := iPool.Get().(*big.Int)

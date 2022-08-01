@@ -71,7 +71,7 @@ func Test_preCompute(t *testing.T) {
 	}
 }
 
-func TestVerify(t *testing.T) {
+func TestVerifyFS(t *testing.T) {
 	type args struct {
 		target *big.Int
 		w1     *big.Int
@@ -85,7 +85,7 @@ func TestVerify(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "test_verify_success_4",
+			name: "test_verifyfs_success_4",
 			args: args{
 				target: big.NewInt(4),
 				w1:     big.NewInt(2),
@@ -96,7 +96,7 @@ func TestVerify(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "test_verify_success_35955023",
+			name: "test_verifyfs_success_35955023",
 			args: args{
 				target: big.NewInt(35955023),
 				w1:     big.NewInt(2323),
@@ -107,7 +107,7 @@ func TestVerify(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "test_verify_fail_35955024",
+			name: "test_verifyfs_fail_35955024",
 			args: args{
 				target: big.NewInt(35955024),
 				w1:     big.NewInt(2323),
@@ -126,8 +126,8 @@ func TestVerify(t *testing.T) {
 				tt.args.w3,
 				tt.args.w4,
 			}
-			if got := Verify(tt.args.target, fs); got != tt.want {
-				t.Errorf("Verify() = %v, want %v", got, tt.want)
+			if got := VerifyFS(tt.args.target, fs); got != tt.want {
+				t.Errorf("VerifyFS() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -164,7 +164,7 @@ func TestLagrangeFourSquares(t *testing.T) {
 				t.Errorf("LagrangeFourSquares() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !Verify(tt.args.n, got) {
+			if !VerifyFS(tt.args.n, got) {
 				t.Errorf("LagrangeFourSquares() verify failed, got: %v != %v", got, tt.args.n)
 			}
 		})

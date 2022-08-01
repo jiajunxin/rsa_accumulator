@@ -38,7 +38,8 @@ func main() {
 		start := time.Now()
 		//fs, err := proof.UnconditionalLagrangeFourSquares(target)
 		//fs, err := proof.LagrangeFourSquares(target)
-		fs, err := proof.LargeLagrangeFourSquares(target)
+		//fs, err := proof.LargeLagrangeFourSquares(target)
+		ts, err := proof.ThreeSquares(target)
 		handleError(err)
 		currTime := time.Now()
 		timeInterval := currTime.Sub(start)
@@ -47,7 +48,7 @@ func main() {
 		secondsStr := fmt.Sprintf("%f", timeInterval.Seconds())
 		_, err = f.WriteString(secondsStr + "\n")
 		handleError(err)
-		if ok := proof.Verify(target, fs); !ok {
+		if ok := proof.VerifyTS(target, ts); !ok {
 			panic("verification failed")
 		}
 	}
@@ -68,7 +69,7 @@ func main() {
 	//	verifier := proof.NewExpVerifier(pp)
 	//	pf, err := prover.Prove(u, x)
 	//	handleError(err)
-	//	ok, err := verifier.Verify(pf, u, w)
+	//	ok, err := verifier.VerifyFS(pf, u, w)
 	//	handleError(err)
 	//	if !ok {
 	//		panic("verification failed")

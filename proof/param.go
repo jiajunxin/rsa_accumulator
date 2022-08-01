@@ -105,3 +105,24 @@ func freshRandCoin(n *big.Int) (*big.Int, error) {
 	}
 	return res, nil
 }
+
+// ThreeInt is the 3-number big integer group
+type ThreeInt [3]*big.Int
+
+// NewThreeInt creates a new 3-number group, in descending order
+func NewThreeInt(w1 *big.Int, w2 *big.Int, w3 *big.Int) ThreeInt {
+	w1.Abs(w1)
+	w2.Abs(w2)
+	w3.Abs(w3)
+	// sort the three big integers in descending order
+	if w1.Cmp(w2) == -1 {
+		w1, w2 = w2, w1
+	}
+	if w1.Cmp(w3) == -1 {
+		w1, w3 = w3, w1
+	}
+	if w2.Cmp(w3) == -1 {
+		w2, w3 = w3, w2
+	}
+	return ThreeInt{w1, w2, w3}
+}
