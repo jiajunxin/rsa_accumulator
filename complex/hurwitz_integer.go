@@ -88,8 +88,8 @@ func (h *HurwitzInt) String() string {
 
 // NewHurwitzInt declares a new integral quaternion with the real, i, j, and k parts
 // If isDouble is true, the arguments r, i, j, k are twice the original scalars
-func NewHurwitzInt(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
-	if isDouble {
+func NewHurwitzInt(r, i, j, k *big.Int, doubled bool) *HurwitzInt {
+	if doubled {
 		return &HurwitzInt{
 			dblR: new(big.Int).Set(r),
 			dblI: new(big.Int).Set(i),
@@ -147,16 +147,16 @@ func (h *HurwitzInt) Val() (r, i, j, k *big.Float) {
 // ValInt reveals value of a Hurwitz integer in integer
 func (h *HurwitzInt) ValInt() (r, i, j, k *big.Int) {
 	rF, iF, jF, kF := h.Val()
-	r = roundFloat(rF)
-	i = roundFloat(iF)
-	j = roundFloat(jF)
-	k = roundFloat(kF)
+	r = roundFloat(rF, nil)
+	i = roundFloat(iF, nil)
+	j = roundFloat(jF, nil)
+	k = roundFloat(kF, nil)
 	return
 }
 
 // Update updates the integral quaternion with the given real, i, j, and k parts
-func (h *HurwitzInt) Update(r, i, j, k *big.Int, isDouble bool) *HurwitzInt {
-	if isDouble {
+func (h *HurwitzInt) Update(r, i, j, k *big.Int, doubled bool) *HurwitzInt {
+	if doubled {
 		h.dblR = r
 		h.dblI = i
 		h.dblJ = j
@@ -257,7 +257,8 @@ func (h *HurwitzInt) Conj(origin *HurwitzInt) *HurwitzInt {
 // Norm obtains the norm of the integral quaternion
 func (h *HurwitzInt) Norm() *big.Int {
 	norm := new(big.Int).Mul(h.dblR, h.dblR)
-	opt := new(big.Int).Mul(h.dblI, h.dblI)
+	opt := iPool.Get().(*big.Int).Mul(h.dblI, h.dblI)
+	defer iPool.Put(opt)
 	norm.Add(norm, opt)
 	opt.Mul(h.dblJ, h.dblJ)
 	norm.Add(norm, opt)
@@ -280,7 +281,8 @@ func (h *HurwitzInt) Prod(a, b *HurwitzInt) *HurwitzInt {
 	i := new(big.Int)
 	j := new(big.Int)
 	k := new(big.Int)
-	opt := new(big.Int)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
 	// 1 part
 	r.Mul(a.dblR, b.dblR)
 	r.Sub(r, opt.Mul(a.dblI, b.dblI))
@@ -317,29 +319,52 @@ func (h *HurwitzInt) Prod(a, b *HurwitzInt) *HurwitzInt {
 // the remainder is stored in the Hurwitz integer that calls the method
 // the quotient is returned as a new Hurwitz integer
 func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
-	a = a.Copy()
-	b = b.Copy()
-	bConj := new(HurwitzInt).Conj(b)
-	numerator := new(HurwitzInt).Prod(a, bConj)
-	denominator := new(HurwitzInt).Prod(b, bConj)
-	deInt := denominator.dblR
-	deFloat := new(big.Float).SetInt(deInt)
+	ac := hiPool.Get().(*HurwitzInt)
+	defer hiPool.Put(ac)
+	ac = a.Copy()
+	bc := hiPool.Get().(*HurwitzInt)
+	defer hiPool.Put(bc)
+	bc = b.Copy()
 
-	rScalar := new(big.Float).SetInt(numerator.dblR)
+	bConj := hiPool.Get().(*HurwitzInt).Conj(bc)
+	defer hiPool.Put(bConj)
+	numerator := hiPool.Get().(*HurwitzInt).Prod(ac, bConj)
+	defer hiPool.Put(numerator)
+	denominator := hiPool.Get().(*HurwitzInt).Prod(bc, bConj)
+	defer hiPool.Put(denominator)
+	deFloat := fPool.Get().(*big.Float).SetInt(denominator.dblR)
+	defer fPool.Put(deFloat)
+
+	rScalar := fPool.Get().(*big.Float).SetInt(numerator.dblR)
+	defer fPool.Put(rScalar)
 	rScalar.Quo(rScalar, deFloat)
-	iScalar := new(big.Float).SetInt(numerator.dblI)
+	iScalar := fPool.Get().(*big.Float).SetInt(numerator.dblI)
+	defer fPool.Put(iScalar)
 	iScalar.Quo(iScalar, deFloat)
-	jScalar := new(big.Float).SetInt(numerator.dblJ)
+	jScalar := fPool.Get().(*big.Float).SetInt(numerator.dblJ)
+	defer fPool.Put(jScalar)
 	jScalar.Quo(jScalar, deFloat)
-	kScalar := new(big.Float).SetInt(numerator.dblK)
+	kScalar := fPool.Get().(*big.Float).SetInt(numerator.dblK)
+	defer fPool.Put(kScalar)
 	kScalar.Quo(kScalar, deFloat)
 
-	rsInt := roundFloat(rScalar)
-	isInt := roundFloat(iScalar)
-	jsInt := roundFloat(jScalar)
-	ksInt := roundFloat(kScalar)
+	rsInt := iPool.Get().(*big.Int)
+	defer iPool.Put(rsInt)
+	roundFloat(rScalar, rsInt)
+	isInt := iPool.Get().(*big.Int)
+	defer iPool.Put(isInt)
+	roundFloat(iScalar, isInt)
+	jsInt := iPool.Get().(*big.Int)
+	defer iPool.Put(jsInt)
+	roundFloat(jScalar, jsInt)
+	ksInt := iPool.Get().(*big.Int)
+	defer iPool.Put(ksInt)
+	roundFloat(kScalar, ksInt)
+
 	quotient := NewHurwitzInt(rsInt, isInt, jsInt, ksInt, false)
-	h.Sub(a, new(HurwitzInt).Prod(quotient, b))
+	opt := hiPool.Get().(*HurwitzInt)
+	defer hiPool.Put(opt)
+	h.Sub(ac, opt.Prod(quotient, bc))
 	return quotient
 }
 
@@ -348,20 +373,24 @@ func (h *HurwitzInt) Div(a, b *HurwitzInt) *HurwitzInt {
 // of a GCRD, and on the right in the case of a GCLD)
 // the result is stored in the Hurwitz integer that calls the method and returned
 func (h *HurwitzInt) GCRD(a, b *HurwitzInt) *HurwitzInt {
-	a = a.Copy()
-	b = b.Copy()
-	if a.CmpNorm(b) < 0 {
-		a, b = b, a
+	ac := hiPool.Get().(*HurwitzInt).Set(a)
+	defer hiPool.Put(ac)
+	bc := hiPool.Get().(*HurwitzInt).Set(b)
+	defer hiPool.Put(bc)
+
+	if ac.CmpNorm(bc) < 0 {
+		ac, bc = bc, ac
 	}
-	remainder := new(HurwitzInt)
+	remainder := hiPool.Get().(*HurwitzInt)
+	defer hiPool.Put(remainder)
 	for {
-		remainder.Div(a, b)
+		remainder.Div(ac, bc)
 		if remainder.IsZero() {
-			h.Set(b)
-			return b
+			h.Set(bc)
+			return new(HurwitzInt).Set(bc)
 		}
-		a.Set(b)
-		b.Set(remainder)
+		ac.Set(bc)
+		bc.Set(remainder)
 	}
 }
 

@@ -58,7 +58,7 @@ func (g *GaussianInt) Set(a *GaussianInt) *GaussianInt {
 }
 
 // Update updates the Gaussian integer with the given real and imaginary parts
-func (g *GaussianInt) Update(r, i *big.Int) {
+func (g *GaussianInt) Update(r, i *big.Int) *GaussianInt {
 	if g.R == nil {
 		g.R = new(big.Int)
 	}
@@ -67,6 +67,7 @@ func (g *GaussianInt) Update(r, i *big.Int) {
 		g.I = new(big.Int)
 	}
 	g.I.Set(i)
+	return g
 }
 
 // Add adds two Gaussian integers
@@ -98,9 +99,11 @@ func (g *GaussianInt) Sub(a, b *GaussianInt) *GaussianInt {
 // Prod returns the products of two Gaussian integers
 func (g *GaussianInt) Prod(a, b *GaussianInt) *GaussianInt {
 	r := new(big.Int).Mul(a.R, b.R)
-	r.Sub(r, new(big.Int).Mul(a.I, b.I))
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	r.Sub(r, opt.Mul(a.I, b.I))
 	i := new(big.Int).Mul(a.R, b.I)
-	i.Add(i, new(big.Int).Mul(a.I, b.R))
+	i.Add(i, opt.Mul(a.I, b.R))
 	g.R, g.I = r, i
 	return g
 }
@@ -115,7 +118,9 @@ func (g *GaussianInt) Conj(origin *GaussianInt) *GaussianInt {
 // Norm obtains the norm of the Gaussian integer
 func (g *GaussianInt) Norm() *big.Int {
 	norm := new(big.Int).Mul(g.R, g.R)
-	norm.Add(norm, new(big.Int).Mul(g.I, g.I))
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
+	norm.Add(norm, opt.Mul(g.I, g.I))
 	return norm
 }
 
@@ -131,26 +136,43 @@ func (g *GaussianInt) Copy() *GaussianInt {
 // the remainder is stored in the Gaussian integer that calls the method
 // the quotient is returned as a new Gaussian integer
 func (g *GaussianInt) Div(a, b *GaussianInt) *GaussianInt {
-	bConj := new(GaussianInt).Conj(b)
-	numerator := new(GaussianInt).Prod(a, bConj)
-	denominator := new(GaussianInt).Prod(b, bConj)
-	deFloat := new(big.Float).SetInt(denominator.R)
+	bConj := giPool.Get().(*GaussianInt).Conj(b)
+	defer giPool.Put(bConj)
+	numerator := giPool.Get().(*GaussianInt).Prod(a, bConj)
+	defer giPool.Put(numerator)
+	denominator := giPool.Get().(*GaussianInt).Prod(b, bConj)
+	defer giPool.Put(denominator)
+	deFloat := fPool.Get().(*big.Float).SetInt(denominator.R)
+	defer fPool.Put(deFloat)
 
-	realScalar := new(big.Float).SetInt(numerator.R)
+	realScalar := fPool.Get().(*big.Float).SetInt(numerator.R)
+	defer fPool.Put(realScalar)
 	realScalar.Quo(realScalar, deFloat)
-	imagScalar := new(big.Float).SetInt(numerator.I)
+	imagScalar := fPool.Get().(*big.Float).SetInt(numerator.I)
+	defer fPool.Put(imagScalar)
 	imagScalar.Quo(imagScalar, deFloat)
 
-	rsInt := roundFloat(realScalar)
-	isInt := roundFloat(imagScalar)
+	rsInt := iPool.Get().(*big.Int)
+	defer iPool.Put(rsInt)
+	roundFloat(realScalar, rsInt)
+	isInt := iPool.Get().(*big.Int)
+	defer iPool.Put(isInt)
+	roundFloat(imagScalar, isInt)
 	quotient := NewGaussianInt(rsInt, isInt)
-	g.Sub(a, new(GaussianInt).Prod(quotient, b))
+	opt := giPool.Get().(*GaussianInt)
+	defer giPool.Put(opt)
+	g.Sub(a, opt.Prod(quotient, b))
 	return quotient
 }
 
-// IsZero returns true if the Gaussian integer is zero
+// IsZero returns true if the Gaussian integer is equal to zero
 func (g *GaussianInt) IsZero() bool {
 	return g.R.Sign() == 0 && g.I.Sign() == 0
+}
+
+// IsOne returns true if the Gaussian integer is equal to one
+func (g *GaussianInt) IsOne() bool {
+	return g.R.Sign() == 1 && g.I.Sign() == 0
 }
 
 // CmpNorm compares the norm of two Gaussian integers
@@ -161,19 +183,23 @@ func (g *GaussianInt) CmpNorm(a *GaussianInt) int {
 // GCD calculates the greatest common divisor of two Gaussian integers using Euclidean algorithm
 // the result is stored in the Gaussian integer that calls the method and returned
 func (g *GaussianInt) GCD(a, b *GaussianInt) *GaussianInt {
-	a = a.Copy()
-	b = b.Copy()
-	if a.CmpNorm(b) < 0 {
-		a, b = b, a
+	ac := giPool.Get().(*GaussianInt).Set(a)
+	defer giPool.Put(ac)
+	bc := giPool.Get().(*GaussianInt).Set(b)
+	defer giPool.Put(bc)
+
+	if ac.CmpNorm(bc) < 0 {
+		ac, bc = bc, ac
 	}
-	remainder := new(GaussianInt)
+	remainder := giPool.Get().(*GaussianInt)
+	defer giPool.Put(remainder)
 	for {
-		remainder.Div(a, b)
+		remainder.Div(ac, bc)
 		if remainder.IsZero() {
-			g.Set(b)
-			return b
+			g.Set(bc)
+			return new(GaussianInt).Set(bc)
 		}
-		a.Set(b)
-		b.Set(remainder)
+		ac.Set(bc)
+		bc.Set(remainder)
 	}
 }
