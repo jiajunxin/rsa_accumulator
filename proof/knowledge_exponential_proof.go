@@ -17,8 +17,8 @@ const (
 	epChallengeStatement = "u^x = w, x is an integer"
 )
 
-// ExponentiationProof represents the proof for proof of exponentiation
-type ExponentiationProof struct {
+// KnowledgeExpProof represents the proof of knowledge of exponentiation
+type KnowledgeExpProof struct {
 	witness  *big.Int // witness x in Z, u^x = w
 	commit   *epCommitment
 	response *epResponse
@@ -101,7 +101,7 @@ func NewExpProver(pp *PublicParameters) *ExpProver {
 }
 
 // Prove generates the proof for proof of exponentiation
-func (e *ExpProver) Prove(u, x *big.Int) (*ExponentiationProof, error) {
+func (e *ExpProver) Prove(u, x *big.Int) (*KnowledgeExpProof, error) {
 	e.u = new(big.Int).Set(u)
 	e.x = new(big.Int).Set(x)
 	challenge, err := e.challenge()
@@ -116,7 +116,7 @@ func (e *ExpProver) Prove(u, x *big.Int) (*ExponentiationProof, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ExponentiationProof{
+	return &KnowledgeExpProof{
 		witness:  x,
 		commit:   commitment,
 		response: response,
@@ -228,7 +228,7 @@ func NewExpVerifier(pp *PublicParameters) *ExpVerifier {
 }
 
 // Verify checks the proof of exponentiation
-func (e *ExpVerifier) Verify(proof *ExponentiationProof, u, w *big.Int) (bool, error) {
+func (e *ExpVerifier) Verify(proof *KnowledgeExpProof, u, w *big.Int) (bool, error) {
 	challenge := e.challenge(proof.commit)
 	c := challenge.bigInt()
 	l := challenge.bigIntPrime()
@@ -243,32 +243,32 @@ func (e *ExpVerifier) challenge(commit *epCommitment) *epChallenge {
 
 // VerifyResponse verifies the response of the verifier
 func (e *ExpVerifier) VerifyResponse(c, l, u, w *big.Int, response *epResponse, commit *epCommitment) (bool, error) {
-	//// check if r_x, r_rho in [left]
+	//// check if r_x, r_rho in [l]
 	//if response.rX.Cmp(l) >= 0 || response.rRho.Cmp(l) >= 0 {
 	//	return false, nil
 	//}
-	// Q_g^left * Com(r_x; r_rho) = A_g * z^c
-	left := iPool.Get().(*big.Int)
-	defer iPool.Put(left)
-	left.Exp(response.qG, l, e.pp.N)
-	left.Mul(left, com(e.pp, response.rX, response.rRho))
-	left.Mod(left, e.pp.N)
-	right := iPool.Get().(*big.Int)
-	defer iPool.Put(right)
-	right.Set(commit.aG)
-	right.Mul(right, new(big.Int).Exp(commit.z, c, e.pp.N))
-	right.Mod(left, e.pp.N)
-	if left.Cmp(right) != 0 {
+	// Q_g^l * Com(r_x; r_rho) = A_g * z^c
+	lhs := iPool.Get().(*big.Int)
+	defer iPool.Put(lhs)
+	lhs.Exp(response.qG, l, e.pp.N)
+	lhs.Mul(lhs, com(e.pp, response.rX, response.rRho))
+	lhs.Mod(lhs, e.pp.N)
+	rhs := iPool.Get().(*big.Int)
+	defer iPool.Put(rhs)
+	rhs.Set(commit.aG)
+	rhs.Mul(rhs, new(big.Int).Exp(commit.z, c, e.pp.N))
+	rhs.Mod(lhs, e.pp.N)
+	if lhs.Cmp(rhs) != 0 {
 		return false, nil
 	}
-	// Q_u^left * u^r_x = A_u * w^c
-	left.Exp(response.qU, l, e.pp.N)
-	left.Mul(left, new(big.Int).Exp(u, response.rX, e.pp.N))
-	left.Mod(left, e.pp.N)
-	right.Set(commit.aU)
-	right.Mul(right, new(big.Int).Exp(w, c, e.pp.N))
-	right.Mod(left, e.pp.N)
-	if left.Cmp(right) != 0 {
+	// Q_u^l * u^r_x = A_u * w^c
+	lhs.Exp(response.qU, l, e.pp.N)
+	lhs.Mul(lhs, new(big.Int).Exp(u, response.rX, e.pp.N))
+	lhs.Mod(lhs, e.pp.N)
+	rhs.Set(commit.aU)
+	rhs.Mul(rhs, new(big.Int).Exp(w, c, e.pp.N))
+	rhs.Mod(lhs, e.pp.N)
+	if lhs.Cmp(rhs) != 0 {
 		return false, nil
 	}
 	return true, nil
