@@ -61,9 +61,6 @@ func sqSetRandBitLen(n *big.Int) uint {
 	if ret < 10 {
 		ret = 10
 	}
-	if ret > 31 {
-		ret = 31
-	}
 	return ret
 }
 
