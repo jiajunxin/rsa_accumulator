@@ -181,7 +181,7 @@ func (r *RPProver) Prove() (*RangeProof, error) {
 // commitForX generates the commitment for x
 func (r *RPProver) commitForX() (FourInt, error) {
 	// calculate lagrange four squares for x
-	fs, err := LagrangeFourSquares(r.x)
+	fs, err := LagFourSquares(r.x)
 	if err != nil {
 		return FourInt{}, err
 	}

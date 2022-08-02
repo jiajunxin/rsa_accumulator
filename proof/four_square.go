@@ -20,11 +20,11 @@ var (
 	numRoutine = runtime.NumCPU()
 )
 
-// LagrangeFourSquares calculates the Lagrange four squares representation of a positive integer
+// LagFourSquares calculates the Lagrange four squares representation of a positive integer
 // Paper: Finding the Four Squares in Lagrange’s Theorem
 // Link: http://pollack.uga.edu/finding4squares.pdf (page 6)
 // The input should be an odd positive integer no less than 9
-func LagrangeFourSquares(n *big.Int) (FourInt, error) {
+func LagFourSquares(n *big.Int) (FourInt, error) {
 	if n.Sign() == 0 {
 		res := NewFourInt(precomputedHurwitzGCRDs[0].ValInt())
 		return res, nil
