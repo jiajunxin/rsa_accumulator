@@ -1,5 +1,5 @@
-// Package proof exponentiation proof
-// Protocol ZKPoKE for R_{PoKE}
+// Package proof zkPoKE
+// Protocol zkPoKE for R_{PoKE}
 // Paper: Batching Techniques for Accumulators with Applications to IOPs and Stateless Blockchains
 // Link: https://eprint.iacr.org/2018/1188.pdf
 package proof
@@ -14,26 +14,26 @@ import (
 )
 
 const (
-	epChallengeStatement = "u^x = w, x is an integer"
+	zkPoKEChallengeStatement = "u^x = w, x is an integer"
 )
 
-// KnowledgeExpProof represents the proof of knowledge of exponentiation
-type KnowledgeExpProof struct {
+// ZKPoKEProof represents the proof of knowledge of exponentiation
+type ZKPoKEProof struct {
 	witness  *big.Int // witness x in Z, u^x = w
-	commit   *epCommitment
-	response *epResponse
+	commit   *zkPoKECommitment
+	response *zkPoKEResponse
 }
 
-type epChallenge struct {
-	statement  string        // the statement for the challenge
-	g, h, n    *big.Int      // public parameters: G, H, N
-	commitment *epCommitment // the commitment of by the prover
+type zkPoKEChallenge struct {
+	statement  string            // the statement for the challenge
+	g, h, n    *big.Int          // public parameters: G, H, N
+	commitment *zkPoKECommitment // the commitment of by the prover
 }
 
-// newEPChallenge generates a new challenge for proof of exponentiation
-func newEPChallenge(pp *PublicParameters, commitment *epCommitment) *epChallenge {
-	return &epChallenge{
-		statement:  epChallengeStatement,
+// newZKPoKEChallenge generates a new challenge for proof of exponentiation
+func newZKPoKEChallenge(pp *PublicParameters, commitment *zkPoKECommitment) *zkPoKEChallenge {
+	return &zkPoKEChallenge{
+		statement:  zkPoKEChallengeStatement,
 		g:          pp.G,
 		h:          pp.H,
 		n:          pp.N,
@@ -42,24 +42,24 @@ func newEPChallenge(pp *PublicParameters, commitment *epCommitment) *epChallenge
 }
 
 // Serialize generates the serialized data for proof of exponentiation challenge in byte format
-func (e *epChallenge) serialize() []byte {
+func (zc *zkPoKEChallenge) serialize() []byte {
 	var buf bytes.Buffer
 	defer buf.Reset()
-	buf.WriteString(e.statement)
-	buf.WriteString(e.g.String())
-	buf.WriteString(e.h.String())
-	buf.WriteString(e.n.String())
-	buf.WriteString(e.commitment.z.String())
-	buf.WriteString(e.commitment.aG.String())
-	buf.WriteString(e.commitment.aU.String())
+	buf.WriteString(zc.statement)
+	buf.WriteString(zc.g.String())
+	buf.WriteString(zc.h.String())
+	buf.WriteString(zc.n.String())
+	buf.WriteString(zc.commitment.z.String())
+	buf.WriteString(zc.commitment.aG.String())
+	buf.WriteString(zc.commitment.aU.String())
 	return buf.Bytes()
 }
 
 // sha256 generates the SHA256 hash of the proof of exponentiation challenge
-func (e *epChallenge) sha256() []byte {
+func (zc *zkPoKEChallenge) sha256() []byte {
 	hashF := crypto.SHA256.New()
 	defer hashF.Reset()
-	hashF.Write(e.serialize())
+	hashF.Write(zc.serialize())
 	sha256Result := hashF.Sum(nil)
 	return sha256Result
 }
@@ -67,18 +67,18 @@ func (e *epChallenge) sha256() []byte {
 // bigInt serializes the proof of exponentiation challenge to bytes,
 // generates the SHA256 hash of the byte data,
 // and convert the hash to big integer
-func (e *epChallenge) bigInt() *big.Int {
-	hashVal := e.sha256()
+func (zc *zkPoKEChallenge) bigInt() *big.Int {
+	hashVal := zc.sha256()
 	return new(big.Int).SetBytes(hashVal)
 }
 
-func (e *epChallenge) bigIntPrime() *big.Int {
-	hashVal := e.sha256()
+func (zc *zkPoKEChallenge) bigIntPrime() *big.Int {
+	hashVal := zc.sha256()
 	return accumulator.HashToPrime(hashVal)
 }
 
-// ExpProver is the prover for proof of exponentiation
-type ExpProver struct {
+// ZKPoKEProver is the prover for proof of exponentiation
+type ZKPoKEProver struct {
 	pp   *PublicParameters
 	b    *big.Int
 	k    *big.Int
@@ -88,35 +88,35 @@ type ExpProver struct {
 	x    *big.Int
 }
 
-// NewExpProver creates a new prover of proof of exponentiation
-func NewExpProver(pp *PublicParameters) *ExpProver {
+// NewZKPoKEProver creates a new prover of proof of exponentiation
+func NewZKPoKEProver(pp *PublicParameters) *ZKPoKEProver {
 	// let |G| be N/4, calculate B = (2^(2*lambda))*|G| = N*(2^(2*lambda-2)
 	b := new(big.Int).Set(pp.N)
 	lsh := 2*securityParam - 2
 	b.Lsh(b, uint(lsh))
-	return &ExpProver{
+	return &ZKPoKEProver{
 		pp: pp,
 		b:  b,
 	}
 }
 
 // Prove generates the proof for proof of exponentiation
-func (e *ExpProver) Prove(u, x *big.Int) (*KnowledgeExpProof, error) {
-	e.u = new(big.Int).Set(u)
-	e.x = new(big.Int).Set(x)
-	challenge, err := e.challenge()
+func (zp *ZKPoKEProver) Prove(u, x *big.Int) (*ZKPoKEProof, error) {
+	zp.u = new(big.Int).Set(u)
+	zp.x = new(big.Int).Set(x)
+	challenge, err := zp.challenge()
 	if err != nil {
 		return nil, err
 	}
-	commitment, err := e.commit(u, x)
+	commitment, err := zp.commit(u, x)
 	if err != nil {
 		return nil, err
 	}
-	response, err := e.response(challenge)
+	response, err := zp.response(challenge)
 	if err != nil {
 		return nil, err
 	}
-	return &KnowledgeExpProof{
+	return &ZKPoKEProof{
 		witness:  x,
 		commit:   commitment,
 		response: response,
@@ -124,46 +124,46 @@ func (e *ExpProver) Prove(u, x *big.Int) (*KnowledgeExpProof, error) {
 }
 
 // chooseRand chooses a random number in [-B, B]
-func (e *ExpProver) chooseRand() (*big.Int, error) {
+func (zp *ZKPoKEProver) chooseRand() (*big.Int, error) {
 	// random number should be generated in [0, 2B]
 	randRange := iPool.Get().(*big.Int)
 	defer iPool.Put(randRange)
-	randRange.Lsh(e.b, 1)
+	randRange.Lsh(zp.b, 1)
 	randRange.Add(randRange, big1)
 	num, err := rand.Int(rand.Reader, randRange)
 	if err != nil {
 		return nil, err
 	}
 	// num' in [0, 2B], then (num' - B) in [-B, B]
-	num.Sub(num, e.b)
+	num.Sub(num, zp.b)
 	return num, nil
 }
 
 // commit generates a commitment provided by the prover
-func (e *ExpProver) commit(u, x *big.Int) (*epCommitment, error) {
-	e.u = new(big.Int).Set(u)
-	e.x = new(big.Int).Set(x)
+func (zp *ZKPoKEProver) commit(u, x *big.Int) (*zkPoKECommitment, error) {
+	zp.u = new(big.Int).Set(u)
+	zp.x = new(big.Int).Set(x)
 	// choose random k, rho_x, rho_y from [-B, B]
 	var err error
-	e.k, err = e.chooseRand()
+	zp.k, err = zp.chooseRand()
 	if err != nil {
 		return nil, err
 	}
-	e.rhoX, err = e.chooseRand()
+	zp.rhoX, err = zp.chooseRand()
 	if err != nil {
 		return nil, err
 	}
-	e.rhoK, err = e.chooseRand()
+	zp.rhoK, err = zp.chooseRand()
 	if err != nil {
 		return nil, err
 	}
 	// z = Com(x; rho_x) =(g^x)(h^rho_x)
-	z := com(e.pp, e.x, e.rhoX)
+	z := com(zp.pp, zp.x, zp.rhoX)
 	// A_g = Com(k; rho_k) = (g^k)(h^rho_k)
-	aG := com(e.pp, e.k, e.rhoK)
+	aG := com(zp.pp, zp.k, zp.rhoK)
 	// A_u =u^k
-	aU := new(big.Int).Exp(u, e.k, e.pp.N)
-	return &epCommitment{
+	aU := new(big.Int).Exp(u, zp.k, zp.pp.N)
+	return &zkPoKECommitment{
 		z:  z,
 		aG: aG,
 		aU: aU,
@@ -171,28 +171,28 @@ func (e *ExpProver) commit(u, x *big.Int) (*epCommitment, error) {
 }
 
 // challenge generates the challenge for proof of exponentiation
-func (e *ExpProver) challenge() (*epChallenge, error) {
-	commit, err := e.commit(e.u, e.x)
+func (zp *ZKPoKEProver) challenge() (*zkPoKEChallenge, error) {
+	commit, err := zp.commit(zp.u, zp.x)
 	if err != nil {
 		return nil, err
 	}
-	return newEPChallenge(e.pp, commit), nil
+	return newZKPoKEChallenge(zp.pp, commit), nil
 }
 
 // response generates the response for proof of exponentiation
-func (e *ExpProver) response(challenge *epChallenge) (*epResponse, error) {
+func (zp *ZKPoKEProver) response(challenge *zkPoKEChallenge) (*zkPoKEResponse, error) {
 	c := challenge.bigInt()
 	l := challenge.bigIntPrime()
 	// s_x = k + c*x
 	sX := iPool.Get().(*big.Int)
 	defer iPool.Put(sX)
-	sX.Mul(c, e.x)
-	sX.Add(sX, e.k)
+	sX.Mul(c, zp.x)
+	sX.Add(sX, zp.k)
 	// s_rho = rho_k + c*rho_x
 	sRho := iPool.Get().(*big.Int)
 	defer iPool.Put(sRho)
-	sRho.Mul(e.rhoX, c)
-	sRho.Add(sRho, e.rhoK)
+	sRho.Mul(zp.rhoX, c)
+	sRho.Add(sRho, zp.rhoK)
 	// q_x * l  + r_x = s_x
 	// q_rho * l + r_rho = s_rho
 	qX := iPool.Get().(*big.Int)
@@ -204,10 +204,10 @@ func (e *ExpProver) response(challenge *epChallenge) (*epResponse, error) {
 	qRho.Div(sRho, l)
 	rRho := new(big.Int).Mod(sRho, l)
 	// Q_g = Com(q_x; q_rho) = (g^q_x)(h^q_rho)
-	qG := com(e.pp, qX, qRho)
+	qG := com(zp.pp, qX, qRho)
 	// Q_u =u^q_x
-	qU := new(big.Int).Exp(e.u, qX, e.pp.N)
-	return &epResponse{
+	qU := new(big.Int).Exp(zp.u, qX, zp.pp.N)
+	return &zkPoKEResponse{
 		qG:   qG,
 		qU:   qU,
 		rX:   rX,
@@ -215,73 +215,73 @@ func (e *ExpProver) response(challenge *epChallenge) (*epResponse, error) {
 	}, nil
 }
 
-// ExpVerifier is the verifier for proof of exponentiation
-type ExpVerifier struct {
+// ZKPoKEVerifier is the verifier for proof of exponentiation
+type ZKPoKEVerifier struct {
 	pp *PublicParameters
 }
 
-// NewExpVerifier creates a new verifier of proof of exponentiation
-func NewExpVerifier(pp *PublicParameters) *ExpVerifier {
-	return &ExpVerifier{
+// NewZKPoKEVerifier creates a new verifier of proof of exponentiation
+func NewZKPoKEVerifier(pp *PublicParameters) *ZKPoKEVerifier {
+	return &ZKPoKEVerifier{
 		pp: pp,
 	}
 }
 
 // Verify checks the proof of exponentiation
-func (e *ExpVerifier) Verify(proof *KnowledgeExpProof, u, w *big.Int) (bool, error) {
-	challenge := e.challenge(proof.commit)
+func (zv *ZKPoKEVerifier) Verify(proof *ZKPoKEProof, u, w *big.Int) (bool, error) {
+	challenge := zv.challenge(proof.commit)
 	c := challenge.bigInt()
 	l := challenge.bigIntPrime()
-	return e.VerifyResponse(c, l, u, w, proof.response, proof.commit)
+	return zv.VerifyResponse(c, l, u, w, proof.response, proof.commit)
 }
 
 // challenge generates a challenge for the verifier
-func (e *ExpVerifier) challenge(commit *epCommitment) *epChallenge {
-	challenge := newEPChallenge(e.pp, commit)
+func (zv *ZKPoKEVerifier) challenge(commit *zkPoKECommitment) *zkPoKEChallenge {
+	challenge := newZKPoKEChallenge(zv.pp, commit)
 	return challenge
 }
 
 // VerifyResponse verifies the response of the verifier
-func (e *ExpVerifier) VerifyResponse(c, l, u, w *big.Int, response *epResponse, commit *epCommitment) (bool, error) {
+func (zv *ZKPoKEVerifier) VerifyResponse(c, l, u, w *big.Int, response *zkPoKEResponse, commit *zkPoKECommitment) (bool, error) {
 	//// check if r_x, r_rho in [l]
 	//if response.rX.Cmp(l) >= 0 || response.rRho.Cmp(l) >= 0 {
 	//	return false, nil
 	//}
-	// Q_g^l * Com(r_x; r_rho) = A_g * z^c
+	// Q_g^l * Com(r_x; r_rho) = A_g * zv^c
 	lhs := iPool.Get().(*big.Int)
 	defer iPool.Put(lhs)
-	lhs.Exp(response.qG, l, e.pp.N)
-	lhs.Mul(lhs, com(e.pp, response.rX, response.rRho))
-	lhs.Mod(lhs, e.pp.N)
+	lhs.Exp(response.qG, l, zv.pp.N)
+	lhs.Mul(lhs, com(zv.pp, response.rX, response.rRho))
+	lhs.Mod(lhs, zv.pp.N)
 	rhs := iPool.Get().(*big.Int)
 	defer iPool.Put(rhs)
 	rhs.Set(commit.aG)
-	rhs.Mul(rhs, new(big.Int).Exp(commit.z, c, e.pp.N))
-	rhs.Mod(lhs, e.pp.N)
+	rhs.Mul(rhs, new(big.Int).Exp(commit.z, c, zv.pp.N))
+	rhs.Mod(lhs, zv.pp.N)
 	if lhs.Cmp(rhs) != 0 {
 		return false, nil
 	}
 	// Q_u^l * u^r_x = A_u * w^c
-	lhs.Exp(response.qU, l, e.pp.N)
-	lhs.Mul(lhs, new(big.Int).Exp(u, response.rX, e.pp.N))
-	lhs.Mod(lhs, e.pp.N)
+	lhs.Exp(response.qU, l, zv.pp.N)
+	lhs.Mul(lhs, new(big.Int).Exp(u, response.rX, zv.pp.N))
+	lhs.Mod(lhs, zv.pp.N)
 	rhs.Set(commit.aU)
-	rhs.Mul(rhs, new(big.Int).Exp(w, c, e.pp.N))
-	rhs.Mod(lhs, e.pp.N)
+	rhs.Mul(rhs, new(big.Int).Exp(w, c, zv.pp.N))
+	rhs.Mod(lhs, zv.pp.N)
 	if lhs.Cmp(rhs) != 0 {
 		return false, nil
 	}
 	return true, nil
 }
 
-// epCommitment is the commitment for proof of exponentiation sent by the prover
-type epCommitment struct {
+// zkPoKECommitment is the commitment for proof of exponentiation sent by the prover
+type zkPoKECommitment struct {
 	z  *big.Int // z = Com(x;rhoX)
 	aG *big.Int
 	aU *big.Int
 }
 
-type epResponse struct {
+type zkPoKEResponse struct {
 	qG   *big.Int
 	qU   *big.Int
 	rX   *big.Int
