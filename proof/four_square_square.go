@@ -41,7 +41,7 @@ func SqLagFourSquares(n *big.Int) (FourInt, error) {
 }
 
 func sqRandTrails(nc *big.Int) (*comp.GaussianInt, *big.Int) {
-	preP := iPool.Get().(*big.Int).Mul(nc, tinyPrimeProd)
+	preP := iPool.Get().(*big.Int).Lsh(nc, 1)
 	defer iPool.Put(preP)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -57,8 +57,11 @@ func sqRandTrails(nc *big.Int) (*comp.GaussianInt, *big.Int) {
 
 func sqSetRandBitLen(n *big.Int) uint {
 	bitLen := n.BitLen()
-	ret := uint(float32(bitLen) / 12)
-	if ret < 31 {
+	ret := uint(float32(bitLen) / 2)
+	if ret < 10 {
+		ret = 10
+	}
+	if ret > 31 {
 		ret = 31
 	}
 	return ret
