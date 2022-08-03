@@ -4,9 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	bc "github.com/tommytim0515/go-bigcomplex"
 	"lukechampine.com/frand"
-
-	comp "github.com/rsa_accumulator/complex"
 )
 
 var (
@@ -20,7 +19,7 @@ func SqLagFourSquares(n *big.Int) (FourInt, error) {
 	}
 
 	nc, e := divideN(n)
-	var hurwitzGCRD *comp.HurwitzInt
+	var hurwitzGCRD *bc.HurwitzInt
 	gcd, l := sqRandTrails(nc)
 	var err error
 	hurwitzGCRD, err = sqDenouement(nc, l, gcd)
@@ -33,14 +32,14 @@ func SqLagFourSquares(n *big.Int) (FourInt, error) {
 	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
 	// Gaussian integer: 1 + i
 	gi := gaussian1PlusIPow(e)
-	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
+	hurwitzProd := bc.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
 	w1, w2, w3, w4 := hurwitzProd.ValInt()
 	fi := NewFourInt(w1, w2, w3, w4)
 	return fi, nil
 }
 
-func sqRandTrails(nc *big.Int) (*comp.GaussianInt, *big.Int) {
+func sqRandTrails(nc *big.Int) (*bc.GaussianInt, *big.Int) {
 	preP := iPool.Get().(*big.Int).Lsh(nc, 1)
 	defer iPool.Put(preP)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,7 +64,7 @@ func sqSetRandBitLen(n *big.Int) uint {
 }
 
 type sqFindResult struct {
-	gcd *comp.GaussianInt
+	gcd *bc.GaussianInt
 	l   *big.Int
 }
 
@@ -143,15 +142,15 @@ func sqPickS(randLmt, preP *big.Int) (s, p, l *big.Int, found bool, err error) {
 	return
 }
 
-func sqDenouement(n, l *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
+func sqDenouement(n, l *big.Int, gcd *bc.GaussianInt) (*bc.HurwitzInt, error) {
 	// compute gcrd(A + Bi + Lj, n), normalized to have integer component
 	// Hurwitz integer: A + Bi + Lj
-	hurwitzInt := hiPool.Get().(*comp.HurwitzInt).Update(gcd.R, gcd.I, l, big0, false)
+	hurwitzInt := hiPool.Get().(*bc.HurwitzInt).Update(gcd.R, gcd.I, l, big0, false)
 	defer hiPool.Put(hurwitzInt)
 	// Hurwitz integer: n
-	hurwitzN := hiPool.Get().(*comp.HurwitzInt).Update(n, big0, big0, big0, false)
+	hurwitzN := hiPool.Get().(*bc.HurwitzInt).Update(n, big0, big0, big0, false)
 	defer hiPool.Put(hurwitzN)
-	gcrd := new(comp.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
+	gcrd := new(bc.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
 
 	return gcrd, nil
 }

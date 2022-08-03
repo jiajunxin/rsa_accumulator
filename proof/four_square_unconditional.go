@@ -6,7 +6,7 @@ import (
 	"math"
 	"math/big"
 
-	comp "github.com/rsa_accumulator/complex"
+	bc "github.com/tommytim0515/go-bigcomplex"
 )
 
 // UnconditionalLagrangeFourSquares calculates the Lagrange four squares for a given non-positive integer
@@ -17,7 +17,7 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourInt, error) {
 		return res, nil
 	}
 	nc, e := divideN(n)
-	var hurwitzGCRD *comp.HurwitzInt
+	var hurwitzGCRD *bc.HurwitzInt
 
 	if nc.Cmp(big8) <= 0 {
 		hurwitzGCRD = precomputedHurwitzGCRDs[nc.Int64()]
@@ -37,11 +37,11 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourInt, error) {
 			up = big.NewInt(1)
 			vp = big.NewInt(0)
 		} else {
-			gcd := giPool.Get().(*comp.GaussianInt)
+			gcd := giPool.Get().(*bc.GaussianInt)
 			defer giPool.Put(gcd)
-			gOpt1 := giPool.Get().(*comp.GaussianInt)
+			gOpt1 := giPool.Get().(*bc.GaussianInt)
 			defer giPool.Put(gOpt1)
-			gOpt2 := giPool.Get().(*comp.GaussianInt)
+			gOpt2 := giPool.Get().(*bc.GaussianInt)
 			defer giPool.Put(gOpt2)
 			gOpt1.Update(p, big0)
 			gOpt2.Update(s, big1)
@@ -49,16 +49,16 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourInt, error) {
 			up = gcd.R
 			vp = gcd.I
 		}
-		uvi := comp.NewGaussianInt(u, v)
-		uPvPI := comp.NewGaussianInt(up, vp)
-		zwi := new(comp.GaussianInt).Prod(uvi, uPvPI)
-		hOpt1 := hiPool.Get().(*comp.HurwitzInt)
+		uvi := bc.NewGaussianInt(u, v)
+		uPvPI := bc.NewGaussianInt(up, vp)
+		zwi := new(bc.GaussianInt).Prod(uvi, uPvPI)
+		hOpt1 := hiPool.Get().(*bc.HurwitzInt)
 		defer hiPool.Put(hOpt1)
 		hOpt1.Update(n, big0, big0, big0, false)
-		hOpt2 := hiPool.Get().(*comp.HurwitzInt)
+		hOpt2 := hiPool.Get().(*bc.HurwitzInt)
 		defer hiPool.Put(hOpt2)
 		hOpt2.Update(x, y, zwi.R, zwi.I, false)
-		hurwitzGCRD = new(comp.HurwitzInt).GCRD(hOpt1, hOpt2)
+		hurwitzGCRD = new(bc.HurwitzInt).GCRD(hOpt1, hOpt2)
 	}
 
 	// if x'^2 + Y'^2 + Z'^2 + W'^2 = n'
@@ -66,7 +66,7 @@ func UnconditionalLagrangeFourSquares(n *big.Int) (FourInt, error) {
 	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
 	// Gaussian integer: 1 + i
 	gi := gaussian1PlusIPow(e)
-	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
+	hurwitzProd := bc.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
 	w1, w2, w3, w4 := hurwitzProd.ValInt()
 	fs := NewFourInt(w1, w2, w3, w4)
@@ -208,7 +208,7 @@ func randomChoiceXY(n *big.Int) (r, x, y *big.Int, err error) {
 }
 
 func computeUV(r1, n *big.Int, primes []*big.Int) (u, v *big.Int, err error) {
-	uvi := comp.NewGaussianInt(big1, big0)
+	uvi := bc.NewGaussianInt(big1, big0)
 	ss, err := computeSquares(n)
 	if err != nil {
 		return nil, nil, err
@@ -217,7 +217,7 @@ func computeUV(r1, n *big.Int, primes []*big.Int) (u, v *big.Int, err error) {
 	defer iPool.Put(opt)
 	mod := iPool.Get().(*big.Int)
 	defer iPool.Put(mod)
-	gOpt := giPool.Get().(*comp.GaussianInt)
+	gOpt := giPool.Get().(*bc.GaussianInt)
 	defer giPool.Put(gOpt)
 	for _, prime := range primes {
 		x, y := ss.findXY(prime)

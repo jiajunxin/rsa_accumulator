@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"sync"
 
-	comp "github.com/rsa_accumulator/complex"
+	bc "github.com/tommytim0515/go-bigcomplex"
 )
 
 var (
@@ -15,11 +15,11 @@ var (
 	}
 	// sync pool for Gaussian integers
 	giPool = sync.Pool{
-		New: func() interface{} { return new(comp.GaussianInt) },
+		New: func() interface{} { return new(bc.GaussianInt) },
 	}
 	// sync pool for Hurwitz integers
 	hiPool = sync.Pool{
-		New: func() interface{} { return new(comp.HurwitzInt) },
+		New: func() interface{} { return new(bc.HurwitzInt) },
 	}
 	// cache for precomputed prime numbers and prime number products
 	pCache = newPrimeCache(16)
@@ -119,7 +119,7 @@ func ResetGaussianIntCache() {
 // CacheGaussianInt caches (1+i)^n, n <= e
 func CacheGaussianInt(e int) {
 	giCache = sync.Map{}
-	gaussianProd := giPool.Get().(*comp.GaussianInt).Update(big1, big0)
+	gaussianProd := giPool.Get().(*bc.GaussianInt).Update(big1, big0)
 	defer giPool.Put(gaussianProd)
 	for i := 0; i <= e; i++ {
 		giCache.Store(i, gaussianProd.Copy())

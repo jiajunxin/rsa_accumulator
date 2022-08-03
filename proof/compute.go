@@ -6,7 +6,7 @@ import (
 
 	"lukechampine.com/frand"
 
-	comp "github.com/rsa_accumulator/complex"
+	bc "github.com/tommytim0515/go-bigcomplex"
 )
 
 const preComputeLmt = 20
@@ -20,49 +20,49 @@ var (
 	big8 = big.NewInt(8)
 
 	// precomputed Hurwitz GCRDs for small integers
-	precomputedHurwitzGCRDs = [preComputeLmt + 1]*comp.HurwitzInt{
+	precomputedHurwitzGCRDs = [preComputeLmt + 1]*bc.HurwitzInt{
 		// 0's precomputed Hurwitz GCRD: 0, 0, 0, 0
-		comp.NewHurwitzInt(big0, big0, big0, big0, false),
+		bc.NewHurwitzInt(big0, big0, big0, big0, false),
 		// 1's precomputed Hurwitz GCRD: 1, 0, 0, 0
-		comp.NewHurwitzInt(big1, big0, big0, big0, false),
+		bc.NewHurwitzInt(big1, big0, big0, big0, false),
 		// 2's precomputed Hurwitz GCRD: 1, 1, 0, 0
-		comp.NewHurwitzInt(big1, big1, big0, big0, false),
+		bc.NewHurwitzInt(big1, big1, big0, big0, false),
 		// 3's precomputed Hurwitz GCRD: 1, 1, 1, 0
-		comp.NewHurwitzInt(big1, big1, big1, big0, false),
+		bc.NewHurwitzInt(big1, big1, big1, big0, false),
 		// 4's precomputed Hurwitz GCRD: 2, 0, 0, 0
-		comp.NewHurwitzInt(big2, big0, big0, big0, false),
+		bc.NewHurwitzInt(big2, big0, big0, big0, false),
 		// 5's precomputed Hurwitz GCRD: 2, 1, 0, 0
-		comp.NewHurwitzInt(big2, big1, big0, big0, false),
+		bc.NewHurwitzInt(big2, big1, big0, big0, false),
 		// 6's precomputed Hurwitz GCRD: 2, 1, 1, 0
-		comp.NewHurwitzInt(big2, big1, big1, big0, false),
+		bc.NewHurwitzInt(big2, big1, big1, big0, false),
 		// 7's precomputed Hurwitz GCRD: 2, 1, 1, 1
-		comp.NewHurwitzInt(big2, big1, big1, big1, false),
+		bc.NewHurwitzInt(big2, big1, big1, big1, false),
 		// 8's precomputed Hurwitz GCRD: 2, 2, 0, 0
-		comp.NewHurwitzInt(big2, big2, big0, big0, false),
+		bc.NewHurwitzInt(big2, big2, big0, big0, false),
 		// 9's precomputed Hurwitz GCRD: 2, 2, 1, 0
-		comp.NewHurwitzInt(big2, big2, big1, big0, false),
+		bc.NewHurwitzInt(big2, big2, big1, big0, false),
 		// 10's precomputed Hurwitz GCRD: 2, 2, 1, 1
-		comp.NewHurwitzInt(big2, big2, big1, big1, false),
+		bc.NewHurwitzInt(big2, big2, big1, big1, false),
 		// 11's precomputed Hurwitz GCRD: 3, 1, 1, 0
-		comp.NewHurwitzInt(big3, big1, big1, big0, false),
+		bc.NewHurwitzInt(big3, big1, big1, big0, false),
 		// 12's precomputed Hurwitz GCRD: 3, 1, 1, 1
-		comp.NewHurwitzInt(big3, big1, big1, big1, false),
+		bc.NewHurwitzInt(big3, big1, big1, big1, false),
 		// 13's precomputed Hurwitz GCRD: 3, 2, 0, 0
-		comp.NewHurwitzInt(big3, big2, big0, big0, false),
+		bc.NewHurwitzInt(big3, big2, big0, big0, false),
 		// 14's precomputed Hurwitz GCRD: 3, 2, 1, 0
-		comp.NewHurwitzInt(big3, big2, big1, big0, false),
+		bc.NewHurwitzInt(big3, big2, big1, big0, false),
 		// 15's precomputed Hurwitz GCRD: 3, 2, 1, 1
-		comp.NewHurwitzInt(big3, big2, big1, big1, false),
+		bc.NewHurwitzInt(big3, big2, big1, big1, false),
 		// 16's precomputed Hurwitz GCRD: 4, 0, 0, 0
-		comp.NewHurwitzInt(big4, big0, big0, big0, false),
+		bc.NewHurwitzInt(big4, big0, big0, big0, false),
 		// 17's precomputed Hurwitz GCRD: 4, 1, 0, 0
-		comp.NewHurwitzInt(big4, big1, big0, big0, false),
+		bc.NewHurwitzInt(big4, big1, big0, big0, false),
 		// 18's precomputed Hurwitz GCRD: 4, 1, 1, 0
-		comp.NewHurwitzInt(big4, big1, big1, big0, false),
+		bc.NewHurwitzInt(big4, big1, big1, big0, false),
 		// 19's precomputed Hurwitz GCRD: 4, 1, 1, 1
-		comp.NewHurwitzInt(big4, big1, big1, big1, false),
+		bc.NewHurwitzInt(big4, big1, big1, big1, false),
 		// 20's precomputed Hurwitz GCRD: 4, 2, 0, 0
-		comp.NewHurwitzInt(big4, big2, big0, big0, false),
+		bc.NewHurwitzInt(big4, big2, big0, big0, false),
 	}
 	bigPreComputeLmt = big.NewInt(preComputeLmt)
 	tinyPrimeProd    = big.NewInt(210) // 2 * 3 * 5 * 7

@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"runtime"
 
-	comp "github.com/rsa_accumulator/complex"
+	bc "github.com/tommytim0515/go-bigcomplex"
 	"lukechampine.com/frand"
 )
 
@@ -30,12 +30,12 @@ func LagFourSquares(n *big.Int) (FourInt, error) {
 		return res, nil
 	}
 	nc, e := divideN(n)
-	var hurwitzGCRD *comp.HurwitzInt
+	var hurwitzGCRD *bc.HurwitzInt
 
 	if nc.Cmp(bigPreComputeLmt) <= 0 {
 		hurwitzGCRD = precomputedHurwitzGCRDs[nc.Int64()]
 	} else {
-		var gcd *comp.GaussianInt
+		var gcd *bc.GaussianInt
 		nBitLen := nc.BitLen()
 		if nBitLen < randLmtThreshold {
 			primeProd, err := preCompute(nc)
@@ -58,14 +58,14 @@ func LagFourSquares(n *big.Int) (FourInt, error) {
 	// (1 + i)^e * (x' + Y'i + Z'j + W'k) = (x + Yi + Zj + Wk)
 	// Gaussian integer: 1 + i
 	gi := gaussian1PlusIPow(e)
-	hurwitzProd := comp.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
+	hurwitzProd := bc.NewHurwitzInt(gi.R, gi.I, big0, big0, false)
 	hurwitzProd.Prod(hurwitzProd, hurwitzGCRD)
 	w1, w2, w3, w4 := hurwitzProd.ValInt()
 	fi := NewFourInt(w1, w2, w3, w4)
 	return fi, nil
 }
 
-func isValidGaussianIntGCD(gcd *comp.GaussianInt) bool {
+func isValidGaussianIntGCD(gcd *bc.GaussianInt) bool {
 	absR := iPool.Get().(*big.Int).Abs(gcd.R)
 	defer iPool.Put(absR)
 	absI := iPool.Get().(*big.Int).Abs(gcd.I)
@@ -98,23 +98,23 @@ func divideN(n *big.Int) (*big.Int, int) {
 }
 
 // gaussian1PlusIPow calculates Gaussian integer (1 + i)^e
-func gaussian1PlusIPow(e int) *comp.GaussianInt {
+func gaussian1PlusIPow(e int) *bc.GaussianInt {
 	if e == 0 {
-		return comp.NewGaussianInt(big1, big0)
+		return bc.NewGaussianInt(big1, big0)
 	}
 	if gi, ok := giCache.Load(e); ok {
-		return gi.(*comp.GaussianInt)
+		return gi.(*bc.GaussianInt)
 	}
-	gaussian1PlusI := giPool.Get().(*comp.GaussianInt).Update(big1, big1)
+	gaussian1PlusI := giPool.Get().(*bc.GaussianInt).Update(big1, big1)
 	defer giPool.Put(gaussian1PlusI)
 
-	gaussianProd := comp.NewGaussianInt(big1, big0)
+	gaussianProd := bc.NewGaussianInt(big1, big0)
 	idx := e
 	for idx > 0 {
 		gaussianProd.Prod(gaussianProd, gaussian1PlusI)
 		idx--
 	}
-	gi := new(comp.GaussianInt).Update(gaussianProd.R, gaussianProd.I)
+	gi := new(bc.GaussianInt).Update(gaussianProd.R, gaussianProd.I)
 	giCache.Store(e, gi)
 	return gaussianProd
 }
@@ -140,7 +140,7 @@ func preCompute(n *big.Int) (*big.Int, error) {
 	return new(big.Int).Set(prod), nil
 }
 
-func randTrails(n, primeProd *big.Int) *comp.GaussianInt {
+func randTrails(n, primeProd *big.Int) *bc.GaussianInt {
 	// use goroutines to choose a random number between [0, n^5 / 2 / numRoutine]
 	// then construct k based on the random number
 	// and check the validity of the trails
@@ -149,7 +149,7 @@ func randTrails(n, primeProd *big.Int) *comp.GaussianInt {
 	defer iPool.Put(preP)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	resChan := make(chan *comp.GaussianInt)
+	resChan := make(chan *bc.GaussianInt)
 	randLmt := setInitRandLmt(n)
 	randLmt.Rsh(randLmt, 1)
 	randLmt.Div(randLmt, big.NewInt(int64(numRoutine)))
@@ -167,10 +167,10 @@ func randTrails(n, primeProd *big.Int) *comp.GaussianInt {
 	return <-resChan
 }
 
-func randLargeTrails(n *big.Int, bitLen int) *comp.GaussianInt {
+func randLargeTrails(n *big.Int, bitLen int) *bc.GaussianInt {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	resChan := make(chan *comp.GaussianInt)
+	resChan := make(chan *bc.GaussianInt)
 	bl := setInitRandBitLen(bitLen)
 	preP := iPool.Get().(*big.Int).Mul(tinyPrimeProd, n)
 	defer iPool.Put(preP)
@@ -199,7 +199,7 @@ func setInitRandBitLen(bitLen int) int {
 	return int(math.Round(lenF))
 }
 
-func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- *comp.GaussianInt) {
+func findSRoutine(ctx context.Context, mul, add, randLmt, preP *big.Int, resChan chan<- *bc.GaussianInt) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -236,7 +236,7 @@ func pickS(mul, add, randLmt, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	return determineSAndP(k, preP)
 }
 
-func findLargeSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan<- *comp.GaussianInt) {
+func findLargeSRoutine(ctx context.Context, randLmt, preP *big.Int, resChan chan<- *bc.GaussianInt) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -324,29 +324,29 @@ func determineSAndP(k, preP *big.Int) (*big.Int, *big.Int, bool, error) {
 	return s, new(big.Int).Set(p), true, nil
 }
 
-func gaussianIntGCD(s, p *big.Int) *comp.GaussianInt {
+func gaussianIntGCD(s, p *big.Int) *bc.GaussianInt {
 	// compute A + Bi := gcd(s + i, p)
 	// Gaussian integer: s + i
-	gaussianInt := giPool.Get().(*comp.GaussianInt).Update(s, big1)
+	gaussianInt := giPool.Get().(*bc.GaussianInt).Update(s, big1)
 	defer giPool.Put(gaussianInt)
 	// Gaussian integer: p
-	gaussianP := giPool.Get().(*comp.GaussianInt).Update(p, big0)
+	gaussianP := giPool.Get().(*bc.GaussianInt).Update(p, big0)
 	defer giPool.Put(gaussianP)
 	// compute gcd(s + i, p)
-	gcd := new(comp.GaussianInt)
+	gcd := new(bc.GaussianInt)
 	gcd.GCD(gaussianInt, gaussianP)
 	return gcd
 }
 
-func denouement(n *big.Int, gcd *comp.GaussianInt) (*comp.HurwitzInt, error) {
+func denouement(n *big.Int, gcd *bc.GaussianInt) (*bc.HurwitzInt, error) {
 	// compute gcrd(A + Bi + j, n), normalized to have integer component
 	// Hurwitz integer: A + Bi + j
-	hurwitzInt := hiPool.Get().(*comp.HurwitzInt).Update(gcd.R, gcd.I, big1, big0, false)
+	hurwitzInt := hiPool.Get().(*bc.HurwitzInt).Update(gcd.R, gcd.I, big1, big0, false)
 	defer hiPool.Put(hurwitzInt)
 	// Hurwitz integer: n
-	hurwitzN := hiPool.Get().(*comp.HurwitzInt).Update(n, big0, big0, big0, false)
+	hurwitzN := hiPool.Get().(*bc.HurwitzInt).Update(n, big0, big0, big0, false)
 	defer hiPool.Put(hurwitzN)
-	gcrd := new(comp.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
+	gcrd := new(bc.HurwitzInt).GCRD(hurwitzInt, hurwitzN)
 
 	return gcrd, nil
 }
