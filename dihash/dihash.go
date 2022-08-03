@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"runtime"
 )
 
 const (
@@ -23,6 +24,8 @@ var (
 	Max256 = big.NewInt(0)
 
 	one = big.NewInt(1)
+
+	numRoutine = runtime.NumCPU()
 )
 
 func init() {
@@ -64,4 +67,38 @@ func get2048Rnd(rnd *rand.Rand) *big.Int {
 
 	ret.SetBytes(hashJoint)
 	return &ret
+}
+
+// Prod returns the product of the input DI-Hash list
+func Prod(hashes []*big.Int) *big.Int {
+	res := big.NewInt(1)
+	for _, h := range hashes {
+		res.Mul(res, h)
+	}
+	return res
+}
+
+// ProdParallel returns the product of the input DI-Hash list with parallel optimization
+func ProdParallel(hashes []*big.Int) *big.Int {
+	numHash := len(hashes)
+	if numHash <= numRoutine {
+		return Prod(hashes)
+	}
+	// split the list into numRoutine parts
+	res := make([]chan *big.Int, numRoutine)
+	for i := 0; i < numRoutine; i++ {
+		res[i] = make(chan *big.Int)
+		go func(i int) {
+			prod := big.NewInt(1)
+			for j := i; j < numHash; j += numRoutine {
+				prod.Mul(prod, hashes[j])
+			}
+			res[i] <- prod
+		}(i)
+	}
+	prod := big.NewInt(1)
+	for i := 0; i < numRoutine; i++ {
+		prod.Mul(prod, <-res[i])
+	}
+	return prod
 }
