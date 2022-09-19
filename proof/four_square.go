@@ -66,6 +66,9 @@ func LagFourSquares(n *big.Int) (FourInt, error) {
 }
 
 func isValidGaussianIntGCD(gcd *comp.GaussianInt) bool {
+	if gcd == nil {
+		return false
+	}
 	absR := iPool.Get().(*big.Int).Abs(gcd.R)
 	defer iPool.Put(absR)
 	absI := iPool.Get().(*big.Int).Abs(gcd.I)

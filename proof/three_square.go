@@ -17,6 +17,7 @@ func ThreeSquares(n *big.Int) (ThreeInt, error) {
 	resChan := make(chan ThreeInt)
 	ncBitLen := nc.BitLen()
 	randLmt := iPool.Get().(*big.Int).Lsh(big1, uint(ncBitLen/2))
+	//randLmt := iPool.Get().(*big.Int).Sqrt(nc)
 	defer iPool.Put(randLmt)
 	for i := 0; i < numRoutine; i++ {
 		go findRoutineTS(ctx, randLmt, nc, resChan)
@@ -103,6 +104,10 @@ func VerifyTS(target *big.Int, ti ThreeInt) bool {
 	check := iPool.Get().(*big.Int).Lsh(target, 2)
 	defer iPool.Put(check)
 	check.Add(check, big1)
+	return verifyTS(check, ti)
+}
+
+func verifyTS(target *big.Int, ti ThreeInt) bool {
 	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
 	opt := iPool.Get().(*big.Int)
@@ -110,5 +115,5 @@ func VerifyTS(target *big.Int, ti ThreeInt) bool {
 	for i := 0; i < 3; i++ {
 		sum.Add(sum, opt.Mul(ti[i], ti[i]))
 	}
-	return sum.Cmp(check) == 0
+	return sum.Cmp(target) == 0
 }
