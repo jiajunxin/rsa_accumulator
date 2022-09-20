@@ -6,7 +6,7 @@ import (
 	"math"
 	"math/big"
 
-	comp "github.com/rsa_accumulator/complex"
+	comp "github.com/txaty/go-bigcomplex"
 )
 
 // UnconditionalLagrangeFourSquares calculates the Lagrange four squares for a given non-positive integer

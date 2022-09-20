@@ -4,46 +4,60 @@ import (
 	"context"
 	"math/big"
 
+	comp "github.com/txaty/go-bigcomplex"
 	"lukechampine.com/frand"
 )
 
-// ThreeSquares calculates the three square sum for 4N + 1
-func ThreeSquares(n *big.Int) (ThreeInt, error) {
-	nc := iPool.Get().(*big.Int).Lsh(n, 2)
-	defer iPool.Put(nc)
-	nc.Add(nc, big1)
+const bitLenThreshold = 13
+
+// ThreeSquare calculates the three square sum for 4N + 1
+func ThreeSquare(n *big.Int) (ThreeInt, error) {
+	nn := new(big.Int).Lsh(n, 2)
+	nn.Add(nn, big1)
+	rt := new(big.Int).Sqrt(nn)
+	rt.Rsh(rt, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan ThreeInt)
-	ncBitLen := nc.BitLen()
-	randLmt := iPool.Get().(*big.Int).Lsh(big1, uint(ncBitLen/2))
-	defer iPool.Put(randLmt)
 	for i := 0; i < numRoutine; i++ {
-		go findRoutineTS(ctx, randLmt, nc, resChan)
+		go routineFindTS(ctx, int64(i), int64(numRoutine), nn, rt, resChan)
 	}
 	return <-resChan, nil
 }
 
-func findRoutineTS(ctx context.Context, randLmt, preP *big.Int, resChan chan<- ThreeInt) {
+func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resChan chan ThreeInt) {
+	cnt := iPool.Get().(*big.Int).SetInt64(start)
+	defer iPool.Put(cnt)
+	stp := iPool.Get().(*big.Int).SetInt64(step)
+	defer iPool.Put(stp)
+	p := iPool.Get().(*big.Int)
+	defer iPool.Put(p)
+	opt := iPool.Get().(*big.Int)
+	defer iPool.Put(opt)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			a, s, p, ok, err := pickASP(randLmt, preP)
-			if err != nil {
-				panic(err)
+			x := new(big.Int).Sub(rt, cnt)
+			if x.Sign() < 0 {
+				return
 			}
-			if !ok {
-				continue
+			x.Lsh(x, 1)
+			p.Mul(x, x).Sub(nn, p)
+			if p.Cmp(big2) < 0 {
+				return
 			}
-			gcd := gaussianIntGCD(s, p)
-			if !isValidGaussianIntGCD(gcd) {
-				continue
+			if p.BitLen() > bitLenThreshold && !p.ProbablyPrime(0) {
+				cnt.Add(cnt, stp)
+				break
 			}
-			ctx.Done()
+			gcd := findTwoSquares(p)
+			for !isValidGaussianIntGCD(gcd) {
+				gcd = findTwoSquares(p)
+			}
 			select {
-			case resChan <- NewThreeInt(a, gcd.R, gcd.I):
+			case resChan <- NewThreeInt(x, gcd.R, gcd.I):
 				return
 			default:
 				return
@@ -52,49 +66,34 @@ func findRoutineTS(ctx context.Context, randLmt, preP *big.Int, resChan chan<- T
 	}
 }
 
-func pickASP(randLmt, preP *big.Int) (a, s, p *big.Int, found bool, err error) {
-	a = frand.BigIntn(randLmt)
-	a.Lsh(a, 1)
-	aSq := iPool.Get().(*big.Int).Mul(a, a)
-	defer iPool.Put(aSq)
-	p = new(big.Int).Sub(preP, aSq)
-	if p.Sign() <= 0 {
-		return nil, nil, nil, false, nil
-	}
-	if !p.ProbablyPrime(0) {
-		return nil, nil, nil, false, nil
-	}
-
-	pMinus1 := iPool.Get().(*big.Int).Sub(p, big1)
-	defer iPool.Put(pMinus1)
-	powU := iPool.Get().(*big.Int).Rsh(pMinus1, 1)
+func findTwoSquares(n *big.Int) *comp.GaussianInt {
+	nMin1 := iPool.Get().(*big.Int).Sub(n, big1)
+	defer iPool.Put(nMin1)
+	powU := iPool.Get().(*big.Int).Rsh(nMin1, 1)
 	defer iPool.Put(powU)
-	halfP := iPool.Get().(*big.Int).Rsh(p, 1)
-	defer iPool.Put(halfP)
+	halfN := iPool.Get().(*big.Int).Rsh(n, 1)
+	defer iPool.Put(halfN)
 	u := iPool.Get().(*big.Int)
 	defer iPool.Put(u)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
+	s := iPool.Get().(*big.Int)
+	defer iPool.Put(s)
 	for i := 0; i < maxUFindingIter; i++ {
-		u = frand.BigIntn(halfP)
+		u = frand.BigIntn(halfN)
 		u.Lsh(u, 1)
 
 		// test if s^2 = -1 (mod p)
-		// if so, continue to the next step, otherwise, repeat this step
-		opt.Exp(u, powU, p)
-		if opt.Cmp(pMinus1) == 0 {
-			found = true
-			break
+		// if so, continue, otherwise, repeat this step
+		opt.Exp(u, powU, n)
+		if opt.Cmp(nMin1) == 0 {
+			// compute s = u^((n - 1) / 4) mod p
+			powU.Rsh(powU, 1)
+			s.Exp(u, powU, n)
+			return gaussianIntGCD(s, n)
 		}
 	}
-	if !found {
-		return nil, nil, nil, false, nil
-	}
-
-	// compute s = u^((p - 1) / 4) mod p
-	powU.Rsh(powU, 1)
-	s = new(big.Int).Exp(u, powU, p)
-	return
+	return nil
 }
 
 // VerifyTS checks if the three-square sum is equal to the original integer
@@ -103,6 +102,10 @@ func VerifyTS(target *big.Int, ti ThreeInt) bool {
 	check := iPool.Get().(*big.Int).Lsh(target, 2)
 	defer iPool.Put(check)
 	check.Add(check, big1)
+	return verifyTS(check, ti)
+}
+
+func verifyTS(target *big.Int, ti ThreeInt) bool {
 	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
 	opt := iPool.Get().(*big.Int)
@@ -110,5 +113,5 @@ func VerifyTS(target *big.Int, ti ThreeInt) bool {
 	for i := 0; i < 3; i++ {
 		sum.Add(sum, opt.Mul(ti[i], ti[i]))
 	}
-	return sum.Cmp(check) == 0
+	return sum.Cmp(target) == 0
 }
