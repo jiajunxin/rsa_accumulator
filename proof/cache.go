@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"sync"
 
-	comp "github.com/rsa_accumulator/complex"
+	comp "github.com/txaty/go-bigcomplex"
 )
 
 var (

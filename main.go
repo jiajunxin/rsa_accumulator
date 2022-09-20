@@ -41,7 +41,7 @@ func main() {
 		//fs, err := proof.LagFourSquares(target)
 		//fs, err := proof.SqLagFourSquares(target)
 		//ts, err := proof.ThreeSquares(target)
-		ts, err := proof.ThreeSquareNew(target)
+		ts, err := proof.ThreeSquare(target)
 		handleError(err)
 		currTime := time.Now()
 		timeInterval := currTime.Sub(start)
@@ -56,7 +56,7 @@ func main() {
 			fmt.Println(ts)
 			panic("verification failed")
 			//fmt.Println("verification failed")
-			//ts, err = proof.ThreeSquareNew(target)
+			//ts, err = proof.ThreeSquare(target)
 			//handleError(err)
 		}
 	}

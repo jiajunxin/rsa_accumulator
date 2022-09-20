@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"runtime"
 
-	comp "github.com/rsa_accumulator/complex"
+	comp "github.com/txaty/go-bigcomplex"
 	"lukechampine.com/frand"
 )
 

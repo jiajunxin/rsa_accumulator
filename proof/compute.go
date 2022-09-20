@@ -6,7 +6,7 @@ import (
 
 	"lukechampine.com/frand"
 
-	comp "github.com/rsa_accumulator/complex"
+	comp "github.com/txaty/go-bigcomplex"
 )
 
 const preComputeLmt = 20
