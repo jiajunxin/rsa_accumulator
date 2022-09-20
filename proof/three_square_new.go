@@ -8,16 +8,13 @@ import (
 	"lukechampine.com/frand"
 )
 
-var big10000 = big.NewInt(10000)
+const bitLenThreshold = 13
 
 // ThreeSquareNew calculates the three square sum for 4N + 1
 func ThreeSquareNew(n *big.Int) (ThreeInt, error) {
-	nn := iPool.Get().(*big.Int).Lsh(n, 2)
-	defer iPool.Put(nn)
+	nn := new(big.Int).Lsh(n, 2)
 	nn.Add(nn, big1)
-	rt := iPool.Get().(*big.Int).Sqrt(nn)
-	defer iPool.Put(rt)
-	rt.Sub(rt, big1)
+	rt := new(big.Int).Sqrt(nn)
 	rt.Rsh(rt, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -35,8 +32,6 @@ func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resC
 	defer iPool.Put(stp)
 	p := iPool.Get().(*big.Int)
 	defer iPool.Put(p)
-	x := iPool.Get().(*big.Int)
-	defer iPool.Put(x)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	for {
@@ -44,26 +39,25 @@ func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resC
 		case <-ctx.Done():
 			return
 		default:
-			x.Sub(rt, cnt)
+			x := new(big.Int).Sub(rt, cnt)
+			if x.Sign() < 0 {
+				return
+			}
 			x.Lsh(x, 1)
-			p.Mul(x, x)
-			p.Sub(nn, p)
-			if p.Cmp(big10000) >= 0 && !p.ProbablyPrime(0) {
-				cnt.Add(cnt, stp)
-				continue
+			p.Mul(x, x).Sub(nn, p)
+			if p.Cmp(big2) < 0 {
+				return
 			}
-			gGCD, ok := findTwoSquares(p)
-			if !ok {
+			if p.BitLen() > bitLenThreshold && !p.ProbablyPrime(0) {
 				cnt.Add(cnt, stp)
-				continue
+				break
 			}
-			ts := NewThreeInt(x, gGCD.R, gGCD.I)
-			if !verifyTS(nn, ts) {
-				cnt.Add(cnt, stp)
-				continue
+			gcd := findTwoSquares(p)
+			for !isValidGaussianIntGCD(gcd) {
+				gcd = findTwoSquares(p)
 			}
 			select {
-			case resChan <- ts:
+			case resChan <- NewThreeInt(x, gcd.R, gcd.I):
 				return
 			default:
 				return
@@ -72,7 +66,7 @@ func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resC
 	}
 }
 
-func findTwoSquares(n *big.Int) (*comp.GaussianInt, bool) {
+func findTwoSquares(n *big.Int) *comp.GaussianInt {
 	nMin1 := iPool.Get().(*big.Int).Sub(n, big1)
 	defer iPool.Put(nMin1)
 	powU := iPool.Get().(*big.Int).Rsh(nMin1, 1)
@@ -86,9 +80,6 @@ func findTwoSquares(n *big.Int) (*comp.GaussianInt, bool) {
 	s := iPool.Get().(*big.Int)
 	defer iPool.Put(s)
 	for i := 0; i < maxUFindingIter; i++ {
-		if halfN.Cmp(big0) <= 0 {
-			return nil, false
-		}
 		u = frand.BigIntn(halfN)
 		u.Lsh(u, 1)
 
@@ -99,8 +90,8 @@ func findTwoSquares(n *big.Int) (*comp.GaussianInt, bool) {
 			// compute s = u^((n - 1) / 4) mod p
 			powU.Rsh(powU, 1)
 			s.Exp(u, powU, n)
-			return gaussianIntGCD(s, n), true
+			return gaussianIntGCD(s, n)
 		}
 	}
-	return nil, false
+	return nil
 }

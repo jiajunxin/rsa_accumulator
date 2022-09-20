@@ -52,6 +52,8 @@ func main() {
 		handleError(err)
 		//if ok := proof.VerifyFS(target, fs); !ok {
 		if ok := proof.VerifyTS(target, ts); !ok {
+			fmt.Println(target)
+			fmt.Println(ts)
 			panic("verification failed")
 			//fmt.Println("verification failed")
 			//ts, err = proof.ThreeSquareNew(target)
