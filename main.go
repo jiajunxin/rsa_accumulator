@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rsa_accumulator/proof"
+	"github.com/jiajunxin/rsa_accumulator/proof"
 )
 
 func main() {
@@ -28,20 +28,14 @@ func main() {
 	for i := 0; i < *tries; i++ {
 		_, err = f.WriteString(time.Now().String() + "\n")
 		handleError(err)
-		target := randOddGen(*bitLen)
-		//target := randOddGen(*bitLen)
-		//target := randGen(randLmt)
-		//handleError(err)
+		randLmt := new(big.Int).Lsh(big.NewInt(1), uint(*bitLen-2))
+		target := randGen(randLmt)
 		_, err = f.WriteString(fmt.Sprintf("%d\n", target.BitLen()))
 		handleError(err)
 		_, err = f.WriteString(target.String() + "\n")
 		handleError(err)
 		start := time.Now()
-		//fs, err := proof.UnconditionalLagrangeFourSquares(target)
-		//fs, err := proof.LagFourSquares(target)
-		//fs, err := proof.SqLagFourSquares(target)
-		//ts, err := proof.ThreeSquares(target)
-		ts, err := proof.ThreeSquare(target)
+		ts, err := proof.ThreeSquares(target)
 		handleError(err)
 		currTime := time.Now()
 		timeInterval := currTime.Sub(start)
@@ -50,14 +44,10 @@ func main() {
 		secondsStr := fmt.Sprintf("%f", timeInterval.Seconds())
 		_, err = f.WriteString(secondsStr + "\n")
 		handleError(err)
-		//if ok := proof.VerifyFS(target, fs); !ok {
-		if ok := proof.VerifyTS(target, ts); !ok {
+		if ok := proof.Verify(target, ts); !ok {
 			fmt.Println(target)
 			fmt.Println(ts)
 			panic("verification failed")
-			//fmt.Println("verification failed")
-			//ts, err = proof.ThreeSquare(target)
-			//handleError(err)
 		}
 	}
 	fmt.Printf("average: %f\n", totalTime/float64(*tries))
@@ -89,19 +79,10 @@ func handleError(err error) {
 	}
 }
 
-func randOddGen(bitLen int) *big.Int {
-	randLmt := new(big.Int).Lsh(big.NewInt(1), uint(bitLen-2))
-	target, err := rand.Int(rand.Reader, randLmt)
-	target.Lsh(target, 1)
+func randGen(randLmt *big.Int) *big.Int {
+	x, err := rand.Int(rand.Reader, randLmt)
 	handleError(err)
-	target.Add(target, big.NewInt(1))
-	target.Add(target, new(big.Int).Lsh(big.NewInt(1), uint(bitLen-1)))
-	//fmt.Println(target)
-	return target
+	x.Lsh(x, 2)
+	x.Add(x, big.NewInt(1))
+	return x
 }
-
-//func randGen(randLmt *big.Int) *big.Int {
-//	x, err := rand.Int(rand.Reader, randLmt)
-//	handleError(err)
-//	return x
-//}

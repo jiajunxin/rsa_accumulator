@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/rsa_accumulator/dihash"
+	"github.com/jiajunxin/rsa_accumulator/dihash"
 )
 
 const testString = "2021HKUST"
