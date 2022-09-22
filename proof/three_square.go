@@ -10,17 +10,19 @@ import (
 
 const bitLenThreshold = 13
 
-// ThreeSquare calculates the three square sum for 4N + 1
-func ThreeSquare(n *big.Int) (ThreeInt, error) {
-	nn := new(big.Int).Lsh(n, 2)
-	nn.Add(nn, big1)
-	rt := new(big.Int).Sqrt(nn)
+// ThreeSquares calculates the three square sum of a given integer
+// i.e. target = t1^2 + t2^2 + t3^2
+// Please note that we only consider the situation of target = 4N + 1,
+// as in our range proof implementation, every integer passed to this function
+// is in the form of 4N + 1.
+func ThreeSquares(n *big.Int) (ThreeInt, error) {
+	rt := new(big.Int).Sqrt(n)
 	rt.Rsh(rt, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resChan := make(chan ThreeInt)
 	for i := 0; i < numRoutine; i++ {
-		go routineFindTS(ctx, int64(i), int64(numRoutine), nn, rt, resChan)
+		go routineFindTS(ctx, int64(i), int64(numRoutine), n, rt, resChan)
 	}
 	return <-resChan, nil
 }
@@ -96,16 +98,9 @@ func findTwoSquares(n *big.Int) *comp.GaussianInt {
 	return nil
 }
 
-// VerifyTS checks if the three-square sum is equal to the original integer
+// Verify checks if the three-square sum is equal to the original integer
 // i.e. target = t1^2 + t2^2 + t3^2
-func VerifyTS(target *big.Int, ti ThreeInt) bool {
-	check := iPool.Get().(*big.Int).Lsh(target, 2)
-	defer iPool.Put(check)
-	check.Add(check, big1)
-	return verifyTS(check, ti)
-}
-
-func verifyTS(target *big.Int, ti ThreeInt) bool {
+func Verify(target *big.Int, ti ThreeInt) bool {
 	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
 	opt := iPool.Get().(*big.Int)

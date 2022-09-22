@@ -1,10 +1,10 @@
-module github.com/rsa_accumulator
+module github.com/jiajunxin/rsa_accumulator
 
 go 1.18
 
 require (
 	github.com/iden3/go-iden3-crypto v0.0.13
-	github.com/txaty/go-bigcomplex v0.1.5
+	github.com/txaty/go-bigcomplex v0.1.6
 	lukechampine.com/frand v1.4.2
 )
 

@@ -94,6 +94,17 @@ func newFourRandCoins(n *big.Int) (coins FourInt, err error) {
 	return
 }
 
+// newThreeRandCoins creates three new random coins for range proof
+func newThreeRandCoins(n *big.Int) (coins ThreeInt, err error) {
+	for i := 0; i < 3; i++ {
+		coins[i], err = freshRandCoin(n)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 // freshRandCoin creates a new fresh random coin in [0, n]
 func freshRandCoin(n *big.Int) (*big.Int, error) {
 	lmt := iPool.Get().(*big.Int).Set(n)

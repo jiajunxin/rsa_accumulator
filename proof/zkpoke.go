@@ -10,7 +10,7 @@ import (
 	"crypto/rand"
 	"math/big"
 
-	"github.com/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
 const (

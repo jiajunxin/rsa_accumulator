@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/rsa_accumulator/dihash"
+	"github.com/jiajunxin/rsa_accumulator/dihash"
 )
 
 func BenchmarkHashToPrime(b *testing.B) {
