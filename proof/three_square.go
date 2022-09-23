@@ -3,31 +3,39 @@ package proof
 import (
 	"context"
 	"math/big"
+	"runtime"
 
 	comp "github.com/txaty/go-bigcomplex"
 	"lukechampine.com/frand"
 )
 
-const bitLenThreshold = 13
+const (
+	maxUFindingIter = 10
+	bitLenThreshold = 13
+)
+
+var (
+	numRoutine = runtime.NumCPU()
+)
 
 // ThreeSquares calculates the three square sum of a given integer
 // i.e. target = t1^2 + t2^2 + t3^2
 // Please note that we only consider the situation of target = 4N + 1,
 // as in our range proof implementation, every integer passed to this function
 // is in the form of 4N + 1.
-func ThreeSquares(n *big.Int) (ThreeInt, error) {
+func ThreeSquares(n *big.Int) (Int3, error) {
 	rt := new(big.Int).Sqrt(n)
 	rt.Rsh(rt, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	resChan := make(chan ThreeInt)
+	resChan := make(chan Int3)
 	for i := 0; i < numRoutine; i++ {
 		go routineFindTS(ctx, int64(i), int64(numRoutine), n, rt, resChan)
 	}
 	return <-resChan, nil
 }
 
-func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resChan chan ThreeInt) {
+func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resChan chan Int3) {
 	cnt := iPool.Get().(*big.Int).SetInt64(start)
 	defer iPool.Put(cnt)
 	stp := iPool.Get().(*big.Int).SetInt64(step)
@@ -98,9 +106,47 @@ func findTwoSquares(n *big.Int) *comp.GaussianInt {
 	return nil
 }
 
+func isValidGaussianIntGCD(gcd *comp.GaussianInt) bool {
+	if gcd == nil {
+		return false
+	}
+	absR := iPool.Get().(*big.Int).Abs(gcd.R)
+	defer iPool.Put(absR)
+	absI := iPool.Get().(*big.Int).Abs(gcd.I)
+	defer iPool.Put(absI)
+	rCmp1 := absR.Cmp(big1)
+	rSign := absR.Sign()
+	iCmp1 := absI.Cmp(big1)
+	iSign := absI.Sign()
+	if rCmp1 == 0 && iSign == 0 {
+		return false
+	}
+	if rSign == 0 && iCmp1 == 0 {
+		return false
+	}
+	if rCmp1 == 0 && iCmp1 == 0 {
+		return false
+	}
+	return true
+}
+
+func gaussianIntGCD(s, p *big.Int) *comp.GaussianInt {
+	// compute A + Bi := gcd(s + i, p)
+	// Gaussian integer: s + i
+	gaussianInt := giPool.Get().(*comp.GaussianInt).Update(s, big1)
+	defer giPool.Put(gaussianInt)
+	// Gaussian integer: p
+	gaussianP := giPool.Get().(*comp.GaussianInt).Update(p, big0)
+	defer giPool.Put(gaussianP)
+	// compute gcd(s + i, p)
+	gcd := new(comp.GaussianInt)
+	gcd.GCD(gaussianInt, gaussianP)
+	return gcd
+}
+
 // Verify checks if the three-square sum is equal to the original integer
 // i.e. target = t1^2 + t2^2 + t3^2
-func Verify(target *big.Int, ti ThreeInt) bool {
+func Verify(target *big.Int, ti Int3) bool {
 	sum := iPool.Get().(*big.Int).SetInt64(0)
 	defer iPool.Put(sum)
 	opt := iPool.Get().(*big.Int)
