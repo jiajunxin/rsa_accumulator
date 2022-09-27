@@ -42,8 +42,13 @@ func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, [
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
+	startingTime = time.Now().UTC()
 	proofs := ProveMembership(setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running Prove Membership Takes [%.3f] Seconds \n",
+		duration.Seconds())
 	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
 	return acc, proofs
