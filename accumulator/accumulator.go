@@ -42,13 +42,8 @@ func AccAndProve(set []string, encodeType EncodeType, setup *Setup) (*big.Int, [
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
-	startingTime = time.Now().UTC()
 	proofs := ProveMembership(setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
-	endingTime = time.Now().UTC()
-	duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running Prove Membership Takes [%.3f] Seconds \n",
-		duration.Seconds())
 	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
 	return acc, proofs
@@ -166,6 +161,20 @@ func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
 	for _, v := range set {
 		g.Exp(g, v, N)
 	}
+	return g
+}
+
+// AccumulateParallel is a test function for Parallelly accumulating elements
+func AccumulateParallel(g, N *big.Int, set []*big.Int) *big.Int {
+	// test function. Just parallel for 4 cores.
+	var prod big.Int
+	prod.SetInt64(1)
+	for _, v := range set {
+		prod.Mul(&prod, v)
+	}
+	bitLength := prod.BitLen()
+	// find the decimal for the bit length
+	g.Exp(g, &prod, N)
 	return g
 }
 

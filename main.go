@@ -8,7 +8,7 @@ import (
 )
 
 func testFirstLayerPersentage() {
-	setSize := 1000000
+	setSize := 100000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
