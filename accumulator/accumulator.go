@@ -164,6 +164,20 @@ func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
 	return g
 }
 
+// AccumulateParallel is a test function for Parallelly accumulating elements
+func AccumulateParallel(g, N *big.Int, set []*big.Int) *big.Int {
+	// test function. Just parallel for 4 cores.
+	var prod big.Int
+	prod.SetInt64(1)
+	for _, v := range set {
+		prod.Mul(&prod, v)
+	}
+	bitLength := prod.BitLen()
+	// find the decimal for the bit length
+	g.Exp(g, &prod, N)
+	return g
+}
+
 func accumulateNew(g, N *big.Int, set []*big.Int) *big.Int {
 	acc := &big.Int{}
 	acc.Set(g)

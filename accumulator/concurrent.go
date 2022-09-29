@@ -53,7 +53,12 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 	}
 
 	// the left part of proof need to accumulate the right part of the set, vice versa.
+	startingTime := time.Now().UTC()
 	leftBase, rightBase := calBaseParallel(base, N, set)
+	endingTime := time.Now().UTC()
+	var duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
+		duration.Seconds())
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
 	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
