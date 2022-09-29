@@ -122,8 +122,8 @@ func freshRandCoin(n *big.Int) (*big.Int, error) {
 // Int3 is the 3-number big integer group
 type Int3 [int3Len]*big.Int
 
-// NewThreeInt creates a new 3-number group, in descending order
-func NewThreeInt(w1 *big.Int, w2 *big.Int, w3 *big.Int) Int3 {
+// NewInt3 creates a new 3-number group, in descending order
+func NewInt3(w1 *big.Int, w2 *big.Int, w3 *big.Int) Int3 {
 	w1.Abs(w1)
 	w2.Abs(w2)
 	w3.Abs(w3)

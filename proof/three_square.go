@@ -67,7 +67,7 @@ func routineFindTS(ctx context.Context, start, step int64, nn, rt *big.Int, resC
 				gcd = findTwoSquares(p)
 			}
 			select {
-			case resChan <- NewThreeInt(x, gcd.R, gcd.I):
+			case resChan <- NewInt3(x, gcd.R, gcd.I):
 				return
 			default:
 				return

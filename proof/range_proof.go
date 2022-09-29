@@ -1,7 +1,4 @@
-// Package proof range proof
-// Variant of Lipmaa’s Compact Argument for Positivity proposed by Geoffroy Couteau et al. for range proof
-// To prove an integer x lies in the range [a, b], we can show that x - a and b - x are positive by decomposing
-// them as sum of four squares
+// Package proof range proof  via sum of three squares (3SPR)
 // Paper: Removing the Strong RSA Assumption from Arguments over the Integers
 // Link: https://eprint.iacr.org/2016/128
 package proof
@@ -131,18 +128,18 @@ func newRPCommitment(d4 Int4, d *big.Int) rpCommitment {
 
 // RPProver refers to the Prover in zero-knowledge integer range proof
 type RPProver struct {
-	pp      PublicParameters // public parameters
-	r       *big.Int         // r
-	sp      *big.Int         // security parameter, kappa
-	C       *big.Int         // c = (g^x)(h^r)
-	a, b    *big.Int         // a, b, range [a, b]
-	ca      *big.Int         // ca = (c * g^(-a))^4 mod n
-	x4      Int4             // x0 = (b-x), and three square sum of 4(b-x)(x-a) + 1 = x1^2 + x2^2 + x3^2
-	commit3 Int3             // commitment of three square sum of x: c1, c2, c3, ci = (g^xi)(h^ri)
-	randM4  Int4             // random coins: m0, m1, m2, m3, mi is in [0, 2^(B + 2kappa)]
-	r4      Int4             // r0 = r, and random coins: r1, r2, r3, ri is in [0, n]
-	randS4  Int4             // random coins: s0, s1, s2, s3, si is in [0, 2^(2kappa)*n]
-	sigma   *big.Int         // random selected parameter sigma in [0, 2^(B + 2kappa)*n]
+	pp     PublicParameters // public parameters
+	r      *big.Int         // r
+	sp     *big.Int         // security parameter, kappa
+	c      *big.Int         // c = (g^x)(h^r)
+	a, b   *big.Int         // a, b, range [a, b]
+	ca     *big.Int         // ca = (c * g^(-a))^4 mod n
+	sigma  *big.Int         // random selected parameter sigma in [0, 2^(B + 2kappa)*n]
+	x4     Int4             // x0 = (b-x), and three square sum of 4(b-x)(x-a) + 1 = x1^2 + x2^2 + x3^2
+	c3     Int3             // commitment of three square sum of x: c1, c2, c3, ci = (g^xi)(h^ri)
+	randM4 Int4             // random coins: m0, m1, m2, m3, mi is in [0, 2^(B + 2kappa)]
+	r4     Int4             // r0 = -r, and random coins: r1, r2, r3, ri is in [0, n]
+	randS4 Int4             // random coins: s0, s1, s2, s3, si is in [0, 2^(2kappa)*n]
 }
 
 // NewRPProver generates a new range proof prover
@@ -159,10 +156,10 @@ func NewRPProver(pp PublicParameters, r, a, b *big.Int) *RPProver {
 
 // Prove generates the proof for range proof
 func (r *RPProver) Prove(x *big.Int) (*RangeProof, error) {
-	r.C = calC(r.pp, r.r, x)
-	r.ca = calCa(r.pp, r.a, r.C)
+	r.c = calC(r.pp, r.r, x)
+	r.ca = calCa(r.pp, r.a, r.c)
 	r.x4[0] = new(big.Int).Sub(r.b, x)
-	r.r4[0] = new(big.Int).Set(r.r)
+	r.r4[0] = r.r
 	cx, err := r.commitForX(x)
 	if err != nil {
 		return nil, err
@@ -175,10 +172,10 @@ func (r *RPProver) Prove(x *big.Int) (*RangeProof, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewRangeProof(r.C, cx, commitment, response), nil
+	return NewRangeProof(r.c, cx, commitment, response), nil
 }
 
-// calculate parameter c, c = (g^x)(h^r)
+// calculate parameter c, c = (g^x)(h^r) mod n
 func calC(pp PublicParameters, r, x *big.Int) (c *big.Int) {
 	c = new(big.Int).Exp(pp.G, x, pp.N)
 	opt := iPool.Get().(*big.Int)
@@ -190,10 +187,12 @@ func calC(pp PublicParameters, r, x *big.Int) (c *big.Int) {
 
 // calculate parameter Ca, Ca = (c * g^(-a))^4 mod n
 func calCa(pp PublicParameters, a, c *big.Int) (ca *big.Int) {
-	opt := new(big.Int).Neg(a)
+	negA := new(big.Int).Neg(a)
+	defer iPool.Put(negA)
+	opt := new(big.Int).Exp(pp.G, negA, pp.N)
 	defer iPool.Put(opt)
-	ca = new(big.Int).Exp(pp.G, opt, pp.N)
-	ca.Mul(ca, c)
+	ca = new(big.Int).Set(c)
+	ca.Mul(ca, opt)
 	ca.Exp(ca, big4, pp.N)
 	return
 }
@@ -216,7 +215,8 @@ func (r *RPProver) commitForX(x *big.Int) (Int3, error) {
 	for i := 0; i < int3Len; i++ {
 		r.x4[i+1] = ts[i]
 	}
-	r.r4[0] = new(big.Int).Set(r.r)
+	// TODO: different from paper, to be clarified
+	r.r4[0] = new(big.Int).Neg(r.r)
 	// calculate commitment for x
 	var rc Int3
 	if rc, err = newThreeRandCoins(r.pp.N); err != nil {
@@ -226,7 +226,7 @@ func (r *RPProver) commitForX(x *big.Int) (Int3, error) {
 		r.r4[i+1] = rc[i]
 	}
 	c3 := newRPCommitFromFS(r.pp, rc, ts)
-	r.commit3 = c3
+	r.c3 = c3
 	return c3, nil
 }
 
@@ -237,6 +237,7 @@ func newRPCommitFromFS(pp PublicParameters, coins Int3, ts Int3) (cList Int3) {
 	for i := 0; i < int3Len; i++ {
 		cList[i] = new(big.Int).Exp(pp.G, ts[i], pp.N)
 		cList[i].Mul(cList[i], opt.Exp(pp.H, coins[i], pp.N))
+		cList[i].Mod(cList[i], pp.N)
 	}
 	return
 }
@@ -284,8 +285,7 @@ func (r *RPProver) firstPartH(m, s Int4) Int4 {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	for i := 0; i < int4Len; i++ {
-		h := new(big.Int).Set(r.pp.G)
-		h.Exp(h, m[i], r.pp.N)
+		h := new(big.Int).Exp(r.pp.G, m[i], r.pp.N)
 		h.Mul(h, opt.Exp(r.pp.H, s[i], r.pp.N))
 		h4[i] = h.Mod(h, r.pp.N)
 	}
@@ -295,34 +295,31 @@ func (r *RPProver) firstPartH(m, s Int4) Int4 {
 // secondPartH calculates h = (h^(sigma))*(c^(m0)_a)*(product of (ci^(-mi))) mod n
 func (r *RPProver) secondPartH(m Int4) *big.Int {
 	// prefix = h^sigma * c_a^m_0
-	prefix := iPool.Get().(*big.Int).Exp(r.pp.H, r.sigma, r.pp.N)
-	defer iPool.Put(prefix)
+	result := iPool.Get().(*big.Int).Exp(r.pp.H, r.sigma, r.pp.N)
+	defer iPool.Put(result)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	opt.Exp(r.ca, r.randM4[0], r.pp.N)
-	prefix.Mul(prefix, opt)
-	prefix.Mod(prefix, r.pp.N)
+	result.Mul(result, opt)
+	result.Mod(result, r.pp.N)
 	// ci^(-mi)
-	var cPowM3 Int3
 	negM := iPool.Get().(*big.Int)
 	defer iPool.Put(negM)
 	// product of ci^(-mi) mod n, for i = 1, 2, 3
 	for i := 0; i < int3Len; i++ {
-		cPowM3[i] = new(big.Int).Exp(r.commit3[i], negM.Neg(m[i+1]), r.pp.N)
+		result.Mul(
+			result,
+			opt.Exp(r.c3[i], negM.Neg(m[i+1]), r.pp.N),
+		)
+		result.Mod(result, r.pp.N)
 	}
 	// product of ci^(-mi)
-	// TODO: refactor
-	d := new(big.Int).Set(prefix)
-	for i := 0; i < int3Len; i++ {
-		d.Mul(d, cPowM3[i])
-		d.Mod(d, r.pp.N)
-	}
-	return d
+	return result
 }
 
 // calChallengeBigInt calculates the challenge for range proof in big integer format
 func (r *RPProver) calChallengeBigInt() *big.Int {
-	challenge := newRPChallenge(r.pp, r.a, r.b, r.commit3)
+	challenge := newRPChallenge(r.pp, r.a, r.b, r.c3)
 	return challenge.bigInt()
 }
 
@@ -342,7 +339,7 @@ func (r *RPProver) response() (*rpResponse, error) {
 		t4[i].Add(t4[i], r.randS4[i])
 	}
 
-	// tau = sigma + e * (x0 * r0 - product of xi * ri, for i = 1, 2, 3)
+	// tau = sigma + e * (4 * x0 * r0 - product of xi * ri, for i = 1, 2, 3)
 	sumXR := iPool.Get().(*big.Int)
 	defer iPool.Put(sumXR)
 	sumXR.SetInt64(0)
@@ -351,11 +348,10 @@ func (r *RPProver) response() (*rpResponse, error) {
 	for i := 1; i < int4Len; i++ {
 		sumXR.Add(sumXR, opt.Mul(r.x4[i], r.r4[i]))
 	}
-	//t := new(big.Int).Sub(r.r, sumXR)
-	//t.Mul(t, e)
-	//t.Add(t, r.sigma)
 	tau := new(big.Int).Mul(r.x4[0], r.r4[0])
-	tau.Sub(tau, sumXR)
+	// TODO: different from paper, to be clarified
+	tau.Lsh(tau, 2)
+	tau.Add(tau, sumXR)
 	tau.Mul(tau, e)
 	tau.Add(tau, r.sigma)
 	response := &rpResponse{
@@ -370,12 +366,10 @@ func (r *RPProver) response() (*rpResponse, error) {
 type RPVerifier struct {
 	pp         PublicParameters // public parameters
 	sp         *big.Int         // security parameters
-	C          *big.Int         // C, (g^x)(h^r)
 	a, b       *big.Int         // the range [a, b]
 	commitment rpCommitment     // commitment, delta = H(d1, d2, d3, d4, d)
-	commitFSX  Int3
-	c0         *big.Int // c0 = c^(-1)*g^b mod n
-	ca         *big.Int // ca = (c*g(-a))^4 mod n
+	c4         Int4             // c0 = c^(-1)*g^b mod n, c1, c2, c3 are the commitments of x
+	ca         *big.Int         // ca = (c*g(-a))^4 mod n
 }
 
 // NewRPVerifier generates a new range proof verifier
@@ -391,42 +385,30 @@ func NewRPVerifier(pp PublicParameters, a, b *big.Int) *RPVerifier {
 
 // Verify verifies the range proof
 func (r *RPVerifier) Verify(proof *RangeProof) bool {
-	r.SetC(proof.c)
-	opt := iPool.Get().(*big.Int).Neg(big1)
+	r.c4[0] = new(big.Int).ModInverse(proof.c, r.pp.N)
+	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	r.c0 = new(big.Int).Exp(r.C, opt, r.pp.N)
-	opt.Exp(r.pp.G, r.b, r.pp.N)
-	r.c0.Mul(r.c0, opt)
-	r.c0.Mod(r.c0, r.pp.N)
+	r.c4[0].Mul(r.c4[0], opt.Exp(r.pp.G, r.b, r.pp.N))
+	r.c4[0].Mod(r.c4[0], r.pp.N)
+	for i := 1; i < int4Len; i++ {
+		r.c4[i] = proof.commit3[i-1]
+	}
 	opt.Neg(r.a)
 	opt.Exp(r.pp.G, opt, r.pp.N)
-	r.ca = new(big.Int).Mul(r.C, opt)
+	r.ca = new(big.Int).Mul(proof.c, opt)
 	r.ca.Mod(r.ca, r.pp.N)
 	r.ca.Exp(r.ca, big4, r.pp.N)
-	r.setCommitForX(proof.commit3)
-	r.setCommitment(proof.commitment)
+	r.commitment = proof.commitment
 	return r.VerifyResponse(proof.response)
-}
-
-// SetC sets C to the verifier
-func (r *RPVerifier) SetC(c *big.Int) {
-	r.C = c
-}
-
-// setCommitment sets the commitment to the verifier
-func (r *RPVerifier) setCommitment(c rpCommitment) {
-	r.commitment = c
-}
-
-// setCommitForX sets the commitment of x to the verifier
-// Commitment of x: c1, c2, c3, ci = (g^x1=i)(h^ri)
-func (r *RPVerifier) setCommitForX(c3 Int3) {
-	r.commitFSX = c3
 }
 
 // challenge generates a challenge for prover's commitment
 func (r *RPVerifier) challenge() *big.Int {
-	challenge := newRPChallenge(r.pp, r.a, r.b, r.commitFSX)
+	var c3 Int3
+	for i := 0; i < int3Len; i++ {
+		c3[i] = r.c4[i+1]
+	}
+	challenge := newRPChallenge(r.pp, r.a, r.b, c3)
 	return challenge.bigInt()
 }
 
@@ -439,16 +421,7 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	defer iPool.Put(negC)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	firstFourParams[0] = new(big.Int).Exp(r.pp.G, response.Z4[0], r.pp.N)
-	firstFourParams[0].Mul(
-		firstFourParams[0],
-		opt.Exp(r.pp.H, response.T4[0], r.pp.N),
-	)
-	firstFourParams[0].Mul(
-		firstFourParams[0],
-		opt.Exp(r.c0, negC, r.pp.N),
-	)
-	for i := 1; i < int4Len; i++ {
+	for i := 0; i < int4Len; i++ {
 		firstFourParams[i] = new(big.Int).Exp(r.pp.G, response.Z4[i], r.pp.N)
 		firstFourParams[i].Mul(
 			firstFourParams[i],
@@ -456,37 +429,27 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 		)
 		firstFourParams[i].Mul(
 			firstFourParams[i],
-			opt.Exp(r.commitFSX[i-1], negC, r.pp.N),
+			opt.Exp(r.c4[i], negC, r.pp.N),
 		)
 		firstFourParams[i].Mod(firstFourParams[i], r.pp.N)
 	}
 
-	//cPowNegE := iPool.Get().(*big.Int)
-	//defer iPool.Put(cPowNegE)
-	//cPowNegE.Exp(r.C, negC, r.pp.N) // c^(-e)
-	//hPowT := iPool.Get().(*big.Int)
-	//defer iPool.Put(hPowT)
-	//hPowT.Exp(r.pp.H, response.T, r.pp.N) // h^t
 	// prefix = h^tau * g^e * c_a^z_0 mod n
-	prefix := new(big.Int).Exp(r.pp.H, response.TAU, r.pp.N)
-	defer iPool.Put(prefix)
-	prefix.Mul(prefix, opt.Exp(r.pp.G, c, r.pp.N))
-	prefix.Mod(prefix, r.pp.N)
-	prefix.Mul(prefix, opt.Exp(r.ca, response.Z4[0], r.pp.N))
-	prefix.Mod(prefix, r.pp.N)
+	lastH := new(big.Int).Exp(r.pp.H, response.TAU, r.pp.N)
+	defer iPool.Put(lastH)
+	lastH.Mul(lastH, opt.Exp(r.pp.G, c, r.pp.N))
+	lastH.Mod(lastH, r.pp.N)
+	lastH.Mul(lastH, opt.Exp(r.ca, response.Z4[0], r.pp.N))
+	lastH.Mod(lastH, r.pp.N)
 	//product of (ci^zi)(h^t)(c^(-e)) mod n
-	prodParam := iPool.Get().(*big.Int).SetInt64(1)
-	defer iPool.Put(prodParam)
-	for i := 0; i < int3Len; i++ {
-		opt.Neg(response.Z4[i+1])
-		prodParam.Mul(
-			prodParam,
-			opt.Exp(r.commitFSX[i], opt, r.pp.N),
+	for i := 1; i < int4Len; i++ {
+		opt.Neg(response.Z4[i])
+		lastH.Mul(
+			lastH,
+			opt.Exp(r.c4[i], opt, r.pp.N),
 		)
-		prodParam.Mod(prodParam, r.pp.N)
+		lastH.Mod(lastH, r.pp.N)
 	}
-	prodParam.Mul(prefix, prodParam)
-	prodParam.Mod(prodParam, r.pp.N)
 
 	hashF := sha256.New()
 	var sha256List [4][]byte
@@ -495,7 +458,7 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
-	hashF.Write(prodParam.Bytes())
+	hashF.Write(lastH.Bytes())
 	h := hashF.Sum(nil)
 	var commitment rpCommitment
 	for i := 0; i < 4; i++ {

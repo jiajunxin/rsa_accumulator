@@ -1,6 +1,7 @@
 package main
 
 import (
+	crand "crypto/rand"
 	"math/big"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
@@ -59,7 +60,8 @@ func main() {
 	w.Exp(u, x, nil)
 	a := big.NewInt(100)
 	b := big.NewInt(200)
-	r := big.NewInt(300)
+	r, err := crand.Int(crand.Reader, n)
+	handleError(err)
 	prover := proof.NewRPProver(pp, r, a, b)
 	verifier := proof.NewRPVerifier(pp, a, b)
 	pf, err := prover.Prove(x)
