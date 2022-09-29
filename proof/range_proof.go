@@ -105,13 +105,13 @@ type rpResponse struct {
 
 // newRPCommitment generates a new commitment for range proof
 func newRPCommitment(d4 Int4, d *big.Int) rpCommitment {
-	var dByteList [4][]byte
-	for i := 0; i < 4; i++ {
+	var dByteList [int4Len][]byte
+	for i := 0; i < int4Len; i++ {
 		dByteList[i] = d4[i].Bytes()
 	}
 	dBytes := d.Bytes()
 	hashF := crypto.SHA256.New()
-	var sha256List [4][]byte
+	var sha256List [int4Len][]byte
 	for i, dByte := range dByteList {
 		hashF.Write(dByte)
 		sha256List[i] = hashF.Sum(nil)
@@ -452,8 +452,8 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	}
 
 	hashF := sha256.New()
-	var sha256List [4][]byte
-	for i := 0; i < 4; i++ {
+	var sha256List [int4Len][]byte
+	for i := 0; i < int4Len; i++ {
 		hashF.Write(firstFourParams[i].Bytes())
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
@@ -461,7 +461,7 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	hashF.Write(lastH.Bytes())
 	h := hashF.Sum(nil)
 	var commitment rpCommitment
-	for i := 0; i < 4; i++ {
+	for i := 0; i < int4Len; i++ {
 		copy(commitment[i*sha256Len:(i+1)*sha256Len], sha256List[i])
 	}
 	copy(commitment[commitLen-sha256Len:], h)
