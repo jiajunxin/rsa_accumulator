@@ -69,7 +69,7 @@ func ManualBenchIterParallel(testSetSize int) {
 		testSetSize, duration.Seconds())
 }
 
-// GenBenchSet generate one set where every element is identical
+// GenBenchSet generate one set where every element is different
 func GenBenchSet(num int) []string {
 	ret := make([]string, num)
 	for i := 0; i < num; i++ {

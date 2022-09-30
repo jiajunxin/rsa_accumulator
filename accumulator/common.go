@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"time"
 )
 
 const (
@@ -86,6 +87,57 @@ func SetProduct(inputSet []big.Int) *big.Int {
 	for i := 0; i < setSize; i++ {
 		ret.Mul(&ret, &inputSet[i])
 	}
+	return &ret
+}
+
+// SetProduct2 calculates the products of the input set
+func SetProduct2(inputSet []*big.Int) *big.Int {
+	var ret big.Int
+	setSize := len(inputSet)
+	ret.Set(big1)
+	// ret is set to 1
+	for i := 0; i < setSize; i++ {
+		ret.Mul(&ret, inputSet[i])
+	}
+	return &ret
+}
+
+// SetProduct calculates the products of the input divide-and-conquer recursively
+func SetProductRecursive(inputSet []*big.Int) *big.Int {
+	length := len(inputSet)
+	var ret big.Int
+	if length <= 2 {
+		setSize := len(inputSet)
+		ret.Set(big1)
+		// ret is set to 1
+		for i := 0; i < setSize; i++ {
+			ret.Mul(&ret, inputSet[i])
+		}
+		return &ret
+	}
+	startingTime := time.Now().UTC()
+	ret.Mul(SetProductRecursive2(inputSet[0:length/2]), SetProductRecursive2(inputSet[length/2:]))
+	endingTime := time.Now().UTC()
+	duration := endingTime.Sub(startingTime)
+	fmt.Printf("Running multiplication for last two large number Takes [%.3f] Seconds \n",
+		duration.Seconds())
+	return &ret
+}
+
+// SetProduct calculates the products of the input divide-and-conquer recursively
+func SetProductRecursive2(inputSet []*big.Int) *big.Int {
+	length := len(inputSet)
+	var ret big.Int
+	if length <= 2 {
+		setSize := len(inputSet)
+		ret.Set(big1)
+		// ret is set to 1
+		for i := 0; i < setSize; i++ {
+			ret.Mul(&ret, inputSet[i])
+		}
+		return &ret
+	}
+	ret.Mul(SetProductRecursive(inputSet[0:length/2]), SetProductRecursive(inputSet[length/2:]))
 	return &ret
 }
 
