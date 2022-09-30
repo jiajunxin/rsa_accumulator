@@ -115,8 +115,11 @@ func SetProductRecursive(inputSet []*big.Int) *big.Int {
 		}
 		return &ret
 	}
+	var temp1, temp2 big.Int
+	temp1 = *SetProductRecursive2(inputSet[0 : length/2])
+	temp2 = *SetProductRecursive2(inputSet[length/2:])
 	startingTime := time.Now().UTC()
-	ret.Mul(SetProductRecursive2(inputSet[0:length/2]), SetProductRecursive2(inputSet[length/2:]))
+	ret.Mul(&temp1, &temp2)
 	endingTime := time.Now().UTC()
 	duration := endingTime.Sub(startingTime)
 	fmt.Printf("Running multiplication for last two large number Takes [%.3f] Seconds \n",
