@@ -137,7 +137,7 @@ func SetProductRecursive2(inputSet []*big.Int) *big.Int {
 		}
 		return &ret
 	}
-	ret.Mul(SetProductRecursive(inputSet[0:length/2]), SetProductRecursive(inputSet[length/2:]))
+	ret.Mul(SetProductRecursive2(inputSet[0:length/2]), SetProductRecursive2(inputSet[length/2:]))
 	return &ret
 }
 
