@@ -8,8 +8,8 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
-// TestFirstLayerPersentage tests the first layer of divide-and-conquer
-func TestFirstLayerPersentage() {
+// TestFirstLayerPercentage tests the first layer of divide-and-conquer
+func TestFirstLayerPercentage() {
 	setSize := 100000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
