@@ -5,7 +5,7 @@ import (
 	"math/big"
 )
 
-const tableSize = 16
+const tableSize = 4
 
 var big1 = big.NewInt(1)
 
@@ -37,13 +37,15 @@ func NewTable(base, n, elementUpperBound *big.Int, numElements uint64) *Table {
 	opt := new(big.Int)
 	for i := uint(0); i < tableSize; i++ {
 		opt.Lsh(big1, t.stepSize*i)
+		fmt.Println("opt = ", opt)
 		t.table[i] = new(big.Int).Exp(base, opt, n)
-		//fmt.Println("table[", i, "] = ", t.table[i])
+		fmt.Println("table[", i, "] = ", t.table[i])
 	}
 	return t
 }
 
 func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
+	fmt.Println("x = ", x)
 	xBitLen := x.BitLen()
 	steps := xBitLen / int(t.stepSize)
 	batchStep := steps / numRoutine
@@ -51,36 +53,40 @@ func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
 		batchStep = 1
 	}
 	batchSize := batchStep * int(t.stepSize)
-	resChan := make(chan *big.Int)
+	resChan := make(chan *big.Int, numRoutine)
 	for i := 0; i < numRoutine; i++ {
-		go routineCompute(t.table[batchStep*i], x, t.n, i*batchSize, batchSize, resChan)
+		startBitLen := i * batchSize
+		var endBitLen int
+		if i == numRoutine-1 {
+			endBitLen = xBitLen
+		} else {
+			endBitLen = startBitLen + batchSize
+		}
+		routineCompute(t.table[batchStep*i], x, t.n, startBitLen, endBitLen, resChan)
 	}
 	res := big.NewInt(1)
 	for i := 0; i < numRoutine; i++ {
 		tmp := <-resChan
 		fmt.Println("tmp = ", tmp)
 		res.Mul(res, tmp)
-		res.Mod(res, t.n)
+		//res.Mod(res, t.n)
 	}
+	res.Mod(res, t.n)
 	return res
 }
 
-func routineCompute(base, x, n *big.Int, startBitLen, batchSize int, resChan chan *big.Int) {
+func routineCompute(base, x, n *big.Int, startBitLen, endBitLen int, resChan chan *big.Int) {
 	pow := big.NewInt(0)
-	endBitLen := startBitLen + batchSize
-	if endBitLen > x.BitLen() {
-		endBitLen = x.BitLen()
-	}
 	for i := startBitLen; i < endBitLen; i++ {
+		pow.Lsh(pow, 1)
 		if x.Bit(i) == 1 {
 			pow.Add(pow, big1)
 		}
-		pow.Lsh(pow, 1)
+		fmt.Print(x.Bit(i))
 	}
+	fmt.Println()
 	fmt.Println("pow = ", pow)
 	fmt.Println(pow.BitLen())
 	fmt.Println("base = ", base)
-	res := new(big.Int).Exp(base, pow, n)
-	fmt.Println("res = ", res)
-	resChan <- res
+	resChan <- new(big.Int).Exp(base, pow, n)
 }
