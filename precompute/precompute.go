@@ -5,7 +5,7 @@ import (
 	"math/big"
 )
 
-const tableSize = 4
+const tableSize = 256
 
 var big1 = big.NewInt(1)
 
@@ -34,18 +34,17 @@ func NewTable(base, n, elementUpperBound *big.Int, numElements uint64) *Table {
 
 	t.maxBitLen = prodMax.BitLen()
 	t.stepSize = uint(t.maxBitLen / tableSize)
-	opt := new(big.Int)
-	for i := uint(0); i < tableSize; i++ {
-		opt.Lsh(big1, t.stepSize*i)
-		fmt.Println("opt = ", opt)
-		t.table[i] = new(big.Int).Exp(base, opt, n)
+	opt := new(big.Int).Lsh(big1, t.stepSize)
+	t.table[0] = new(big.Int).Set(base)
+	fmt.Println("table[ 0 ] = ", t.table[0])
+	for i := uint(1); i < tableSize; i++ {
+		t.table[i] = new(big.Int).Exp(t.table[i-1], opt, n)
 		fmt.Println("table[", i, "] = ", t.table[i])
 	}
 	return t
 }
 
 func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
-	fmt.Println("x = ", x)
 	xBitLen := x.BitLen()
 	steps := xBitLen / int(t.stepSize)
 	batchStep := steps / numRoutine
@@ -62,31 +61,24 @@ func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
 		} else {
 			endBitLen = startBitLen + batchSize
 		}
-		routineCompute(t.table[batchStep*i], x, t.n, startBitLen, endBitLen, resChan)
+		go routineCompute(t.table[batchStep*i], x, t.n, startBitLen, endBitLen, resChan)
 	}
 	res := big.NewInt(1)
 	for i := 0; i < numRoutine; i++ {
 		tmp := <-resChan
-		fmt.Println("tmp = ", tmp)
 		res.Mul(res, tmp)
-		//res.Mod(res, t.n)
+		res.Mod(res, t.n)
 	}
-	res.Mod(res, t.n)
 	return res
 }
 
 func routineCompute(base, x, n *big.Int, startBitLen, endBitLen int, resChan chan *big.Int) {
 	pow := big.NewInt(0)
-	for i := startBitLen; i < endBitLen; i++ {
+	for i := endBitLen - 1; i >= startBitLen; i-- {
 		pow.Lsh(pow, 1)
 		if x.Bit(i) == 1 {
 			pow.Add(pow, big1)
 		}
-		fmt.Print(x.Bit(i))
 	}
-	fmt.Println()
-	fmt.Println("pow = ", pow)
-	fmt.Println(pow.BitLen())
-	fmt.Println("base = ", base)
 	resChan <- new(big.Int).Exp(base, pow, n)
 }

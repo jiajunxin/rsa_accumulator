@@ -1,8 +1,6 @@
 package precompute
 
 import (
-	crand "crypto/rand"
-	"fmt"
 	"math/big"
 	"reflect"
 	"sync"
@@ -11,33 +9,24 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
-const testSize = 4
+const testSize = 128
 
 var (
-	accSetup     *accumulator.Setup
-	set          []string
-	reps         []*big.Int
-	repProd      *big.Int
-	acc          *big.Int
-	randReps     []*big.Int
-	randAcc      *big.Int
-	onceSetup    sync.Once
-	onceSet      sync.Once
-	onceReps     sync.Once
-	onceRepProd  sync.Once
-	onceAcc      sync.Once
-	onceRandReps sync.Once
-	onceRandAcc  sync.Once
-	randLmt      = new(big.Int).Lsh(big.NewInt(1), 8)
+	accSetup    *accumulator.Setup
+	set         []string
+	reps        []*big.Int
+	repProd     *big.Int
+	acc         *big.Int
+	onceSetup   sync.Once
+	onceSet     sync.Once
+	onceReps    sync.Once
+	onceRepProd sync.Once
+	onceAcc     sync.Once
 )
 
 func getSetup() *accumulator.Setup {
 	onceSetup.Do(func() {
-		//accSetup = accumulator.TrustedSetup()
-		accSetup = &accumulator.Setup{
-			G: big.NewInt(11),
-			N: big.NewInt(23),
-		}
+		accSetup = accumulator.TrustedSetup()
 	})
 	return accSetup
 }
@@ -75,68 +64,36 @@ func getAcc() *big.Int {
 	return acc
 }
 
-func getRandomRepresentations() []*big.Int {
-	onceRandReps.Do(func() {
-		randReps = make([]*big.Int, testSize)
-		var err error
-		for i := 0; i < testSize; i++ {
-			randReps[i], err = crand.Int(crand.Reader, randLmt)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(randReps[i])
-		}
-	})
-	return randReps
-}
-
-func getRandomAcc() *big.Int {
-	onceRandAcc.Do(func() {
-		randAcc = new(big.Int).Set(getSetup().G)
-		for _, v := range getRandomRepresentations() {
-			fmt.Println(v)
-			randAcc.Exp(randAcc, v, getSetup().N)
-		}
-	})
-	return randAcc
-}
-
-func getRandRepProd() *big.Int {
-	randRepProd := big.NewInt(1)
-	for _, v := range getRandomRepresentations() {
-		randRepProd.Mul(randRepProd, v)
-	}
-	return randRepProd
-}
-
 func TestTable_Compute(t1 *testing.T) {
 	type args struct {
 		x          *big.Int
 		numRoutine int
 	}
 	tests := []struct {
-		name  string
-		setup func() *Table
-		args  args
-		want  *big.Int
+		name       string
+		setupTable func() *Table
+		args       args
+		want       *big.Int
 	}{
 		{
 			name: "TestTable_Compute",
-			setup: func() *Table {
+			setupTable: func() *Table {
 				setup := getSetup()
-				t := NewTable(setup.G, setup.N, randLmt, testSize)
+				elemUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
+				elemUpperBound.Sub(elemUpperBound, big.NewInt(1))
+				t := NewTable(setup.G, setup.N, elemUpperBound, testSize)
 				return t
 			},
 			args: args{
-				x:          getRandRepProd(),
+				x:          getRepProd(),
 				numRoutine: 4,
 			},
-			want: getRandomAcc(),
+			want: getAcc(),
 		},
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := tt.setup()
+			t := tt.setupTable()
 			if got := t.Compute(tt.args.x, tt.args.numRoutine); !reflect.DeepEqual(got, tt.want) {
 				t1.Errorf("Compute() = %v, want %v", got, tt.want)
 			}
