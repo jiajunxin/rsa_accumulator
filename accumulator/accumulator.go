@@ -65,6 +65,9 @@ func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	if len(set) <= 2 {
 		return handleSmallSet(base, N, set)
 	}
+	// if len(set) <= 1024 {
+	// 	return set
+	// }
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftBase := *accumulateNew(base, N, set[len(set)/2:])
 	rightBase := *accumulateNew(base, N, set[0:len(set)/2])

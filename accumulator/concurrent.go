@@ -84,6 +84,13 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan
 		return
 	}
 
+	// if len(set) <= 1024 {
+	// 	c <- set[:]
+	// 	//c <- handleSmallSet(base, N, set)
+	// 	close(c)
+	// 	return
+	// }
+
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftBase, rightBase := calBaseParallel(base, N, set)
 	c1 := make(chan []*big.Int)

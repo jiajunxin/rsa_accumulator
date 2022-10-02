@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
-	"github.com/jiajunxin/rsa_accumulator/experiments"
 )
 
 func testFirstLayerPersentage() {
@@ -14,7 +13,7 @@ func testFirstLayerPersentage() {
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	startingTime := time.Now().UTC()
-	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 2)
+	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 1)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
@@ -22,10 +21,10 @@ func testFirstLayerPersentage() {
 }
 
 func main() {
-	//testFirstLayerPersentage()
+	testFirstLayerPersentage()
 
 	//experiments.TestProduct2()
-	experiments.TestRange()
+	//experiments.TestRange()
 	// bitLen := flag.Int("bit", 1792, "bit length of the modulus")
 	// tries := flag.Int("try", 1000, "number of tries")
 	// flag.Parse()
