@@ -6,11 +6,13 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/jiajunxin/rsa_accumulator/precompute"
+
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
 // AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
-func AccAndProveParallel(set []string, encodeType accumulator.EncodeType, setup *accumulator.Setup) (*big.Int, []*big.Int) {
+func AccAndProveParallel(table *precompute.Table, set []string, encodeType accumulator.EncodeType, setup *accumulator.Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
 	rep := accumulator.GenRepresentatives(set, encodeType)
 	endingTime := time.Now().UTC()
@@ -18,7 +20,7 @@ func AccAndProveParallel(set []string, encodeType accumulator.EncodeType, setup 
 	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	numWorkers, _ := calNumWorkers()
-	proofs := ProveMembershipParallel(setup.G, setup.N, rep, numWorkers)
+	proofs := ProveMembershipParallel(table, setup.G, setup.N, rep, numWorkers, numWorkers)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
 	acc := AccumulateNew(proofs[0], rep[0], setup.N)
 
@@ -27,7 +29,7 @@ func AccAndProveParallel(set []string, encodeType accumulator.EncodeType, setup 
 
 // ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 // It uses at most O(2^limit) Goroutines
-func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big.Int {
+func ProveMembershipParallel(table *precompute.Table, base, N *big.Int, set []*big.Int, limit, numRoutine int) []*big.Int {
 	if limit == 0 {
 		return ProveMembership(base, N, set)
 	}
@@ -39,11 +41,11 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	startingTime := time.Now().UTC()
-	leftBase, rightBase := calBaseParallel(base, N, set)
+	//leftBase, rightBase := calBaseParallel(base, N, set)
+	leftBase, rightBase := calFirstLayerWithPrecompute(table, base, N, set, numRoutine)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
-		duration.Seconds())
+	fmt.Printf("Running ProveMembershipParallel for the first layer with %d cores Takes [%.3f] Seconds \n", numRoutine, duration.Seconds())
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
 	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
@@ -53,6 +55,17 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 
 	proofs1 = append(proofs1, proofs2...)
 	return proofs1
+}
+
+func calFirstLayerWithPrecompute(table *precompute.Table, base, N *big.Int, set []*big.Int, numRoutine int) (*big.Int, *big.Int) {
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	//c1 := make(chan *big.Int)
+	//c2 := make(chan *big.Int)
+	//leftBase, rightBase := <-c1, <-c2
+	fmt.Println("numRoutine", numRoutine)
+	leftBase := table.Compute(accumulator.SetProductRecursive(set[0:len(set)/2]), numRoutine)
+	rightBase := table.Compute(accumulator.SetProductRecursive(set[len(set)/2:]), numRoutine)
+	return leftBase, rightBase
 }
 
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))

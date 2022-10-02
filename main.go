@@ -2,26 +2,44 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"time"
+
+	"github.com/jiajunxin/rsa_accumulator/experiments"
+	"github.com/jiajunxin/rsa_accumulator/precompute"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
-func testFirstLayerPersentage() {
+func testFirstLayerPercentage() {
 	setSize := 100000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
+	fmt.Println("set size:", setSize)
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
-	startingTime := time.Now().UTC()
-	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 1)
-	endingTime := time.Now().UTC()
-	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
-		duration.Seconds())
+	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
+	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
+	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize/2))
+	tests := [][2]int{
+		{5, 32},
+		{4, 16},
+		{3, 8},
+		{2, 4},
+		{1, 2},
+	}
+	for _, test := range tests {
+		fmt.Println("test:", test)
+		startingTime := time.Now().UTC()
+		experiments.ProveMembershipParallel(table, setup.G, setup.N, rep, test[0], test[1])
+		endingTime := time.Now().UTC()
+		var duration = endingTime.Sub(startingTime)
+		fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
+			duration.Seconds())
+	}
 }
 
 func main() {
-	testFirstLayerPersentage()
+	testFirstLayerPercentage()
 
 	//experiments.TestProduct2()
 	//experiments.TestRange()
@@ -85,11 +103,11 @@ func main() {
 	//}
 }
 
-// func handleError(err error) {
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// }
+func handleError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 // func randGen(randLmt *big.Int) *big.Int {
 // 	x, err := rand.Int(rand.Reader, randLmt)
