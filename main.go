@@ -12,7 +12,7 @@ import (
 )
 
 func testFirstLayerPercentage() {
-	setSize := 100000
+	setSize := 1000000 // 1 million
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	fmt.Println("set size:", setSize)
@@ -22,8 +22,8 @@ func testFirstLayerPercentage() {
 	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize/2))
 	tests := [][2]int{
 		{4, 16},
-		{3, 8},
-		{2, 4},
+		//{3, 8},
+		//{2, 4},
 	}
 	for _, test := range tests {
 		fmt.Println("test:", test)
