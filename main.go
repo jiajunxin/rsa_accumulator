@@ -21,11 +21,9 @@ func testFirstLayerPercentage() {
 	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
 	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize/2))
 	tests := [][2]int{
-		{5, 32},
 		{4, 16},
 		{3, 8},
 		{2, 4},
-		{1, 2},
 	}
 	for _, test := range tests {
 		fmt.Println("test:", test)
