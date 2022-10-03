@@ -26,8 +26,12 @@ func testFirstLayerPercentage() {
 		duration.Seconds())
 
 	tests := [][2]int{
-		{5, 32},
 		{4, 16},
+<<<<<<< HEAD
+=======
+		//{3, 8},
+		//{2, 4},
+>>>>>>> a4c1e5ed0f1bdec934fca022230a239531e93a8b
 	}
 	startingTime = time.Now().UTC()
 	prod := accumulator.SetProductParallel(rep, 4)

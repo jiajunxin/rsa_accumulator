@@ -40,12 +40,9 @@ func ProveMembershipParallel(table *precompute.Table, base, N *big.Int, set []*b
 	}
 
 	// the left part of proof need to accumulate the right part of the set, vice versa.
-	startingTime := time.Now().UTC()
+
 	//leftBase, rightBase := calBaseParallel(base, N, set)
 	leftBase, rightBase := calFirstLayerWithPrecompute(table, base, N, set, limit, numRoutine)
-	endingTime := time.Now().UTC()
-	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallel for the first layer with %d cores Takes [%.3f] Seconds \n", numRoutine, duration.Seconds())
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
 	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
@@ -62,9 +59,21 @@ func calFirstLayerWithPrecompute(table *precompute.Table, base, N *big.Int, set 
 	//c1 := make(chan *big.Int)
 	//c2 := make(chan *big.Int)
 	//leftBase, rightBase := <-c1, <-c2
+	startingTime := time.Now().UTC()
+	leftHalfSetProd := accumulator.SetProductParallel(set[0:len(set)/2], limit)
+	rightHalfSetProd := accumulator.SetProductParallel(set[len(set)/2:], limit)
+	endingTime := time.Now().UTC()
+	duration := endingTime.Sub(startingTime)
+	fmt.Printf("Calculate set products for the first layer with %d cores Takes [%.3f] Seconds \n", numRoutine, duration.Seconds())
+
 	fmt.Println("numRoutine", numRoutine)
-	leftBase := table.Compute(accumulator.SetProductParallel(set[0:len(set)/2], limit), numRoutine)
-	rightBase := table.Compute(accumulator.SetProductParallel(set[len(set)/2:], limit), numRoutine)
+	startingTime = time.Now().UTC()
+	leftBase := table.Compute(leftHalfSetProd, numRoutine)
+	rightBase := table.Compute(rightHalfSetProd, numRoutine)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Calculate left and right bases for the first layer with %d cores Takes [%.3f] Seconds \n", numRoutine, duration.Seconds())
+
 	return leftBase, rightBase
 }
 

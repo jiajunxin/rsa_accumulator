@@ -4,7 +4,7 @@ import (
 	"math/big"
 )
 
-const tableSize = 512
+const tableSize = 2048
 
 var big1 = big.NewInt(1)
 
