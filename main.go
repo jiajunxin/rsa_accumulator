@@ -19,7 +19,7 @@ func testFirstLayerPercentage() {
 	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
 	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
 	startingTime := time.Now().UTC()
-	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize/2))
+	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize))
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running precompute.NewTable Takes [%.3f] Seconds \n",
@@ -43,8 +43,7 @@ func testFirstLayerPercentage() {
 		table.Compute(prod, test[1])
 		endingTime = time.Now().UTC()
 		duration = endingTime.Sub(startingTime)
-		fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
-			duration.Seconds())
+		fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n", duration.Seconds())
 	}
 }
 
