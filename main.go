@@ -12,7 +12,7 @@ import (
 )
 
 func testFirstLayerPercentage() {
-	setSize := 1000
+	setSize := 100000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	fmt.Println("set size:", setSize)
