@@ -5,34 +5,43 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/jiajunxin/rsa_accumulator/experiments"
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
 func testFirstLayerPercentage() {
-	setSize := 1000
+	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	fmt.Println("set size:", setSize)
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
 	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
+	startingTime := time.Now().UTC()
 	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize/2))
+	endingTime := time.Now().UTC()
+	var duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running precompute.NewTable Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
 	tests := [][2]int{
 		{5, 32},
 		{4, 16},
-		{3, 8},
-		{2, 4},
-		{1, 2},
 	}
+	startingTime = time.Now().UTC()
+	prod := accumulator.SetProductParallel(rep, 4)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductParallel Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
 	for _, test := range tests {
 		fmt.Println("test:", test)
-		startingTime := time.Now().UTC()
-		experiments.ProveMembershipParallel(table, setup.G, setup.N, rep, test[0], test[1])
-		endingTime := time.Now().UTC()
-		var duration = endingTime.Sub(startingTime)
+		startingTime = time.Now().UTC()
+		table.Compute(prod, test[1])
+		endingTime = time.Now().UTC()
+		duration = endingTime.Sub(startingTime)
 		fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
 			duration.Seconds())
 	}
@@ -40,7 +49,7 @@ func testFirstLayerPercentage() {
 
 func main() {
 	testFirstLayerPercentage()
-
+	//experiments.TestMembership()
 	//experiments.TestProduct3()
 	//experiments.TestRange()
 	// bitLen := flag.Int("bit", 1792, "bit length of the modulus")

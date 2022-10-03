@@ -10,7 +10,7 @@ import (
 
 // TestFirstLayerPercentage tests the first layer of divide-and-conquer
 func TestFirstLayerPercentage() {
-	setSize := 100000
+	setSize := 10000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
@@ -19,6 +19,27 @@ func TestFirstLayerPercentage() {
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
+		duration.Seconds())
+}
+
+func TestMembership() {
+	setSize := 1000000
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	startingTime := time.Now().UTC()
+	prod := accumulator.SetProductRecursiveFast(rep)
+	endingTime := time.Now().UTC()
+	var duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductRecursiveFast Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	accumulator.AccumulateNew(setup.G, prod, setup.N)
+	//accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 2)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running AccumulateNew Takes [%.3f] Seconds \n",
 		duration.Seconds())
 }
 
