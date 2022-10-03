@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+
+	"github.com/remyoudompheng/bigfft"
 )
 
 const (
@@ -125,19 +127,43 @@ func SetProductRecursive(inputSet []*big.Int) *big.Int {
 	return &ret
 }
 
+// SetProduct calculates the products of the input divide-and-conquer recursively
+func SetProductRecursiveFast(inputSet []*big.Int) *big.Int {
+	length := len(inputSet)
+	var ret *big.Int
+	if length <= 2 {
+		ret = new(big.Int)
+		ret.Set(big1)
+		// ret is set to 1
+		for i := 0; i < length; i++ {
+			ret = bigfft.Mul(ret, inputSet[i])
+		}
+		return ret
+	}
+	var prod1, prod2 big.Int
+	prod1 = *SetProductRecursiveFast(inputSet[0 : length/2])
+	prod2 = *SetProductRecursiveFast(inputSet[length/2:])
+	// startingTime := time.Now().UTC()
+	ret = bigfft.Mul(&prod1, &prod2)
+	//ret.Mul(&prod1, &prod2)
+	// endingTime := time.Now().UTC()
+	// duration := endingTime.Sub(startingTime)
+	// fmt.Printf("Running multiplication for last two large number Takes [%.3f] Seconds \n",
+	// 	duration.Seconds())
+	return ret
+}
+
 // SetProductParallel uses divide-and-conquer method to calculate the product of the input
 // It uses at most O(2^limit) Goroutines
 func SetProductParallel(inputSet []*big.Int, limit int) *big.Int {
 	if limit == 0 {
-		return SetProductRecursive(inputSet)
+		return SetProductRecursiveFast(inputSet)
 	}
 	limit--
 	length := len(inputSet)
 	if length <= 2 {
-		return SetProductRecursive(inputSet)
+		return SetProductRecursiveFast(inputSet)
 	}
-
-	var ret big.Int
 
 	c1 := make(chan *big.Int)
 	c2 := make(chan *big.Int)
@@ -146,26 +172,24 @@ func SetProductParallel(inputSet []*big.Int, limit int) *big.Int {
 	prod1 := <-c1
 	prod2 := <-c2
 
-	ret.Mul(prod1, prod2)
-	return &ret
+	ret := bigfft.Mul(prod1, prod2)
+	return ret
 }
 
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func setProductParallelWithChan(inputSet []*big.Int, limit int, c chan *big.Int) {
 	if limit == 0 {
-		c <- SetProductRecursive(inputSet)
+		c <- SetProductRecursiveFast(inputSet)
 		close(c)
 		return
 	}
 	limit--
 	length := len(inputSet)
 	if len(inputSet) <= 2 {
-		c <- SetProductRecursive(inputSet)
+		c <- SetProductRecursiveFast(inputSet)
 		close(c)
 		return
 	}
-
-	var ret big.Int
 
 	c1 := make(chan *big.Int)
 	c2 := make(chan *big.Int)
@@ -174,8 +198,8 @@ func setProductParallelWithChan(inputSet []*big.Int, limit int, c chan *big.Int)
 	prod1 := <-c1
 	prod2 := <-c2
 
-	ret.Mul(prod1, prod2)
-	c <- &ret
+	ret := bigfft.Mul(prod1, prod2)
+	c <- ret
 	close(c)
 }
 

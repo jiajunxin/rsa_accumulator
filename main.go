@@ -41,7 +41,7 @@ func testFirstLayerPercentage() {
 func main() {
 	testFirstLayerPercentage()
 
-	//experiments.TestProduct2()
+	//experiments.TestProduct3()
 	//experiments.TestRange()
 	// bitLen := flag.Int("bit", 1792, "bit length of the modulus")
 	// tries := flag.Int("try", 1000, "number of tries")

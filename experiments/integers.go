@@ -70,6 +70,28 @@ func TestProduct2() {
 	fmt.Println("product length is", prod.BitLen())
 }
 
+// TestProduct test different ways to
+func TestProduct3() {
+	setSize := 10000
+	set := accumulator.GenBenchSet(setSize)
+	var prod big.Int
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	startingTime := time.Now().UTC()
+	prod = *accumulator.SetProductRecursiveFast(rep)
+	endingTime := time.Now().UTC()
+	duration := endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductRecursiveFast Takes [%.3f] Seconds \n",
+		duration.Seconds())
+	fmt.Println("product length is", prod.BitLen())
+	startingTime = time.Now().UTC()
+	prod = *accumulator.SetProductRecursive(rep)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductRecursive Takes [%.3f] Seconds \n",
+		duration.Seconds())
+	fmt.Println("product length is", prod.BitLen())
+}
+
 func genDIMin(size int) []*big.Int {
 	ret := make([]*big.Int, size)
 	for i := 0; i < size; i++ {
