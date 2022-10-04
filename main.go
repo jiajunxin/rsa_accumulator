@@ -8,7 +8,6 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
-	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
 func testFirstLayerPercentage() {
@@ -20,17 +19,17 @@ func testFirstLayerPercentage() {
 	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
 	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
 	startingTime := time.Now().UTC()
-	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize))
+	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize), 125000)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running precompute.NewTable Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
-	tests := [][2]int{
-		{4, 16},
-		//{3, 8},
-		//{2, 4},
-	}
+	//tests := [][2]int{
+	//	{4, 16},
+	//	//{3, 8},
+	//	//{2, 4},
+	//}
 	startingTime = time.Now().UTC()
 	prod := accumulator.SetProductParallel(rep, 4)
 	endingTime = time.Now().UTC()
@@ -38,14 +37,14 @@ func testFirstLayerPercentage() {
 	fmt.Printf("Running SetProductParallel Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
-	for _, test := range tests {
-		fmt.Println("test:", test)
-		startingTime = time.Now().UTC()
-		table.Compute(prod, test[1])
-		endingTime = time.Now().UTC()
-		duration = endingTime.Sub(startingTime)
-		fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n", duration.Seconds())
-	}
+	//for _, test := range tests {
+	//fmt.Println("test:", test)
+	startingTime = time.Now().UTC()
+	table.Compute(prod, 16)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n", duration.Seconds())
+	//}
 }
 
 func testPreCompute() {
@@ -87,8 +86,9 @@ func testPreCompute() {
 }
 
 func main() {
+	testFirstLayerPercentage()
 
-	testPreCompute()
+	//testPreCompute()
 
 	//experiments.TestProduct2()
 
