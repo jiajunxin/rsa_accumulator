@@ -7,9 +7,7 @@ import (
 
 const byteChunkSize = 125000
 
-
 // Table is the precomputing table
-
 type Table struct {
 	g             *big.Int
 	n             *big.Int
@@ -84,14 +82,16 @@ type input struct {
 	tableIdx int
 }
 
-func (t *Table) routineCompute(ctx context.Context, n *big.Int, xBytes []byte, inputChan chan input, resChan chan *big.Int) {
+func (t *Table) routineCompute(ctx context.Context, n *big.Int, xBytes []byte,
+	inputChan chan input, resChan chan *big.Int) {
+	opt := new(big.Int)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case in := <-inputChan:
-			res := new(big.Int).SetBytes(xBytes[in.left:in.right])
-			res.Exp(t.table[in.tableIdx], res, n)
+			opt.SetBytes(xBytes[in.left:in.right])
+			res := new(big.Int).Exp(t.table[in.tableIdx], opt, n)
 			resChan <- res
 		default:
 			continue
