@@ -8,6 +8,7 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
 func testFirstLayerPercentage() {
@@ -47,10 +48,50 @@ func testFirstLayerPercentage() {
 	}
 }
 
+func testPreCompute() {
+	setSize := 1000
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	startingTime := time.Now().UTC()
+	prod := accumulator.SetProductRecursive(rep)
+	endingTime := time.Now().UTC()
+	var duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductRecursive Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running AccumulateNew Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	table := precompute.GenPreTable(setup.G, setup.N, 10000, 100)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running GenPreTable Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	result := precompute.ComputeFromTable(table, prod, setup.N)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running ComputeFromTable Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	if result.Cmp(originalResult) != 0 {
+		fmt.Println("wrong result")
+	}
+}
+
 func main() {
-	testFirstLayerPercentage()
-	//experiments.TestMembership()
-	//experiments.TestProduct3()
+
+	testPreCompute()
+
+	//experiments.TestProduct2()
+
 	//experiments.TestRange()
 	// bitLen := flag.Int("bit", 1792, "bit length of the modulus")
 	// tries := flag.Int("try", 1000, "number of tries")

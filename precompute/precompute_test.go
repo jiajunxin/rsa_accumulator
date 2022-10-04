@@ -131,14 +131,14 @@ func BenchmarkPrecompute(b *testing.B) {
 		t.Compute(repProd, 4)
 
 func TestComputeFromTable(t1 *testing.T) {
-	setSize := 100
+	setSize := 1000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	prod := accumulator.SetProductRecursive(rep)
 	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
 
-	table := GenPreTable(setup.G, setup.N, 100, 10)
+	table := GenPreTable(setup.G, setup.N, 10000, 100)
 	result := ComputeFromTable(table, prod, setup.N)
 	if result.Cmp(originalResult) != 0 {
 		t1.Errorf("wrong result")

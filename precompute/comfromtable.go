@@ -22,6 +22,9 @@ type PreTable struct {
 }
 
 func GenPreTable(base, N *big.Int, bitLen, tableSize int) *PreTable {
+	if bitLen <= tableSize {
+		panic("invalid table size, larger than intput bitLen")
+	}
 	var table PreTable
 	table.base = make([]*big.Int, tableSize)
 	table.n = make([]int, tableSize)
@@ -32,12 +35,12 @@ func GenPreTable(base, N *big.Int, bitLen, tableSize int) *PreTable {
 	table.base[0].Set(base)
 	table.n[0] = 0
 
+	var step big.Int
+	step.Exp(big2, big.NewInt(int64(stepSize)), nil)
 	for i := 1; i < tableSize; i++ {
 		table.n[i] = table.n[i-1] + stepSize
-		var power big.Int
-		// need to optimize
-		power.Exp(big2, big.NewInt(int64(table.n[i])), nil)
-		table.base[i] = accumulator.AccumulateNew(base, &power, N)
+		table.base[i] = accumulator.AccumulateNew(table.base[i-1],
+			&step, N)
 	}
 
 	return &table
