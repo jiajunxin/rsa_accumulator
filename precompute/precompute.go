@@ -1,79 +1,100 @@
 package precompute
 
 import (
+	"context"
 	"math/big"
 )
 
-const tableSize = 2048
+const byteChunkSize = 125000
 
 
 // Table is the precomputing table
 
 type Table struct {
-	base        *big.Int
-	n           *big.Int
-	maxBitLen   int
-	numElements uint64
-	stepSize    uint
-	table       []*big.Int
+	g             *big.Int
+	n             *big.Int
+	byteChunkSize int
+	table         []*big.Int
 }
 
 // NewTable creates a new precomputing table
-func NewTable(base, n, elementUpperBound *big.Int, numElements uint64) *Table {
+func NewTable(g, n, elementUpperBound *big.Int, numElements uint64, byteChunkSize int) *Table {
 	t := &Table{
-		base:        base,
-		n:           n,
-		numElements: numElements,
+		g:             g,
+		n:             n,
+		byteChunkSize: byteChunkSize,
 	}
-	t.table = make([]*big.Int, tableSize)
-	t.maxBitLen = elementUpperBound.BitLen() * int(numElements)
-	t.stepSize = uint(t.maxBitLen / tableSize)
-	opt := new(big.Int).Lsh(big1, t.stepSize)
-	t.table[0] = new(big.Int).Set(base)
-	//fmt.Println("table[ 0 ] = ", t.table[0])
-	for i := uint(1); i < tableSize; i++ {
+	maxBitLen := elementUpperBound.BitLen() * int(numElements)
+	numByteChunks := maxBitLen / (t.byteChunkSize * 8)
+	t.table = make([]*big.Int, numByteChunks)
+	t.table[0] = new(big.Int).Set(g)
+	opt := new(big.Int).Lsh(big1, uint(t.byteChunkSize*8))
+	for i := 1; i < numByteChunks; i++ {
 		t.table[i] = new(big.Int).Exp(t.table[i-1], opt, n)
-		//fmt.Println("table[", i, "] = ", t.table[i])
 	}
 	return t
 }
 
 // Compute computes the result of base^x mod n with specified number of goroutines
 func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
-	xBitLen := x.BitLen()
-	steps := xBitLen / int(t.stepSize)
-	batchStep := steps / numRoutine
-	if batchStep == 0 {
-		batchStep = 1
-	}
-	batchSize := batchStep * int(t.stepSize)
-	resChan := make(chan *big.Int, numRoutine)
+	xBytes := x.Bytes()
+	inputChan := make(chan input, numRoutine<<2)
+	outputChan := make(chan *big.Int, numRoutine)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for i := 0; i < numRoutine; i++ {
-		startBitLen := i * batchSize
-		var endBitLen int
-		if i == numRoutine-1 {
-			endBitLen = xBitLen
-		} else {
-			endBitLen = startBitLen + batchSize
+		go t.routineCompute(ctx, t.n, xBytes, inputChan, outputChan)
+	}
+	resChan := make(chan *big.Int)
+	go func() {
+		res := big.NewInt(1)
+		counter := len(xBytes) / t.byteChunkSize
+		if len(xBytes)%t.byteChunkSize != 0 {
+			counter++
 		}
-		go routineCompute(t.table[batchStep*i], x, t.n, startBitLen, endBitLen, resChan)
+		for out := range outputChan {
+			res.Mul(res, out)
+			res.Mod(res, t.n)
+			counter--
+			if counter == 0 {
+				resChan <- res
+				return
+			}
+		}
+	}()
+	for i := len(xBytes); i > 0; i -= t.byteChunkSize {
+		right := i
+		left := right - t.byteChunkSize
+		if left < 0 {
+			left = 0
+		}
+		idx := (len(xBytes) - i) / t.byteChunkSize
+		inputChan <- input{
+			left:     left,
+			right:    right,
+			tableIdx: idx,
+		}
 	}
-	res := big.NewInt(1)
-	for i := 0; i < numRoutine; i++ {
-		tmp := <-resChan
-		res.Mul(res, tmp)
-		res.Mod(res, t.n)
-	}
-	return res
+	return <-resChan
 }
 
-func routineCompute(base, x, n *big.Int, startBitLen, endBitLen int, resChan chan *big.Int) {
-	pow := big.NewInt(0)
-	for i := endBitLen - 1; i >= startBitLen; i-- {
-		pow.Lsh(pow, 1)
-		if x.Bit(i) == 1 {
-			pow.Add(pow, big1)
+type input struct {
+	left     int
+	right    int
+	tableIdx int
+}
+
+func (t *Table) routineCompute(ctx context.Context, n *big.Int, xBytes []byte, inputChan chan input, resChan chan *big.Int) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case in := <-inputChan:
+			res := new(big.Int).SetBytes(xBytes[in.left:in.right])
+			res.Exp(t.table[in.tableIdx], res, n)
+			resChan <- res
+		default:
+			continue
 		}
 	}
-	resChan <- new(big.Int).Exp(base, pow, n)
 }
