@@ -6,9 +6,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/jiajunxin/rsa_accumulator/precompute"
-
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
 // AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
@@ -42,7 +41,7 @@ func ProveMembershipParallel(table *precompute.Table, base, N *big.Int, set []*b
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 
 	//leftBase, rightBase := calBaseParallel(base, N, set)
-	leftBase, rightBase := calFirstLayerWithPrecompute(table, base, N, set, limit, numRoutine)
+	leftBase, rightBase := calFirstLayerWithPrecompute(table, set, limit, numRoutine)
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
 	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
@@ -54,24 +53,17 @@ func ProveMembershipParallel(table *precompute.Table, base, N *big.Int, set []*b
 	return proofs1
 }
 
-func calFirstLayerWithPrecompute(table *precompute.Table, base, N *big.Int, set []*big.Int, limit, numRoutine int) (*big.Int, *big.Int) {
-	// the left part of proof need to accumulate the right part of the set, vice versa.
-	//c1 := make(chan *big.Int)
-	//c2 := make(chan *big.Int)
-	//leftBase, rightBase := <-c1, <-c2
+func calFirstLayerWithPrecompute(t *precompute.Table, set []*big.Int, limit, numRoutine int) (*big.Int, *big.Int) {
 	startingTime := time.Now().UTC()
 	leftHalfSetProd := accumulator.SetProductParallel(set[0:len(set)/2], limit)
 	rightHalfSetProd := accumulator.SetProductParallel(set[len(set)/2:], limit)
-	endingTime := time.Now().UTC()
-	duration := endingTime.Sub(startingTime)
+	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Calculate set products for the first layer with %d cores Takes [%.3f] Seconds \n", numRoutine, duration.Seconds())
 
-	fmt.Println("numRoutine", numRoutine)
 	startingTime = time.Now().UTC()
-	leftBase := table.Compute(leftHalfSetProd, numRoutine)
-	rightBase := table.Compute(rightHalfSetProd, numRoutine)
-	endingTime = time.Now().UTC()
-	duration = endingTime.Sub(startingTime)
+	leftBase := t.Compute(leftHalfSetProd, numRoutine)
+	rightBase := t.Compute(rightHalfSetProd, numRoutine)
+	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Calculate left and right bases for the first layer with %d cores Takes [%.3f] Seconds \n", numRoutine, duration.Seconds())
 
 	return leftBase, rightBase
