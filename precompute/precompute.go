@@ -7,8 +7,6 @@ import (
 
 const tableSize = 256
 
-var big1 = big.NewInt(1)
-
 type Table struct {
 	base        *big.Int
 	n           *big.Int
