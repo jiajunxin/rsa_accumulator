@@ -1,8 +1,8 @@
 package precompute
 
 import (
-	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
@@ -64,8 +64,8 @@ func ComputeFromTable(table *PreTable, x, N *big.Int) *big.Int {
 	var iCounter int
 	var xCopy big.Int
 	xCopy.Set(x)
-	fmt.Println("len(table.n) = ", len(table.n))
-	fmt.Println("len(x) = ", length)
+	// fmt.Println("len(table.n) = ", len(table.n))
+	// fmt.Println("len(x) = ", length)
 	for iCounter = 0; iCounter < len(table.n); iCounter++ {
 		if table.n[iCounter] >= length {
 			break
@@ -75,18 +75,18 @@ func ComputeFromTable(table *PreTable, x, N *big.Int) *big.Int {
 		iCounter--
 	}
 
-	fmt.Println("iCounter = ", iCounter)
+	// fmt.Println("iCounter = ", iCounter)
 	subX := make([]big.Int, iCounter+2)
 
 	for i := 1; i < iCounter+1; i++ {
 		var modulo big.Int
 		modulo.Exp(big2, big.NewInt(int64(table.n[i]-table.n[i-1])), nil)
 		subX[i-1].Mod(&xCopy, &modulo)
-		fmt.Println("subX[i-1] = ", subX[i-1].String())
+		//fmt.Println("subX[i-1] = ", subX[i-1].String())
 		xCopy.Rsh(&xCopy, uint(table.n[i]-table.n[i-1]))
 	}
 	subX[iCounter].Set(&xCopy)
-	fmt.Println("subX[iCounter+1] = ", subX[iCounter+1].String())
+	//fmt.Println("subX[iCounter+1] = ", subX[iCounter+1].String())
 
 	// --------------start of test code------------------------------
 	//the following code tests the if the separation for x is correct or not
@@ -118,4 +118,78 @@ func ComputeFromTable(table *PreTable, x, N *big.Int) *big.Int {
 		prod.Mod(&prod, N)
 	}
 	return &prod
+}
+
+func ComputeFromTableParallel(table *PreTable, x, N *big.Int) *big.Int {
+	// Todo: more checks for the validity of the table
+	if len(table.base) != len(table.n) {
+		panic("invalid pre-compute table, unbalanced")
+	}
+	if len(table.base) < 1 {
+		panic("invalid pre-compute table, too small")
+	}
+	if x.Cmp(big0) < 1 {
+		panic("invalid x, negative")
+	}
+
+	// Now, we divide x according to the n
+	// We first find out how many sub part can we separate x according to the table
+	length := x.BitLen()
+	var iCounter int
+	var xCopy big.Int
+	xCopy.Set(x)
+	for iCounter = 0; iCounter < len(table.n); iCounter++ {
+		if table.n[iCounter] >= length {
+			break
+		}
+	}
+	if iCounter == len(table.n) {
+		iCounter--
+	}
+
+	subX := make([]big.Int, iCounter+2)
+	for i := 1; i < iCounter+1; i++ {
+		var modulo big.Int
+		modulo.Exp(big2, big.NewInt(int64(table.n[i]-table.n[i-1])), nil)
+		subX[i-1].Mod(&xCopy, &modulo)
+		xCopy.Rsh(&xCopy, uint(table.n[i]-table.n[i-1]))
+	}
+	subX[iCounter].Set(&xCopy)
+
+	// The next part can be paralleled
+	var prod big.Int
+	prod.SetInt64(1)
+	c := make(chan *big.Int, iCounter)
+	for i := 0; i < iCounter+1; i++ {
+		if i == 0 {
+			go getAccumulate(table.base[0], &subX[0], N, c)
+			// temp := accumulator.AccumulateNew(table.base[0], &subX[0], N)
+			// prod.Mul(&prod, temp)
+			continue
+		}
+		go getAccumulate(table.base[i], &subX[i], N, c)
+		//temp := accumulator.AccumulateNew(table.base[i], &subX[i], N)
+	}
+
+	var mutex sync.Mutex
+	i := 0
+	for v := range c {
+		mutex.Lock()
+		prod.Mul(&prod, v)
+		prod.Mod(&prod, N)
+		i++
+		mutex.Unlock()
+		if i == iCounter+1 {
+			close(c)
+			break
+		}
+	}
+
+	return &prod
+}
+
+func getAccumulate(base, exp, N *big.Int, c chan *big.Int) {
+	var ret big.Int
+	ret.Exp(base, exp, N)
+	c <- &ret
 }

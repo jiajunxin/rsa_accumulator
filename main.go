@@ -47,7 +47,7 @@ func testFirstLayerPercentage() {
 }
 
 func testPreCompute() {
-	setSize := 1000
+	setSize := 10000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
@@ -73,7 +73,7 @@ func testPreCompute() {
 		duration.Seconds())
 
 	startingTime = time.Now().UTC()
-	result := precompute.ComputeFromTable(table, prod, setup.N)
+	result := precompute.ComputeFromTableParallel(table, prod, setup.N)
 	endingTime = time.Now().UTC()
 	duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running ComputeFromTable Takes [%.3f] Seconds \n",
