@@ -101,7 +101,6 @@ func TestTable_Compute(t1 *testing.T) {
 	}
 }
 
-
 func accumulate(setup *accumulator.Setup, reps []*big.Int) *big.Int {
 	acc := new(big.Int).Set(setup.G)
 	for _, v := range reps {
@@ -129,6 +128,9 @@ func BenchmarkPrecompute(b *testing.B) {
 		t := NewTable(setup.G, setup.N, elemUpperBound, testSize)
 		repProd := accumulator.SetProductRecursive(reps)
 		t.Compute(repProd, 4)
+
+	}
+}
 
 func TestComputeFromTable(t1 *testing.T) {
 	setSize := 1000

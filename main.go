@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/jiajunxin/rsa_accumulator/precompute"
-
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
@@ -68,7 +66,7 @@ func testPreCompute() {
 		duration.Seconds())
 
 	startingTime = time.Now().UTC()
-	table := precompute.GenPreTable(setup.G, setup.N, 10000, 100)
+	table := precompute.GenPreTable(setup.G, setup.N, prod.BitLen(), 100)
 	endingTime = time.Now().UTC()
 	duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running GenPreTable Takes [%.3f] Seconds \n",
