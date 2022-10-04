@@ -1,6 +1,7 @@
 package precompute
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 
@@ -19,6 +20,14 @@ var (
 type PreTable struct {
 	base []*big.Int
 	n    []int
+}
+
+// PrintTable prints out the table for storage
+func PrintTable(p *PreTable) {
+	for i := 0; i < len(p.base); i++ {
+		fmt.Println("BaseString", i, " = \"", p.base[i].String(), "\"")
+		fmt.Println("n", i, " = ", p.n[i])
+	}
 }
 
 func GenPreTable(base, N *big.Int, bitLen, tableSize int) *PreTable {
