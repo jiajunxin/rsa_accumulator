@@ -43,7 +43,7 @@ func testFirstLayerPercentage() {
 	table.Compute(prod, 16)
 	endingTime = time.Now().UTC()
 	duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running table.Compute Takes [%.3f] Seconds \n", duration.Seconds())
 	//}
 }
 
