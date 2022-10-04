@@ -9,7 +9,7 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
-const testSize = 128
+const testSize = 10000
 
 var (
 	accSetup    *accumulator.Setup
@@ -101,6 +101,35 @@ func TestTable_Compute(t1 *testing.T) {
 	}
 }
 
+
+func accumulate(setup *accumulator.Setup, reps []*big.Int) *big.Int {
+	acc := new(big.Int).Set(setup.G)
+	for _, v := range reps {
+		acc.Exp(acc, v, setup.N)
+	}
+	return acc
+}
+
+func BenchmarkAccumulate(b *testing.B) {
+	setup := getSetup()
+	reps := getRepresentations()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		accumulate(setup, reps)
+	}
+}
+
+func BenchmarkPrecompute(b *testing.B) {
+	setup := getSetup()
+	elemUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
+	elemUpperBound.Sub(elemUpperBound, big.NewInt(1))
+	reps := getRepresentations()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t := NewTable(setup.G, setup.N, elemUpperBound, testSize)
+		repProd := accumulator.SetProductRecursive(reps)
+		t.Compute(repProd, 4)
+
 func TestComputeFromTable(t1 *testing.T) {
 	setSize := 1000
 	set := accumulator.GenBenchSet(setSize)
@@ -113,5 +142,6 @@ func TestComputeFromTable(t1 *testing.T) {
 	result := ComputeFromTable(table, prod, setup.N)
 	if result.Cmp(originalResult) != 0 {
 		t1.Errorf("wrong result")
+
 	}
 }

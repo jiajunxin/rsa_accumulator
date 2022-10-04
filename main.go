@@ -2,23 +2,50 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"time"
+
+	"github.com/jiajunxin/rsa_accumulator/precompute"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
-func testFirstLayerPersentage() {
-	setSize := 100000
+func testFirstLayerPercentage() {
+	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
+	fmt.Println("set size:", setSize)
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
+	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
 	startingTime := time.Now().UTC()
-	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 1)
+	table := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize))
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
+	fmt.Printf("Running precompute.NewTable Takes [%.3f] Seconds \n",
 		duration.Seconds())
+
+	tests := [][2]int{
+		{4, 16},
+		//{3, 8},
+		//{2, 4},
+	}
+	startingTime = time.Now().UTC()
+	prod := accumulator.SetProductParallel(rep, 4)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductParallel Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	for _, test := range tests {
+		fmt.Println("test:", test)
+		startingTime = time.Now().UTC()
+		table.Compute(prod, test[1])
+		endingTime = time.Now().UTC()
+		duration = endingTime.Sub(startingTime)
+		fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n", duration.Seconds())
+	}
 }
 
 func testPreCompute() {
@@ -60,9 +87,11 @@ func testPreCompute() {
 }
 
 func main() {
+
 	testPreCompute()
 
 	//experiments.TestProduct2()
+
 	//experiments.TestRange()
 	// bitLen := flag.Int("bit", 1792, "bit length of the modulus")
 	// tries := flag.Int("try", 1000, "number of tries")
@@ -124,11 +153,11 @@ func main() {
 	//}
 }
 
-// func handleError(err error) {
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// }
+func handleError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 // func randGen(randLmt *big.Int) *big.Int {
 // 	x, err := rand.Int(rand.Reader, randLmt)
