@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
 func testFirstLayerPersentage() {
@@ -20,8 +21,46 @@ func testFirstLayerPersentage() {
 		duration.Seconds())
 }
 
+func testPreCompute() {
+	setSize := 1000
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	startingTime := time.Now().UTC()
+	prod := accumulator.SetProductRecursive(rep)
+	endingTime := time.Now().UTC()
+	var duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running SetProductRecursive Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running AccumulateNew Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	table := precompute.GenPreTable(setup.G, setup.N, 10000, 100)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running GenPreTable Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	result := precompute.ComputeFromTable(table, prod, setup.N)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running ComputeFromTable Takes [%.3f] Seconds \n",
+		duration.Seconds())
+
+	if result.Cmp(originalResult) != 0 {
+		fmt.Println("wrong result")
+	}
+}
+
 func main() {
-	testFirstLayerPersentage()
+	testPreCompute()
 
 	//experiments.TestProduct2()
 	//experiments.TestRange()
