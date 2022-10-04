@@ -80,15 +80,33 @@ func testPreCompute() {
 	fmt.Printf("Running ComputeFromTable Takes [%.3f] Seconds \n",
 		duration.Seconds())
 
+	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
+	elementUpperBound.Sub(elementUpperBound, big.NewInt(1))
+	startingTime = time.Now().UTC()
+	table1 := precompute.NewTable(setup.G, setup.N, elementUpperBound, 1000, 1000)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running NewTable Takes [%.3f] Seconds \n", duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	result1 := table1.Compute(prod, 8)
+	endingTime = time.Now().UTC()
+	duration = endingTime.Sub(startingTime)
+	fmt.Printf("Running table.Compute Takes [%.3f] Seconds \n", duration.Seconds())
+
 	if result.Cmp(originalResult) != 0 {
+		fmt.Println("wrong result")
+	}
+
+	if result1.Cmp(originalResult) != 0 {
 		fmt.Println("wrong result")
 	}
 }
 
 func main() {
-	testFirstLayerPercentage()
+	//testFirstLayerPercentage()
 
-	//testPreCompute()
+	testPreCompute()
 
 	//experiments.TestProduct2()
 
