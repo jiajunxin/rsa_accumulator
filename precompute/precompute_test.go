@@ -101,6 +101,7 @@ func TestTable_Compute(t1 *testing.T) {
 	}
 }
 
+
 func accumulate(setup *accumulator.Setup, reps []*big.Int) *big.Int {
 	acc := new(big.Int).Set(setup.G)
 	for _, v := range reps {
@@ -128,5 +129,19 @@ func BenchmarkPrecompute(b *testing.B) {
 		t := NewTable(setup.G, setup.N, elemUpperBound, testSize)
 		repProd := accumulator.SetProductRecursive(reps)
 		t.Compute(repProd, 4)
+
+func TestComputeFromTable(t1 *testing.T) {
+	setSize := 100
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	prod := accumulator.SetProductRecursive(rep)
+	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
+
+	table := GenPreTable(setup.G, setup.N, 100, 10)
+	result := ComputeFromTable(table, prod, setup.N)
+	if result.Cmp(originalResult) != 0 {
+		t1.Errorf("wrong result")
+
 	}
 }

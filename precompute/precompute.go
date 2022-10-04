@@ -6,9 +6,9 @@ import (
 
 const tableSize = 2048
 
-var big1 = big.NewInt(1)
 
 // Table is the precomputing table
+
 type Table struct {
 	base        *big.Int
 	n           *big.Int
