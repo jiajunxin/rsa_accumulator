@@ -9,7 +9,12 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
-const testSize = 10000
+const (
+	testSize           = 1000
+	smallByteChunkSize = 1
+
+	testByteChunkSize = 512
+)
 
 var (
 	accSetup    *accumulator.Setup
@@ -64,6 +69,32 @@ func getAcc() *big.Int {
 	return acc
 }
 
+func getSmallSetup() *accumulator.Setup {
+	return &accumulator.Setup{
+		G: big.NewInt(2),
+		N: big.NewInt(1000003),
+	}
+}
+
+func getSmallReps() []*big.Int {
+	return []*big.Int{
+		big.NewInt(21),
+		big.NewInt(32),
+		big.NewInt(15),
+		big.NewInt(17),
+	}
+}
+
+func getSmallRepProd() *big.Int {
+	return big.NewInt(171360)
+}
+
+func getSmallAcc() *big.Int {
+	setup := getSmallSetup()
+	reps := getSmallReps()
+	return accumulate(setup, reps)
+}
+
 func TestTable_Compute(t1 *testing.T) {
 	type args struct {
 		x          *big.Int
@@ -76,12 +107,27 @@ func TestTable_Compute(t1 *testing.T) {
 		want       *big.Int
 	}{
 		{
+			name: "TestTable_Compute_small",
+			setupTable: func() *Table {
+				setup := getSmallSetup()
+
+				elemUpperBound := big.NewInt(32)
+				t := NewTable(setup.G, setup.N, elemUpperBound, uint64(len(getSmallReps())), smallByteChunkSize)
+				return t
+			},
+			args: args{
+				x:          getSmallRepProd(),
+				numRoutine: 4,
+			},
+			want: getSmallAcc(),
+		},
+		{
 			name: "TestTable_Compute",
 			setupTable: func() *Table {
 				setup := getSetup()
 				elemUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
 				elemUpperBound.Sub(elemUpperBound, big.NewInt(1))
-				t := NewTable(setup.G, setup.N, elemUpperBound, testSize)
+				t := NewTable(setup.G, setup.N, elemUpperBound, testSize, testByteChunkSize)
 				return t
 			},
 			args: args{
@@ -123,27 +169,26 @@ func BenchmarkPrecompute(b *testing.B) {
 	elemUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
 	elemUpperBound.Sub(elemUpperBound, big.NewInt(1))
 	reps := getRepresentations()
+	t := NewTable(setup.G, setup.N, elemUpperBound, testSize, 1024)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		t := NewTable(setup.G, setup.N, elemUpperBound, testSize)
 		repProd := accumulator.SetProductRecursive(reps)
 		t.Compute(repProd, 4)
-
 	}
 }
 
-func TestComputeFromTable(t1 *testing.T) {
-	setSize := 1000
-	set := accumulator.GenBenchSet(setSize)
-	setup := *accumulator.TrustedSetup()
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
-	prod := accumulator.SetProductRecursive(rep)
-	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
-
-	table := GenPreTable(setup.G, setup.N, 10000, 100)
-	result := ComputeFromTable(table, prod, setup.N)
-	if result.Cmp(originalResult) != 0 {
-		t1.Errorf("wrong result")
-
-	}
-}
+//func TestComputeFromTable(t1 *testing.T) {
+//	setSize := 1000
+//	set := accumulator.GenBenchSet(setSize)
+//	setup := *accumulator.TrustedSetup()
+//	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+//	prod := accumulator.SetProductRecursive(rep)
+//	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
+//
+//	table := GenPreTable(setup.G, setup.N, 10000, 100)
+//	result := ComputeFromTable(table, prod, setup.N)
+//	if result.Cmp(originalResult) != 0 {
+//		t1.Errorf("wrong result")
+//
+//	}
+//}
