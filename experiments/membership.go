@@ -10,6 +10,8 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
+const retSize = 1024
+
 // AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
 func AccAndProveParallel(table *precompute.Table, set []string, encodeType accumulator.EncodeType, setup *accumulator.Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
@@ -57,7 +59,7 @@ func ProveMembershipParallel(table *precompute.Table, base, N *big.Int, set []*b
 // It uses at most O(2^limit) Goroutines
 func ProveMembershipParallel2(table *precompute.Table, base, N *big.Int, set []*big.Int, limit, numRoutine int) []*big.Int {
 	if limit == 0 {
-		return ProveMembership(base, N, set)
+		return ProveMembership2(base, N, set)
 	}
 	limit--
 
@@ -84,7 +86,7 @@ func ProveMembershipParallel2(table *precompute.Table, base, N *big.Int, set []*
 // It uses at most O(2^limit) Goroutines
 func ProveMembershipParallel3(table *precompute.Table, base, N *big.Int, set []*big.Int, limit, numRoutine int) []*big.Int {
 	if limit == 0 {
-		return ProveMembership(base, N, set)
+		return ProveMembership3(base, N, set)
 	}
 	limit--
 
@@ -160,7 +162,7 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func proveMembershipWithChan2(base, N *big.Int, set []*big.Int, limit int, c chan []*big.Int) {
 	if limit == 0 {
-		c <- ProveMembership(base, N, set)
+		c <- ProveMembership2(base, N, set)
 		close(c)
 		return
 	}
@@ -171,7 +173,7 @@ func proveMembershipWithChan2(base, N *big.Int, set []*big.Int, limit int, c cha
 	// 	return
 	// }
 
-	if len(set) <= 1024 {
+	if len(set) <= retSize {
 		c <- set[:]
 		//c <- handleSmallSet(base, N, set)
 		close(c)
@@ -182,8 +184,8 @@ func proveMembershipWithChan2(base, N *big.Int, set []*big.Int, limit int, c cha
 	leftBase, rightBase := calBaseParallel(base, N, set)
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
-	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
-	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	go proveMembershipWithChan2(leftBase, N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan2(rightBase, N, set[len(set)/2:], limit, c2)
 	proofs1 := <-c1
 	proofs2 := <-c2
 	proofs1 = append(proofs1, proofs2...)
@@ -194,7 +196,7 @@ func proveMembershipWithChan2(base, N *big.Int, set []*big.Int, limit int, c cha
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func proveMembershipWithChan3(base, N *big.Int, set []*big.Int, limit int, c chan []*big.Int) {
 	if limit == 0 {
-		c <- ProveMembership(base, N, set)
+		c <- ProveMembership3(base, N, set)
 		close(c)
 		return
 	}
@@ -205,7 +207,7 @@ func proveMembershipWithChan3(base, N *big.Int, set []*big.Int, limit int, c cha
 	// 	return
 	// }
 
-	if len(set) <= 1024 {
+	if len(set) <= retSize {
 		c <- set[:]
 		prod := accumulator.SetProductRecursiveFast(set[:])
 		accumulator.AccumulateNew(base, prod, N)
@@ -218,8 +220,8 @@ func proveMembershipWithChan3(base, N *big.Int, set []*big.Int, limit int, c cha
 	leftBase, rightBase := calBaseParallel(base, N, set)
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
-	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
-	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	go proveMembershipWithChan3(leftBase, N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan3(rightBase, N, set[len(set)/2:], limit, c2)
 	proofs1 := <-c1
 	proofs2 := <-c2
 	proofs1 = append(proofs1, proofs2...)
@@ -278,6 +280,40 @@ func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	rightBase := *accumulateNew(base, N, set[0:len(set)/2])
 	proofs := ProveMembership(&leftBase, N, set[0:len(set)/2])
 	proofs = append(proofs, ProveMembership(&rightBase, N, set[len(set)/2:])...)
+	return proofs
+}
+
+// ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+func ProveMembership2(base, N *big.Int, set []*big.Int) []*big.Int {
+	// if len(set) <= 2 {
+	// 	return handleSmallSet(base, N, set)
+	// }
+	if len(set) <= retSize {
+		return set
+	}
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	leftBase := *accumulateNew(base, N, set[len(set)/2:])
+	rightBase := *accumulateNew(base, N, set[0:len(set)/2])
+	proofs := ProveMembership2(&leftBase, N, set[0:len(set)/2])
+	proofs = append(proofs, ProveMembership2(&rightBase, N, set[len(set)/2:])...)
+	return proofs
+}
+
+// ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+func ProveMembership3(base, N *big.Int, set []*big.Int) []*big.Int {
+	// if len(set) <= 2 {
+	// 	return handleSmallSet(base, N, set)
+	// }
+	if len(set) <= retSize {
+		prod := accumulator.SetProductRecursiveFast(set[:])
+		accumulator.AccumulateNew(base, prod, N)
+		return set
+	}
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	leftBase := *accumulateNew(base, N, set[len(set)/2:])
+	rightBase := *accumulateNew(base, N, set[0:len(set)/2])
+	proofs := ProveMembership3(&leftBase, N, set[0:len(set)/2])
+	proofs = append(proofs, ProveMembership3(&rightBase, N, set[len(set)/2:])...)
 	return proofs
 }
 
