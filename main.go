@@ -11,7 +11,7 @@ import (
 )
 
 func testPreCompute() {
-	setSize := 100000
+	setSize := 65536 // 2 ^ 16
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
@@ -26,6 +26,11 @@ func testPreCompute() {
 	experiments.ProveMembershipParallel2(t, setup.G, setup.N, rep, 4, 16)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	experiments.ProveMembershipParallel3(t, setup.G, setup.N, rep, 4, 16)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallel3 Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
 func main() {
