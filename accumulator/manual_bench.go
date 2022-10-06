@@ -11,7 +11,7 @@ func ManualBench(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = AccAndProve(set, DIHashFromPoseidon, &setup)
+	_, _ = AccAndProve(set, EncodeTypePoseidonDIHash, &setup)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProve with set size %v\nTakes [%.3f] Seconds \n",
@@ -24,7 +24,7 @@ func ManualBenchZKAcc(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = ZKAccumulate(set, DIHashFromPoseidon, &setup)
+	_, _ = ZKAccumulate(set, EncodeTypePoseidonDIHash, &setup)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProve with set size %v\nTakes [%.3f] Seconds \n",
@@ -36,7 +36,7 @@ func ManualBenchIter(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = AccAndProveIter(set, DIHashFromPoseidon, &setup)
+	_, _ = AccAndProveIter(set, EncodeTypePoseidonDIHash, &setup)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProveIter with set size %v\nTakes [%.3f] Seconds \n",
@@ -49,7 +49,7 @@ func ManualBenchParallel(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = AccAndProveParallel(set, DIHashFromPoseidon, &setup)
+	_, _ = AccAndProveParallel(set, EncodeTypePoseidonDIHash, &setup)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProveParallel with set size %v\nTakes [%.3f] Seconds \n",
@@ -62,7 +62,7 @@ func ManualBenchIterParallel(testSetSize int) {
 	set := GenBenchSet(testSetSize)
 	setup := *TrustedSetup()
 	startingTime := time.Now().UTC()
-	_, _ = AccAndProveIterParallel(set, DIHashFromPoseidon, &setup)
+	_, _ = AccAndProveIterParallel(set, EncodeTypePoseidonDIHash, &setup)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running AccAndProveIterParallel with set size %v\nTakes [%.3f] Seconds \n",

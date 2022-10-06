@@ -9,7 +9,7 @@ func TestProduct(t *testing.T) {
 	// we need to check if A ?= B + C
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepresentatives(set, DIHashFromPoseidon)
+	rep := HashEncode(set, EncodeTypePoseidonDIHash)
 	prodRecursive := *SetProductRecursive(rep)
 	prodRecursiveParallel := *SetProductParallel(rep, 2)
 

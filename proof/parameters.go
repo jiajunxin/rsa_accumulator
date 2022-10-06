@@ -12,6 +12,13 @@ const (
 	int4Len       = 4
 )
 
+var (
+	big0 = big.NewInt(0)
+	big1 = big.NewInt(1)
+	big2 = big.NewInt(2)
+	big4 = big.NewInt(4)
+)
+
 // PublicParameters holds public parameters initialized during the setup procedure
 type PublicParameters struct {
 	N *big.Int
@@ -73,7 +80,7 @@ func (f *Int4) Div(n *big.Int) {
 	}
 }
 
-// String stringnifies the Int4 object
+// String stringifies the Int4 object
 func (f *Int4) String() string {
 	res := "{"
 	for i := 0; i < 3; i++ {

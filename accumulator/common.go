@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"sync"
 
 	"github.com/remyoudompheng/bigfft"
 )
@@ -21,10 +22,10 @@ const (
 	N2048String = "22582513446883649683242153375773765418277977026848618150278436227443969113525388360965414596382292671632010154272027792498289390464326093128963474525925743125404187090638221587455285089494562751793489098182761320953828657439130044252338283109583198301789045090284695934345711523245381620643226632165168827411546661236460973389982263385406789443858985073091473529732325356098830825299275985202060852102775942940039443155227986748457261585440368528834910182851433705587223040610934954417065434756145769875043620201897615075786323297141320586481340831246603933018654794846594742280842668198512719618188992528830140149361"
 	G2048String = "3734320578166922768976307305081280303658237303482921793243310032002132951325426885895423150554487167609218974062079302792001919827304933109188668552532361245089029380294384169787606911401094856511916709999954764232948323779503820860893459514928713744983707360078264267038900798843893405664990521531326919997106338139056096176409033756102908667173913246197068450150318832809948977367751025873698025220766782003611956130604742644746610708520581969538416206455665972248047959779079118036299417601968576259426648158714614452861031491553305187113545916330322686053758561416773919173504690956803771722726889946697788319929"
 	H2048String = "1582433196042535773898642856814926874501199844772808209798545765882857391073717631360065816613373509202691737458490830509979879771883168398785856056110736083435040549860024938378796318753064835110482441115760897524667343221753799849207723195729358565521753697076761550453675996906942484179834968386568757636433579938945322152073309477120701766107272148535093122238519340372766971216124175473667780382425281013570558875523373504108433319932127851859684947025440123382599601611460274335280822834972913253420025827402904805226163959418839188054187383250553791823431534564282919675786841775533806609995586228017407921459"
-	// HashToPrimeFromSha256 is a prime number generated from Sha256
-	HashToPrimeFromSha256 = iota
-	// DIHashFromPoseidon is a division intractable Hash output
-	DIHashFromPoseidon
+	// EncodeTypeSHA256HashToPrime is a prime number generated from Sha256
+	EncodeTypeSHA256HashToPrime = iota
+	// EncodeTypePoseidonDIHash is a division intractable Hash output
+	EncodeTypePoseidonDIHash
 )
 
 var (
@@ -43,8 +44,16 @@ var (
 	big37 = big.NewInt(37)
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
-	Min2048 = big.NewInt(0)
+	min2048     = new(big.Int)
+	onceMin2048 sync.Once
 )
+
+func Min2048() *big.Int {
+	onceMin2048.Do(func() {
+		min2048.Lsh(big1, RSABitLength-1)
+	})
+	return min2048
+}
 
 // Setup is a basic struct for a hidden order group
 type Setup struct {
@@ -60,7 +69,7 @@ type EncodeType int
 
 // GenerateG generates a generator for a hidden order group randomly
 func GenerateG() {
-	buffer := make([]big.Int, 8)
+	buffer := make([]*big.Int, 8)
 	buffer[0].Set(SHA256ToInt([]byte(N2048String))) //g1 should be 256 bit.
 	for i := 1; i < 8; i++ {
 		buffer[i].Set(SHA256ToInt(buffer[i-1].Bytes()))
@@ -80,15 +89,16 @@ func GenerateG() {
 }
 
 // SetProduct calculates the products of the input set
-func SetProduct(inputSet []big.Int) *big.Int {
-	var ret big.Int
+func SetProduct(inputSet []*big.Int) *big.Int {
+	//var ret big.Int
+	ret := new(big.Int).Set(big1)
 	setSize := len(inputSet)
 	ret.Set(big1)
 	// ret is set to 1
 	for i := 0; i < setSize; i++ {
-		ret.Mul(&ret, &inputSet[i])
+		ret.Mul(ret, inputSet[i])
 	}
-	return &ret
+	return ret
 }
 
 // SetProduct2 calculates the products of the input set
@@ -105,26 +115,28 @@ func SetProduct2(inputSet []*big.Int) *big.Int {
 
 // SetProduct calculates the products of the input divide-and-conquer recursively
 func SetProductRecursive(inputSet []*big.Int) *big.Int {
-	length := len(inputSet)
-	var ret big.Int
+	var (
+		length = len(inputSet)
+		ret    *big.Int
+	)
 	if length <= 2 {
 		ret.Set(big1)
 		// ret is set to 1
 		for i := 0; i < length; i++ {
-			ret.Mul(&ret, inputSet[i])
+			ret.Mul(ret, inputSet[i])
 		}
-		return &ret
+		return ret
 	}
-	var prod1, prod2 big.Int
-	prod1 = *SetProductRecursive(inputSet[0 : length/2])
-	prod2 = *SetProductRecursive(inputSet[length/2:])
+	var prod1, prod2 *big.Int
+	prod1 = SetProductRecursive(inputSet[0 : length/2])
+	prod2 = SetProductRecursive(inputSet[length/2:])
 	// startingTime := time.Now().UTC()
-	ret.Mul(&prod1, &prod2)
+	ret.Mul(prod1, prod2)
 	// endingTime := time.Now().UTC()
 	// duration := endingTime.Sub(startingTime)
 	// fmt.Printf("Running multiplication for last two large number Takes [%.3f] Seconds \n",
 	// 	duration.Seconds())
-	return &ret
+	return ret
 }
 
 // SetProduct calculates the products of the input divide-and-conquer recursively
@@ -165,42 +177,49 @@ func SetProductParallel(inputSet []*big.Int, limit int) *big.Int {
 		return SetProductRecursiveFast(inputSet)
 	}
 
-	c1 := make(chan *big.Int)
-	c2 := make(chan *big.Int)
+	//c1 := make(chan *big.Int)
+	//c2 := make(chan *big.Int)
+	var (
+		c1 = make(chan *big.Int)
+		c2 = make(chan *big.Int)
+	)
 	go setProductParallelWithChan(inputSet[0:length/2], limit, c1)
 	go setProductParallelWithChan(inputSet[length/2:], limit, c2)
-	prod1 := <-c1
-	prod2 := <-c2
+	//prod1 := <-c1
+	//prod2 := <-c2
 
-	ret := bigfft.Mul(prod1, prod2)
+	ret := bigfft.Mul(<-c1, <-c2)
 	return ret
 }
 
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func setProductParallelWithChan(inputSet []*big.Int, limit int, c chan *big.Int) {
+	defer close(c)
 	if limit == 0 {
 		c <- SetProductRecursiveFast(inputSet)
-		close(c)
+		//close(c)
 		return
 	}
 	limit--
-	length := len(inputSet)
 	if len(inputSet) <= 2 {
 		c <- SetProductRecursiveFast(inputSet)
-		close(c)
+		//close(c)
 		return
 	}
 
-	c1 := make(chan *big.Int)
-	c2 := make(chan *big.Int)
+	var (
+		c1     = make(chan *big.Int)
+		c2     = make(chan *big.Int)
+		length = len(inputSet)
+	)
 	go setProductParallelWithChan(inputSet[0:length/2], limit, c1)
 	go setProductParallelWithChan(inputSet[length/2:], limit, c2)
-	prod1 := <-c1
-	prod2 := <-c2
+	//prod1 := <-c1
+	//prod2 := <-c2
 
-	ret := bigfft.Mul(prod1, prod2)
+	ret := bigfft.Mul(<-c1, <-c2)
 	c <- ret
-	close(c)
+	//close(c)
 }
 
 // GetPseudoRandomElement returns the pseudo random element from the input integer, for test use only
@@ -248,21 +267,21 @@ func TrustedSetupForQRN() {
 }
 
 func getOrder(p, q *big.Int) *big.Int {
-	var pPrime, qPrime, phiN big.Int
+	var pPrime, qPrime, phiN *big.Int
 	pPrime.Sub(p, big1)
-	pPrime.Div(&pPrime, big2)
+	pPrime.Div(pPrime, big2)
 	qPrime.Sub(q, big1)
-	qPrime.Div(&qPrime, big2)
-	phiN.Mul(&pPrime, &qPrime)
-	return &phiN
+	qPrime.Div(qPrime, big2)
+	phiN.Mul(pPrime, qPrime)
+	return phiN
 }
 
 func testRemainder(input, modulo *big.Int) bool {
-	var remainder, cmp big.Int
+	var remainder, cmp *big.Int
 	cmp.Sub(modulo, big1)
-	cmp.Div(&cmp, big2)
+	cmp.Div(cmp, big2)
 	remainder.Mod(input, modulo)
-	if remainder.Cmp(&cmp) != 0 {
+	if remainder.Cmp(cmp) != 0 {
 		return true
 	}
 	return true
@@ -330,41 +349,42 @@ func getSuitablePrime() *big.Int {
 
 // a safe prime p = 2p' +1 where p' is also a prime number
 func getSafePrime() *big.Int {
-	flag := false
+	var (
+		flag    bool
+		randNum *big.Int
+	)
 	for !flag {
-		ranNum := getSuitablePrime()
+		randNum = getSuitablePrime()
 		//fmt.Println("get a prime = ", ranNum.String())
-		ranNum.Mul(ranNum, big2)
-		ranNum.Add(ranNum, big1)
-		flag = ranNum.ProbablyPrime(securityPara / 2)
-		if !flag {
-			continue
-		} else {
-			fmt.Println("Found one safe prime = ", ranNum.String())
-			return ranNum
-		}
+		randNum.Mul(randNum, big2)
+		randNum.Add(randNum, big1)
+		flag = randNum.ProbablyPrime(securityPara / 2)
 	}
-	return nil
+	fmt.Println("Found one safe prime = ", randNum)
+	return randNum
 }
 
 func getRanQR(p, q *big.Int) *big.Int {
-	var N big.Int
-	N.Mul(p, q)
-
-	flag := false
+	//var N big.Int
+	//N.Mul(p, q)
+	var (
+		flag    bool
+		randNum *big.Int
+		err     error
+	)
 	for !flag {
-		ranNum, err := crand.Int(crand.Reader, Min2048)
+		randNum, err = crand.Int(crand.Reader, Min2048())
 		if err != nil {
 			panic(err)
 		}
-		flag = isQR(ranNum, p, q)
-		if !flag {
-			continue
-		} else {
-			return ranNum
-		}
+		flag = isQR(randNum, p, q)
+		//if !flag {
+		//	continue
+		//} else {
+		//
+		//}
 	}
-	return nil
+	return randNum
 }
 
 func isQR(input, p, q *big.Int) bool {

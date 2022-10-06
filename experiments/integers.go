@@ -13,7 +13,7 @@ func TestFirstLayerPercentage() {
 	setSize := 10000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 	startingTime := time.Now().UTC()
 	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 2)
 	endingTime := time.Now().UTC()
@@ -26,7 +26,7 @@ func TestMembership() {
 	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 	startingTime := time.Now().UTC()
 	prod := accumulator.SetProductRecursiveFast(rep)
 	endingTime := time.Now().UTC()
@@ -48,7 +48,7 @@ func TestProduct() {
 	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
 	var prod big.Int
-	//rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	//rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 	startingTime := time.Now().UTC()
 	//prod = *accumulator.SetProduct2(rep)
 	endingTime := time.Now().UTC()
@@ -56,7 +56,7 @@ func TestProduct() {
 	fmt.Printf("Running ProveMembershipParallel Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	fmt.Println("product length is", prod.BitLen())
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 	startingTime = time.Now().UTC()
 	prod = *accumulator.SetProductRecursive(rep)
 	endingTime = time.Now().UTC()
@@ -71,7 +71,7 @@ func TestProduct2() {
 	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
 	var prod big.Int
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 	startingTime := time.Now().UTC()
 	prod = *accumulator.SetProductRecursive(rep)
 	endingTime := time.Now().UTC()
@@ -96,7 +96,7 @@ func TestProduct3() {
 	setSize := 10000
 	set := accumulator.GenBenchSet(setSize)
 	var prod big.Int
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 	startingTime := time.Now().UTC()
 	prod = *accumulator.SetProductRecursiveFast(rep)
 	endingTime := time.Now().UTC()
@@ -116,7 +116,7 @@ func TestProduct3() {
 func genDIMin(size int) []*big.Int {
 	ret := make([]*big.Int, size)
 	for i := 0; i < size; i++ {
-		ret[i] = accumulator.Min2048
+		ret[i] = accumulator.Min2048()
 	}
 	return ret
 }
@@ -128,7 +128,7 @@ func genDIMax(size int) []*big.Int {
 	min257.Lsh(&min257, 256)
 	for i := 0; i < size; i++ {
 		ret[i] = new(big.Int)
-		ret[i].Add(accumulator.Min2048, &min257)
+		ret[i].Add(accumulator.Min2048(), &min257)
 	}
 	//fmt.Println("2048 = ", accumulator.Min2048.String())
 	// fmt.Println("257 = ", min257.String())

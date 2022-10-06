@@ -19,7 +19,7 @@ func TestAccAndProveIterParallel(t *testing.T) {
 			name: "set_size_16",
 			args: args{
 				set:        GenTestSet(16),
-				encodeType: HashToPrimeFromSha256,
+				encodeType: EncodeTypeSHA256HashToPrime,
 				setup:      TrustedSetup(),
 			},
 			idx:          5,
@@ -29,7 +29,7 @@ func TestAccAndProveIterParallel(t *testing.T) {
 			name: "set_size_17",
 			args: args{
 				set:        GenTestSet(17),
-				encodeType: HashToPrimeFromSha256,
+				encodeType: EncodeTypeSHA256HashToPrime,
 				setup:      TrustedSetup(),
 			},
 			idx:          7,
@@ -39,7 +39,7 @@ func TestAccAndProveIterParallel(t *testing.T) {
 			name: "set_size_254",
 			args: args{
 				set:        GenTestSet(254),
-				encodeType: HashToPrimeFromSha256,
+				encodeType: EncodeTypeSHA256HashToPrime,
 				setup:      TrustedSetup(),
 			},
 			idx:          253,

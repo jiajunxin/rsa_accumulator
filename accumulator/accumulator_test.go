@@ -47,7 +47,7 @@ func TestSetup(t *testing.T) {
 		//this condition should never happen
 		t.Errorf("g and N not co-prime! We win the RSA-2048 challenge!")
 	}
-	bitLen := Min2048.BitLen()
+	bitLen := Min2048().BitLen()
 	if bitLen != 2048 {
 		t.Errorf("Min2048 is not 2048 bits")
 	}
@@ -58,11 +58,11 @@ func TestAccAndProve(t *testing.T) {
 
 	testSetSize := 16
 	set := GenTestSet(testSetSize)
-	acc, proofs := AccAndProve(set, HashToPrimeFromSha256, setup)
+	acc, proofs := AccAndProve(set, EncodeTypeSHA256HashToPrime, setup)
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := HashEncode(set, EncodeTypeSHA256HashToPrime)
 	acc2 := accumulateNew(setup.G, setup.N, rep)
 	acc3 := AccumulateNew(proofs[5], rep[5], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -75,11 +75,11 @@ func TestAccAndProve(t *testing.T) {
 	// test another set size not a power of 2
 	testSetSize = 17
 	set = GenTestSet(testSetSize)
-	acc, proofs = AccAndProve(set, HashToPrimeFromSha256, setup)
+	acc, proofs = AccAndProve(set, EncodeTypeSHA256HashToPrime, setup)
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep = GenRepresentatives(set, HashToPrimeFromSha256)
+	rep = HashEncode(set, EncodeTypeSHA256HashToPrime)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
 	acc3 = AccumulateNew(proofs[7], rep[7], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -92,11 +92,11 @@ func TestAccAndProve(t *testing.T) {
 	// test another set size not a power of 2
 	testSetSize = 254
 	set = GenTestSet(testSetSize)
-	acc, proofs = AccAndProve(set, HashToPrimeFromSha256, setup)
+	acc, proofs = AccAndProve(set, EncodeTypeSHA256HashToPrime, setup)
 	if len(set) != len(proofs) {
 		t.Errorf("proofs have different size as the input set")
 	}
-	rep = GenRepresentatives(set, HashToPrimeFromSha256)
+	rep = HashEncode(set, EncodeTypeSHA256HashToPrime)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
 	acc3 = AccumulateNew(proofs[253], rep[253], setup.N)
 	if acc.Cmp(acc3) != 0 {
@@ -108,7 +108,7 @@ func TestAccAndProve(t *testing.T) {
 }
 
 func genAccts(set []string, setup *Setup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := HashEncode(set, EncodeTypeSHA256HashToPrime)
 	acc1 = accumulateNew(setup.G, setup.N, rep)
 	acc2 = AccumulateNew(proofs[idx], rep[idx], setup.N)
 	return
@@ -131,7 +131,7 @@ func TestAccAndProveIter(t *testing.T) {
 			name: "set_size_16",
 			args: args{
 				set:        GenTestSet(16),
-				encodeType: HashToPrimeFromSha256,
+				encodeType: EncodeTypeSHA256HashToPrime,
 				setup:      TrustedSetup(),
 			},
 			idx:          5,
@@ -141,7 +141,7 @@ func TestAccAndProveIter(t *testing.T) {
 			name: "set_size_17",
 			args: args{
 				set:        GenTestSet(17),
-				encodeType: HashToPrimeFromSha256,
+				encodeType: EncodeTypeSHA256HashToPrime,
 				setup:      TrustedSetup(),
 			},
 			idx:          7,
@@ -151,7 +151,7 @@ func TestAccAndProveIter(t *testing.T) {
 			name: "set_size_254",
 			args: args{
 				set:        GenTestSet(254),
-				encodeType: HashToPrimeFromSha256,
+				encodeType: EncodeTypeSHA256HashToPrime,
 				setup:      TrustedSetup(),
 			},
 			idx:          253,

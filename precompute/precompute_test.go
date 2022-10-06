@@ -45,7 +45,7 @@ func getSet() []string {
 
 func getRepresentations() []*big.Int {
 	onceReps.Do(func() {
-		reps = accumulator.GenRepresentatives(getSet(), accumulator.DIHashFromPoseidon)
+		reps = accumulator.HashEncode(getSet(), accumulator.EncodeTypePoseidonDIHash)
 	})
 	return reps
 }
@@ -181,7 +181,7 @@ func BenchmarkPrecompute(b *testing.B) {
 //	setSize := 1000
 //	set := accumulator.GenBenchSet(setSize)
 //	setup := *accumulator.TrustedSetup()
-//	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+//	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
 //	prod := accumulator.SetProductRecursive(rep)
 //	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
 //

@@ -23,10 +23,10 @@ func NewTable(g, n, elementUpperBound *big.Int, numElements uint64, byteChunkSiz
 		byteChunkSize: byteChunkSize,
 	}
 	maxBitLen := elementUpperBound.BitLen() * int(numElements)
-	numByteChunks := maxBitLen / (t.byteChunkSize * 8)
+	numByteChunks := maxBitLen / (t.byteChunkSize << 3)
 	t.table = make([]*big.Int, numByteChunks)
 	t.table[0] = new(big.Int).Set(g)
-	opt := new(big.Int).Lsh(big1, uint(t.byteChunkSize*8))
+	opt := new(big.Int).Lsh(big1, uint(t.byteChunkSize<<3))
 	for i := 1; i < numByteChunks; i++ {
 		t.table[i] = new(big.Int).Exp(t.table[i-1], opt, n)
 	}
@@ -35,15 +35,18 @@ func NewTable(g, n, elementUpperBound *big.Int, numElements uint64, byteChunkSiz
 
 // Compute computes the result of base^x mod n with specified number of goroutines
 func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
-	xBytes := x.Bytes()
-	inputChan := make(chan input, numRoutine<<2)
-	outputChan := make(chan *big.Int, numRoutine)
+	var (
+		xBytes     = x.Bytes()
+		inputChan  = make(chan input, numRoutine<<2)
+		outputChan = make(chan *big.Int, numRoutine)
+		resChan    = make(chan *big.Int)
+	)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	for i := 0; i < numRoutine; i++ {
 		go t.routineCompute(ctx, t.n, xBytes, inputChan, outputChan)
 	}
-	resChan := make(chan *big.Int)
 	go func() {
 		res := big.NewInt(1)
 		counter := len(xBytes) / t.byteChunkSize
@@ -60,6 +63,7 @@ func (t *Table) Compute(x *big.Int, numRoutine int) *big.Int {
 			}
 		}
 	}()
+
 	for i := len(xBytes); i > 0; i -= t.byteChunkSize {
 		right := i
 		left := right - t.byteChunkSize
@@ -93,8 +97,6 @@ func (t *Table) routineCompute(ctx context.Context, n *big.Int, xBytes []byte,
 			opt.SetBytes(xBytes[in.left:in.right])
 			res := new(big.Int).Exp(t.table[in.tableIdx], opt, n)
 			resChan <- res
-		default:
-			continue
 		}
 	}
 }

@@ -15,10 +15,10 @@ const retSize = 1024
 // AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
 func AccAndProveParallel(table *precompute.Table, set []string, encodeType accumulator.EncodeType, setup *accumulator.Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := accumulator.GenRepresentatives(set, encodeType)
+	rep := accumulator.HashEncode(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running HashEncode Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	numWorkers, _ := calNumWorkers()
 	proofs := ProveMembershipParallel(table, setup.G, setup.N, rep, numWorkers, numWorkers)

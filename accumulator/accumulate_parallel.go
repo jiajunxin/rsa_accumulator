@@ -11,10 +11,10 @@ import (
 // AccAndProveParallel recursively generates the accumulator with all the memberships precomputed in parallel
 func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := GenRepresentatives(set, encodeType)
+	rep := HashEncode(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running HashEncode Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	numWorkers, _ := calNumWorkers()
 	proofs := ProveMembershipParallel(setup.G, setup.N, rep, numWorkers)
@@ -28,10 +28,10 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*bi
 func AccAndProveIterParallel(set []string, encodeType EncodeType,
 	setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
-	rep := GenRepresentatives(set, encodeType)
+	rep := HashEncode(set, encodeType)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
-	fmt.Printf("Running GenRepresentatives Takes [%.3f] Seconds \n",
+	fmt.Printf("Running HashEncode Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	proofs := ProveMembershipIterParallel(*setup.G, setup.N, rep)
 	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
@@ -115,12 +115,11 @@ func calBaseParallel(base, N *big.Int, set []*big.Int) (*big.Int, *big.Int) {
 }
 
 func accumulateWithChan(set []*big.Int, g, N *big.Int, c chan *big.Int) {
-	var acc big.Int
-	acc.Set(g)
+	acc := new(big.Int).Set(g)
 	for _, v := range set {
-		acc.Exp(&acc, v, N)
+		acc.Exp(acc, v, N)
 	}
-	c <- &acc
+	c <- acc
 	close(c)
 }
 
@@ -178,15 +177,19 @@ func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*bi
 }
 
 func calNumWorkers() (int, int) {
-	numWorkersPowerOfTwo := 0
-	numWorkers := 1
-	numCPUs := runtime.NumCPU()
+	var (
+		powOfTwo   int
+		numWorkers = 1
+		numCPUs    = runtime.NumCPU()
+	)
 	for numWorkers <= numCPUs {
-		numWorkersPowerOfTwo++
-		numWorkers *= 2
+		powOfTwo++
+		numWorkers <<= 1
 	}
-	fmt.Printf("CPU Number: %d, Number of Workers: %d\n", numCPUs, numWorkers/2)
-	return numWorkers / 2, numWorkersPowerOfTwo - 1
+	powOfTwo--
+	numWorkers >>= 1
+	fmt.Printf("CPU Number: %d, Number of Workers: %d\n", numCPUs, numWorkers)
+	return numWorkers, powOfTwo
 }
 
 type sendParam struct {
@@ -230,7 +233,7 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 				iter = iter.next
 				continue
 			}
-			iter = insertNewProofNodeWithChan(iter, N, set, sendChan, iterChan)
+			iter = insertNewNodeWithChan(iter, N, set, sendChan, iterChan)
 			finishFlag = true
 		}
 	}
@@ -268,7 +271,7 @@ func initMembershipProofs(base, N *big.Int, set []*big.Int,
 	}()
 }
 
-func insertNewProofNodeWithChan(iter *proofNode, N *big.Int, set []*big.Int,
+func insertNewNodeWithChan(iter *proofNode, N *big.Int, set []*big.Int,
 	sendChan chan<- sendParam, iterChan <-chan *big.Int) *proofNode {
 	left := iter.left
 	right := iter.right

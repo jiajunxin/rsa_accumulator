@@ -21,14 +21,14 @@ func BenchmarkAccAndProve(b *testing.B) {
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = AccAndProve(set, HashToPrimeFromSha256, &setup)
+		_, _ = AccAndProve(set, EncodeTypeSHA256HashToPrime, &setup)
 	}
 }
 
 func BenchmarkProveMembership(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := HashEncode(set, EncodeTypeSHA256HashToPrime)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -39,7 +39,7 @@ func BenchmarkProveMembership(b *testing.B) {
 func BenchmarkProveMembershipIter(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := HashEncode(set, EncodeTypeSHA256HashToPrime)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -50,7 +50,7 @@ func BenchmarkProveMembershipIter(b *testing.B) {
 func BenchmarkProveMembershipParallel(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := HashEncode(set, EncodeTypeSHA256HashToPrime)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
