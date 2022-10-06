@@ -29,19 +29,22 @@ const (
 )
 
 var (
-	big1  = big.NewInt(1)
-	big2  = big.NewInt(2)
-	big3  = big.NewInt(3)
-	big5  = big.NewInt(5)
-	big7  = big.NewInt(7)
-	big11 = big.NewInt(11)
-	big13 = big.NewInt(13)
-	big17 = big.NewInt(17)
-	big19 = big.NewInt(19)
-	big23 = big.NewInt(23)
-	big29 = big.NewInt(29)
-	big31 = big.NewInt(31)
-	big37 = big.NewInt(37)
+	big1           = big.NewInt(1)
+	big2           = big.NewInt(2)
+	big3           = big.NewInt(3)
+	big5           = big.NewInt(5)
+	big7           = big.NewInt(7)
+	big11          = big.NewInt(11)
+	big13          = big.NewInt(13)
+	big17          = big.NewInt(17)
+	big19          = big.NewInt(19)
+	big23          = big.NewInt(23)
+	big29          = big.NewInt(29)
+	big31          = big.NewInt(31)
+	big37          = big.NewInt(37)
+	safePrimeSieve = [...]*big.Int{
+		big3, big5, big7, big11, big13, big17, big19, big23, big29, big31, big37,
+	}
 	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
 	min2048     = new(big.Int)
@@ -75,12 +78,13 @@ func GenerateG() {
 		buffer[i].Set(SHA256ToInt(buffer[i-1].Bytes()))
 	}
 	prod := SetProduct(buffer)
-	var N big.Int
-	N.SetString(N2048String, 10)
-	prod.Mod(prod, &N)
+	n := new(big.Int)
+	if _, ok := n.SetString(N2048String, 10); !ok {
+		panic("failed to set N")
+	}
+	prod.Mod(prod, n)
 	fmt.Println("prod = ", prod.String())
-	var gcd big.Int
-	gcd.GCD(nil, nil, &N, prod)
+	gcd := new(big.Int).GCD(nil, nil, n, prod)
 	if gcd.Cmp(big1) != 0 {
 		// gcd != 1
 		//this condition should never happen
@@ -90,10 +94,8 @@ func GenerateG() {
 
 // SetProduct calculates the products of the input set
 func SetProduct(inputSet []*big.Int) *big.Int {
-	//var ret big.Int
-	ret := new(big.Int).Set(big1)
+	ret := big.NewInt(1)
 	setSize := len(inputSet)
-	ret.Set(big1)
 	// ret is set to 1
 	for i := 0; i < setSize; i++ {
 		ret.Mul(ret, inputSet[i])
@@ -103,21 +105,20 @@ func SetProduct(inputSet []*big.Int) *big.Int {
 
 // SetProduct2 calculates the products of the input set
 func SetProduct2(inputSet []*big.Int) *big.Int {
-	var ret big.Int
+	ret := big.NewInt(1)
 	setSize := len(inputSet)
-	ret.Set(big1)
 	// ret is set to 1
 	for i := 0; i < setSize; i++ {
-		ret.Mul(&ret, inputSet[i])
+		ret.Mul(ret, inputSet[i])
 	}
-	return &ret
+	return ret
 }
 
 // SetProduct calculates the products of the input divide-and-conquer recursively
 func SetProductRecursive(inputSet []*big.Int) *big.Int {
 	var (
 		length = len(inputSet)
-		ret    *big.Int
+		ret    = new(big.Int)
 	)
 	if length <= 2 {
 		ret.Set(big1)
@@ -127,9 +128,8 @@ func SetProductRecursive(inputSet []*big.Int) *big.Int {
 		}
 		return ret
 	}
-	var prod1, prod2 *big.Int
-	prod1 = SetProductRecursive(inputSet[0 : length/2])
-	prod2 = SetProductRecursive(inputSet[length/2:])
+	prod1 := SetProductRecursive(inputSet[0 : length/2])
+	prod2 := SetProductRecursive(inputSet[length/2:])
 	// startingTime := time.Now().UTC()
 	ret.Mul(prod1, prod2)
 	// endingTime := time.Now().UTC()
@@ -141,8 +141,10 @@ func SetProductRecursive(inputSet []*big.Int) *big.Int {
 
 // SetProduct calculates the products of the input divide-and-conquer recursively
 func SetProductRecursiveFast(inputSet []*big.Int) *big.Int {
-	length := len(inputSet)
-	var ret *big.Int
+	var (
+		length = len(inputSet)
+		ret    = new(big.Int)
+	)
 	if length <= 2 {
 		ret = new(big.Int)
 		ret.Set(big1)
@@ -152,11 +154,10 @@ func SetProductRecursiveFast(inputSet []*big.Int) *big.Int {
 		}
 		return ret
 	}
-	var prod1, prod2 big.Int
-	prod1 = *SetProductRecursiveFast(inputSet[0 : length/2])
-	prod2 = *SetProductRecursiveFast(inputSet[length/2:])
+	prod1 := SetProductRecursiveFast(inputSet[0 : length/2])
+	prod2 := SetProductRecursiveFast(inputSet[length/2:])
 	// startingTime := time.Now().UTC()
-	ret = bigfft.Mul(&prod1, &prod2)
+	ret = bigfft.Mul(prod1, prod2)
 	//ret.Mul(&prod1, &prod2)
 	// endingTime := time.Now().UTC()
 	// duration := endingTime.Sub(startingTime)
@@ -177,16 +178,12 @@ func SetProductParallel(inputSet []*big.Int, limit int) *big.Int {
 		return SetProductRecursiveFast(inputSet)
 	}
 
-	//c1 := make(chan *big.Int)
-	//c2 := make(chan *big.Int)
 	var (
 		c1 = make(chan *big.Int)
 		c2 = make(chan *big.Int)
 	)
 	go setProductParallelWithChan(inputSet[0:length/2], limit, c1)
 	go setProductParallelWithChan(inputSet[length/2:], limit, c2)
-	//prod1 := <-c1
-	//prod2 := <-c2
 
 	ret := bigfft.Mul(<-c1, <-c2)
 	return ret
@@ -197,13 +194,11 @@ func setProductParallelWithChan(inputSet []*big.Int, limit int, c chan *big.Int)
 	defer close(c)
 	if limit == 0 {
 		c <- SetProductRecursiveFast(inputSet)
-		//close(c)
 		return
 	}
 	limit--
 	if len(inputSet) <= 2 {
 		c <- SetProductRecursiveFast(inputSet)
-		//close(c)
 		return
 	}
 
@@ -214,20 +209,17 @@ func setProductParallelWithChan(inputSet []*big.Int, limit int, c chan *big.Int)
 	)
 	go setProductParallelWithChan(inputSet[0:length/2], limit, c1)
 	go setProductParallelWithChan(inputSet[length/2:], limit, c2)
-	//prod1 := <-c1
-	//prod2 := <-c2
 
 	ret := bigfft.Mul(<-c1, <-c2)
 	c <- ret
-	//close(c)
 }
 
 // GetPseudoRandomElement returns the pseudo random element from the input integer, for test use only
-func GetPseudoRandomElement(input int) *Element {
-	var ret Element
+func GetPseudoRandomElement(input int) Element {
+	//var ret Element
 	temp := strconv.Itoa(input)
-	ret = []byte(temp[:])
-	return &ret
+	ret := []byte(temp[:])
+	return ret
 }
 
 // flipCoin outputs 1/0 with equal probability
@@ -245,42 +237,39 @@ func flipCoin() bool {
 
 // TrustedSetupForQRN outputs a hidden order group
 func TrustedSetupForQRN() {
-	var p, q, N, g, h big.Int
-	p = *getSafePrime()
-	q = *getSafePrime()
+	p := getSafePrime()
+	q := getSafePrime()
 	fmt.Println("Bit length of p = ", p.BitLen())
 	fmt.Println("Bit length of q = ", q.BitLen())
-	N.Mul(&p, &q)
+	n := new(big.Int).Mul(p, q)
 
-	g = *getRanQR(&p, &q)
+	g := getRanQR(p, q)
 	// get a uniform random value randomNum in the QR_N, where the order of the group is p'q'
 	randomNum, err := crand.Prime(crand.Reader, RSABitLength)
 	if err != nil {
 		panic(err)
 	}
-	order := getOrder(&p, &q)
+	order := getOrder(p, q)
 	randomNum.Mod(randomNum, order)
-	h.Exp(&g, randomNum, &N)
-	fmt.Println("N = ", N.String())
+	h := new(big.Int).Exp(g, randomNum, n)
+	fmt.Println("N = ", n.String())
 	fmt.Println("g = ", g.String())
 	fmt.Println("h = ", h.String())
 }
 
 func getOrder(p, q *big.Int) *big.Int {
-	var pPrime, qPrime, phiN *big.Int
-	pPrime.Sub(p, big1)
+	pPrime := new(big.Int).Sub(p, big1)
 	pPrime.Div(pPrime, big2)
-	qPrime.Sub(q, big1)
+	qPrime := new(big.Int).Sub(q, big1)
 	qPrime.Div(qPrime, big2)
-	phiN.Mul(pPrime, qPrime)
+	phiN := new(big.Int).Mul(pPrime, qPrime)
 	return phiN
 }
 
 func testRemainder(input, modulo *big.Int) bool {
-	var remainder, cmp *big.Int
-	cmp.Sub(modulo, big1)
+	cmp := new(big.Int).Sub(modulo, big1)
 	cmp.Div(cmp, big2)
-	remainder.Mod(input, modulo)
+	remainder := new(big.Int).Mod(input, modulo)
 	if remainder.Cmp(cmp) != 0 {
 		return true
 	}
@@ -289,62 +278,29 @@ func testRemainder(input, modulo *big.Int) bool {
 
 // The following function implements the method described in "Safe Prime Generation with a Combined Sieve"
 // for small prime r, if the input == (r-1)/2 mod r, then return false. How many r should be tested is purely experimental.
-func safePrimeSieve(input *big.Int) bool {
-	if !testRemainder(input, big3) {
-		return false
+func checkSafePrimeBySieve(input *big.Int) bool {
+	for _, val := range safePrimeSieve {
+		if !testRemainder(input, val) {
+			return false
+		}
 	}
-	if !testRemainder(input, big5) {
-		return false
-	}
-	if !testRemainder(input, big7) {
-		return false
-	}
-	if !testRemainder(input, big11) {
-		return false
-	}
-	if !testRemainder(input, big13) {
-		return false
-	}
-	if !testRemainder(input, big17) {
-		return false
-	}
-	if !testRemainder(input, big19) {
-		return false
-	}
-	if !testRemainder(input, big23) {
-		return false
-	}
-	if !testRemainder(input, big29) {
-		return false
-	}
-	if !testRemainder(input, big31) {
-		return false
-	}
-	if !testRemainder(input, big37) {
-		return false
-	}
-
 	return true
 }
 
 func getSuitablePrime() *big.Int {
-	flag := false
-	for !flag {
+	for {
 		ranNum, err := crand.Prime(crand.Reader, RSABitLength/2-1)
 		if err != nil {
 			panic(err)
 		}
-		flag = safePrimeSieve(ranNum)
-		if !flag {
+		if ok := checkSafePrimeBySieve(ranNum); !ok {
 			continue
 		}
-		flag = ranNum.ProbablyPrime(securityPara / 2)
-		if !flag {
+		if ok := ranNum.ProbablyPrime(securityPara / 2); !ok {
 			continue
 		}
 		return ranNum
 	}
-	return nil
 }
 
 // a safe prime p = 2p' +1 where p' is also a prime number
@@ -365,8 +321,6 @@ func getSafePrime() *big.Int {
 }
 
 func getRanQR(p, q *big.Int) *big.Int {
-	//var N big.Int
-	//N.Mul(p, q)
 	var (
 		flag    bool
 		randNum *big.Int
@@ -378,11 +332,6 @@ func getRanQR(p, q *big.Int) *big.Int {
 			panic(err)
 		}
 		flag = isQR(randNum, p, q)
-		//if !flag {
-		//	continue
-		//} else {
-		//
-		//}
 	}
 	return randNum
 }

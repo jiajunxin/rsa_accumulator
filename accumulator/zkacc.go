@@ -38,8 +38,7 @@ func GenRandomizer() *big.Int {
 func ZKAccumulate(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
 	rep := HashEncode(set, encodeType)
-	endingTime := time.Now().UTC()
-	var duration = endingTime.Sub(startingTime)
+	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running HashEncode Takes [%.3f] Seconds \n",
 		duration.Seconds())
 

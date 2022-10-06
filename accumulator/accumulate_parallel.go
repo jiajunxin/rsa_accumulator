@@ -25,8 +25,7 @@ func AccAndProveParallel(set []string, encodeType EncodeType, setup *Setup) (*bi
 }
 
 // AccAndProveIterParallel iteratively and concurrently generates the accumulator with all the memberships precomputed
-func AccAndProveIterParallel(set []string, encodeType EncodeType,
-	setup *Setup) (*big.Int, []*big.Int) {
+func AccAndProveIterParallel(set []string, encodeType EncodeType, setup *Setup) (*big.Int, []*big.Int) {
 	startingTime := time.Now().UTC()
 	rep := HashEncode(set, encodeType)
 	endingTime := time.Now().UTC()
@@ -147,7 +146,7 @@ func ProveMembershipIterParallel(base big.Int, N *big.Int, set []*big.Int) []*bi
 			receivers <- parallelReceiver{
 				left:   node.left,
 				right:  node.right,
-				proofs: proveMembershipIter(*node.proof, N, set, node.left, node.right),
+				proofs: proveMembershipIter(node.proof, N, set, node.left, node.right),
 			}
 		}(node)
 		cnt++
@@ -197,7 +196,7 @@ type sendParam struct {
 	right int
 }
 
-func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right int) []*big.Int {
+func proveMembershipIter(base, N *big.Int, set []*big.Int, left, right int) []*big.Int {
 	if len(set) <= 0 {
 		return nil
 	}
@@ -205,7 +204,7 @@ func proveMembershipIter(base big.Int, N *big.Int, set []*big.Int, left, right i
 		header = &proofNode{
 			left:  left,
 			right: right,
-			proof: &base,
+			proof: base,
 		}
 		iter       = header
 		finishFlag = true
