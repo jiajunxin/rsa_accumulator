@@ -5,8 +5,6 @@ import (
 	"math/big"
 )
 
-const byteChunkSize = 125000
-
 // Table is the precomputing table
 type Table struct {
 	g             *big.Int
@@ -16,13 +14,13 @@ type Table struct {
 }
 
 // NewTable creates a new precomputing table
-func NewTable(g, n, elementUpperBound *big.Int, numElements uint64, byteChunkSize int) *Table {
+func NewTable(g, n *big.Int, elementBitLen, numElements, byteChunkSize int) *Table {
 	t := &Table{
 		g:             g,
 		n:             n,
 		byteChunkSize: byteChunkSize,
 	}
-	maxBitLen := elementUpperBound.BitLen() * int(numElements)
+	maxBitLen := elementBitLen * numElements
 	numByteChunks := maxBitLen / (t.byteChunkSize << 3)
 	t.table = make([]*big.Int, numByteChunks)
 	t.table[0] = new(big.Int).Set(g)

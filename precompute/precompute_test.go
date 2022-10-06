@@ -110,9 +110,7 @@ func TestTable_Compute(t1 *testing.T) {
 			name: "TestTable_Compute_small",
 			setupTable: func() *Table {
 				setup := getSmallSetup()
-
-				elemUpperBound := big.NewInt(32)
-				t := NewTable(setup.G, setup.N, elemUpperBound, uint64(len(getSmallReps())), smallByteChunkSize)
+				t := NewTable(setup.G, setup.N, 6, len(getSmallReps()), smallByteChunkSize)
 				return t
 			},
 			args: args{
@@ -125,9 +123,7 @@ func TestTable_Compute(t1 *testing.T) {
 			name: "TestTable_Compute",
 			setupTable: func() *Table {
 				setup := getSetup()
-				elemUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
-				elemUpperBound.Sub(elemUpperBound, big.NewInt(1))
-				t := NewTable(setup.G, setup.N, elemUpperBound, testSize, testByteChunkSize)
+				t := NewTable(setup.G, setup.N, 2048, testSize, testByteChunkSize)
 				return t
 			},
 			args: args{
@@ -166,10 +162,8 @@ func BenchmarkAccumulate(b *testing.B) {
 
 func BenchmarkPrecompute(b *testing.B) {
 	setup := getSetup()
-	elemUpperBound := new(big.Int).Lsh(big.NewInt(1), 2048)
-	elemUpperBound.Sub(elemUpperBound, big.NewInt(1))
 	reps := getRepresentations()
-	t := NewTable(setup.G, setup.N, elemUpperBound, testSize, 1024)
+	t := NewTable(setup.G, setup.N, 2048, testSize, 1024)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		repProd := accumulator.SetProductRecursive(reps)
@@ -177,18 +171,18 @@ func BenchmarkPrecompute(b *testing.B) {
 	}
 }
 
-//func TestComputeFromTable(t1 *testing.T) {
-//	setSize := 1000
-//	set := accumulator.GenBenchSet(setSize)
-//	setup := *accumulator.TrustedSetup()
-//	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
-//	prod := accumulator.SetProductRecursive(rep)
-//	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
-//
-//	table := GenPreTable(setup.G, setup.N, 10000, 100)
-//	result := ComputeFromTable(table, prod, setup.N)
-//	if result.Cmp(originalResult) != 0 {
-//		t1.Errorf("wrong result")
-//
-//	}
-//}
+func TestComputeFromTable(t1 *testing.T) {
+	setSize := 1000
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+	rep := accumulator.HashEncode(set, accumulator.EncodeTypePoseidonDIHash)
+	prod := accumulator.SetProductRecursive(rep)
+	originalResult := accumulator.AccumulateNew(setup.G, prod, setup.N)
+
+	table := GenPreTable(setup.G, setup.N, 10000, 100)
+	result := ComputeFromTable(table, prod, setup.N)
+	if result.Cmp(originalResult) != 0 {
+		t1.Errorf("wrong result")
+
+	}
+}
