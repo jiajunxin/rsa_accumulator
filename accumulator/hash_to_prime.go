@@ -13,8 +13,7 @@ func HashToPrime(input []byte) *big.Int {
 	hashTemp := h.Sum(nil)
 	ret.SetBytes(hashTemp)
 	for {
-		isPrime := ret.ProbablyPrime(securityParaHashToPrime)
-		if isPrime {
+		if isPrime := ret.ProbablyPrime(securityParaHashToPrime); isPrime {
 			break
 		}
 		h.Reset()

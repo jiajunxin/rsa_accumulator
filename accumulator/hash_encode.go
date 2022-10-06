@@ -33,8 +33,7 @@ func poseidonDIHash(set []string) []*big.Int {
 	)
 	for i := range set {
 		ret[i] = Min2048()
-		opt, err = poseidon.HashBytes([]byte(set[i]))
-		if err != nil {
+		if opt, err = poseidon.HashBytes([]byte(set[i])); err != nil {
 			panic(err)
 		}
 		ret[i].Add(ret[i], opt)

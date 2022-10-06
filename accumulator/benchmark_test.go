@@ -90,7 +90,7 @@ func BenchmarkAccumulateDIHashWithPreCompute(b *testing.B) {
 	testObject := *TrustedSetup()
 	testBytes := []byte(testString)
 
-	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
+	B := AccumulateNew(testObject.G, dihash.Delta(), testObject.N)
 	tempInt := *SHA256ToInt(testBytes)
 	var BCSum big.Int
 

@@ -2,9 +2,10 @@ package dihash
 
 import (
 	"crypto/sha256"
-	"fmt"
+	"github.com/jiajunxin/rsa_accumulator/param"
 	"math/big"
 	"math/rand"
+	"sync"
 )
 
 const (
@@ -17,51 +18,59 @@ const (
 )
 
 var (
-	// Delta is a 2000 bits large integer
-	Delta = big.NewInt(0)
-	// Max256 is set to 2^256 after init
-	Max256 = big.NewInt(0)
-
-	one = big.NewInt(1)
+	// delta is a 2000 bits large integer
+	delta     *big.Int
+	onceDelta sync.Once
+	// max256 is set to 2^256 after init
+	max256     *big.Int
+	onceMax256 sync.Once
 )
 
-func init() {
-	_, flag := Delta.SetString(deltaValString, 10)
-	if !flag {
-		fmt.Printf("flag is false, init of DI Hash failed")
-		panic(0)
-	}
-	_ = Max256.Lsh(one, 256)
-	_ = Max256.Sub(Max256, one)
-	//fmt.Println("the Delta = ", Delta.String())
-	//fmt.Println("the Max256 in bits = ", Max256.Text(2))
+func Delta() *big.Int {
+	onceDelta.Do(func() {
+		delta = new(big.Int)
+		if _, ok := delta.SetString(deltaValString, 10); !ok {
+			panic("failed to set delta")
+		}
+	})
+	return delta
+}
+
+func Max256() *big.Int {
+	onceMax256.Do(func() {
+		max256 = new(big.Int)
+		max256.Lsh(param.Big1, 256)
+		max256.Sub(max256, param.Big1)
+	})
+	return max256
 }
 
 // DIHash returns the Delta + Sha256(input)
 func DIHash(input []byte) *big.Int {
 	h := sha256.New()
-	var temp, ret big.Int
 	h.Write(input)
-	hashTemp := h.Sum(nil)
-	temp.SetBytes(hashTemp)
-	_ = ret.Add(Delta, &temp)
-	return &ret
+	hashBytes := h.Sum(nil)
+	temp := new(big.Int).SetBytes(hashBytes)
+	ret := new(big.Int).Add(Delta(), temp)
+	return ret
 }
 
 // Get2048Rnd returns the Sha256(input||0) || Sha256(input||1) || ... Sha256(input||7)
 func get2048Rnd(rnd *rand.Rand) *big.Int {
 	h := sha256.New()
-	var ranNum, ret big.Int
-	var hashJoint []byte
+	var (
+		ranNum    = new(big.Int)
+		hashJoint []byte
+	)
 
 	for i := 0; i < 8; i++ {
-		ranNum.Rand(rnd, Max256)
+		ranNum.Rand(rnd, Max256())
 		tempBytes := append(ranNum.Bytes(), byte(i))
 		h.Write(tempBytes)
 		hashTemp := h.Sum(nil)
 		hashJoint = append(hashJoint, hashTemp...)
 	}
 
-	ret.SetBytes(hashJoint)
-	return &ret
+	ret := new(big.Int).SetBytes(hashJoint)
+	return ret
 }
