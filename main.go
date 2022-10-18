@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/jiajunxin/rsa_accumulator/experiments"
 	"math/big"
 	"time"
+
+	"github.com/jiajunxin/rsa_accumulator/experiments"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
 func testPreCompute() {
-	setSize := 100000
+	setSize := 10000
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
@@ -28,8 +29,31 @@ func testPreCompute() {
 	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
+func testPreCompute2() {
+	setSize := 10000
+	set := accumulator.GenBenchSet(setSize)
+	setup := accumulator.TrustedSetup()
+
+	startingTime := time.Now().UTC()
+	accumulator.AccAndProve(set, accumulator.MultiDIHashFromPoseidon, setup)
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
+}
+
+func testPreCompute3() {
+	setSize := 10000
+	set := accumulator.GenBenchSet(setSize)
+	setup := accumulator.TrustedSetup()
+
+	startingTime := time.Now().UTC()
+	accumulator.AccAndProve(set, accumulator.DIHashFromPoseidon, setup)
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
+}
+
 func main() {
 
-	testPreCompute()
-
+	//experiments.TestDI()
+	testPreCompute2()
+	testPreCompute3()
 }
