@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -99,5 +100,61 @@ func BenchmarkAccumulateDIHashWithPreCompute(b *testing.B) {
 		C := AccumulateNew(testObject.G, &tempInt, testObject.N)
 		BCSum.Mul(B, C)
 		BCSum.Mod(&BCSum, testObject.N)
+	}
+}
+
+func BenchmarkGroupElementMul(b *testing.B) {
+	setup := *TrustedSetup()
+
+	setSize := 10000
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, setup.N)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		groupElementMul(setup.N, set)
+	}
+}
+
+func BenchmarkGroupElementSquare(b *testing.B) {
+	setup := *TrustedSetup()
+
+	setSize := 10000
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, setup.N)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		groupElementSquare(setup.N, set)
+	}
+}
+
+func groupElementMul(N *big.Int, set []*big.Int) {
+	var temp big.Int
+	for i := range set {
+		if i > 0 {
+			temp.Mul(set[i], set[i-1])
+			temp.Mod(&temp, N)
+		}
+	}
+}
+
+func groupElementSquare(N *big.Int, set []*big.Int) {
+	var temp big.Int
+	for i := range set {
+		if i > 0 {
+			temp.Exp(set[i], big2, N)
+		}
 	}
 }
