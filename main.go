@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/jiajunxin/rsa_accumulator/experiments"
 	"math/big"
 	"time"
+
+	"github.com/jiajunxin/rsa_accumulator/experiments"
 
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	"github.com/jiajunxin/rsa_accumulator/precompute"
@@ -33,8 +34,29 @@ func testPreCompute() {
 	fmt.Printf("Running ProveMembershipParallel3 Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
+func testBigInt() {
+	var temp, temp2 big.Int
+	temp.SetInt64(1024)
+	bytes := temp.Bytes()
+	fmt.Println("byte[0] = ", bytes[0])
+	fmt.Println("byte[1] = ", bytes[1])
+	//fmt.Println("byte[2] = ", bytes[2])
+	//fmt.Println("byte[4] = ", bytes[3])
+	temp2.SetBytes(bytes)
+	fmt.Println("temp2 = ", temp2.String())
+
+	bits := temp.Bits()
+	fmt.Println("bit[0] = ", bits[0])
+	bits[0]++
+	//fmt.Println("bit[1] = ", bits[1])
+	temp2.SetBits(bits)
+	fmt.Println("temp = ", temp.String())
+	fmt.Println("temp2 = ", temp2.String())
+}
+
 func main() {
 
-	testPreCompute()
+	//testPreCompute()
+	testBigInt()
 
 }
