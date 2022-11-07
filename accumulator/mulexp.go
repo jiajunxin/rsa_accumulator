@@ -1,7 +1,6 @@
 package accumulator
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -19,21 +18,23 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 
 // GCB calculates the greatest common binaries of a and b.
 // For example, if a = 1011 (binary) and b = 1100,
-// the return will be of the form 1000
+// the return will be of 1000(binary)
 func GCB(a, b *big.Int) *big.Int {
 	bitStringA := a.Bits()
 	bitStringB := b.Bits()
 
 	var maxBitLen int
 	if len(bitStringA) > len(bitStringB) {
-		maxBitLen = len(bitStringA)
-	} else {
 		maxBitLen = len(bitStringB)
+	} else {
+		maxBitLen = len(bitStringA)
 	}
 
 	bitStingsRet := make([]big.Word, maxBitLen)
 	for i := 0; i < maxBitLen; i++ {
 		bitStingsRet[i] = CommonBits(bitStringA[i], bitStringB[i])
+		bitStringA[i] = bitStringA[i] - bitStingsRet[i]
+		bitStringB[i] = bitStringB[i] - bitStingsRet[i]
 	}
 	var ret big.Int
 	ret.SetBits(bitStingsRet)
@@ -48,7 +49,7 @@ func CommonBits(a, b big.Word) big.Word {
 	for i := 0; i < 32; i++ {
 		mask = uint(1 << i)
 		if ((uint(a) & mask) == mask) && ((uint(b) & mask) == mask) {
-			fmt.Println("i == ", i, "mask = ", mask)
+			//fmt.Println("i == ", i, "mask = ", mask)
 			ret = uint(ret) | mask
 		}
 	}
