@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -43,9 +44,11 @@ func GCB(a, b *big.Int) *big.Int {
 func CommonBits(a, b big.Word) big.Word {
 	var ret uint
 	ret = 0
+	var mask uint
 	for i := 0; i < 32; i++ {
-		mask := uint(1 << uint(i))
-		if (uint(a) & mask) == (uint(b) & mask) {
+		mask = uint(1 << i)
+		if ((uint(a) & mask) == mask) && ((uint(b) & mask) == mask) {
+			fmt.Println("i == ", i, "mask = ", mask)
 			ret = uint(ret) | mask
 		}
 	}
