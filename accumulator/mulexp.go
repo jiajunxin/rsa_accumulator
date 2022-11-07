@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -29,16 +30,18 @@ func GCB(a, b *big.Int) *big.Int {
 	} else {
 		maxBitLen = len(bitStringA)
 	}
-
+	fmt.Println("test 0 ")
 	bitStingsRet := make([]big.Word, maxBitLen)
 	for i := 0; i < maxBitLen; i++ {
 		bitStingsRet[i] = CommonBits(bitStringA[i], bitStringB[i])
 		bitStringA[i] = bitStringA[i] - bitStingsRet[i]
 		bitStringB[i] = bitStringB[i] - bitStingsRet[i]
 	}
+	fmt.Println("test 1 ")
 	var ret big.Int
 	ret.SetBits(bitStingsRet)
-	return nil
+	fmt.Println("test 2 ")
+	return &ret
 }
 
 // CommonBits calculates the greatest common binaries of a and b when they are uint.
