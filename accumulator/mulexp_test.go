@@ -64,3 +64,35 @@ func TestGCB(t *testing.T) {
 		t.Errorf("Wrong result for GCB")
 	}
 }
+
+func TestSimpleExp(t *testing.T) {
+	var max big.Int
+	max.SetInt64(1000000)
+
+	g, err := rand.Int(rand.Reader, &max)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	x, err := rand.Int(rand.Reader, &max)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	N, err := rand.Int(rand.Reader, &max)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	fmt.Println("g = ", g.String())
+	fmt.Println("x = ", x.String())
+	fmt.Println("N = ", N.String())
+
+	var result2 big.Int
+	result2.Exp(g, x, N)
+	result := SimpleExp(g, x, N)
+	fmt.Println("result = ", result.String())
+	fmt.Println("result2 = ", result2.String())
+
+	fmt.Println("test 4 ")
+	if result.Cmp(&result2) != 0 {
+		t.Errorf("Wrong result for SimpleExp")
+	}
+}

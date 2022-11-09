@@ -13,8 +13,26 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 	}
 	// change x to its binary representation
 	//binaryX := x.Bytes()
-
-	return nil
+	bitLen := x.BitLen()
+	bits := x.Bits() // bits is a slice of uint32
+	var mask uint
+	var gCopy, output big.Int
+	gCopy.Set(g)
+	output.SetInt64(1)
+	for i := 0; i < bitLen; i++ {
+		chunk := i / 32
+		for j := 0; j < 32; j++ {
+			mask = uint(1 << j)
+			if (uint(bits[chunk]) & mask) == mask {
+				output.Mul(&output, &gCopy)
+				output.Mod(&output, n)
+			}
+			gCopy.Mul(&gCopy, &gCopy)
+			gCopy.Mod(&gCopy, n)
+		}
+		i += 32
+	}
+	return &output
 }
 
 // GCB calculates the greatest common binaries of a and b.
