@@ -158,3 +158,42 @@ func groupElementSquare(N *big.Int, set []*big.Int) {
 		}
 	}
 }
+
+func BenchmarkExp(b *testing.B) {
+	setup := *TrustedSetup()
+
+	setSize := 10000
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, setup.N)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	var temp big.Int
+	for i := 0; i < b.N; i++ {
+		temp.Exp(setup.G, set[i], setup.N)
+	}
+}
+
+func BenchmarkSimpleExp(b *testing.B) {
+	setup := *TrustedSetup()
+
+	setSize := 10000
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, setup.N)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = SimpleExp(setup.G, set[i], setup.N)
+	}
+}

@@ -14,14 +14,16 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 	// change x to its binary representation
 	//binaryX := x.Bytes()
 	bitLen := x.BitLen()
+	//fmt.Println("BitLen = ", bitLen)
 	bits := x.Bits() // bits is a slice of uint32
+	//fmt.Println("Bitslice len = ", len(bits))
 	var mask uint
 	var gCopy, output big.Int
 	gCopy.Set(g)
 	output.SetInt64(1)
 	for i := 0; i < bitLen; i++ {
-		chunk := i / 32
-		for j := 0; j < 32; j++ {
+		chunk := i / 64
+		for j := 0; j < 64; j++ {
 			mask = uint(1 << j)
 			if (uint(bits[chunk]) & mask) == mask {
 				output.Mul(&output, &gCopy)
@@ -30,7 +32,7 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 			gCopy.Mul(&gCopy, &gCopy)
 			gCopy.Mod(&gCopy, n)
 		}
-		i += 32
+		i += 64
 	}
 	return &output
 }
