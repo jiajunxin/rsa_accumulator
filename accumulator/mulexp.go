@@ -34,6 +34,7 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 		}
 		i += 64
 	}
+	_ = big.MultiExp(g, g, g, g)
 	return &output
 }
 

@@ -54,9 +54,18 @@ func testBigInt() {
 	fmt.Println("temp2 = ", temp2.String())
 }
 
+func testExp() {
+	setup := *accumulator.TrustedSetup()
+	var ret1, ret2 big.Int
+	ret1.Exp(setup.G, setup.G, setup.N)
+	ret2 = *big.MultiExp(setup.G, setup.G, setup.G, setup.N)[0]
+	fmt.Println("ret1 in main = ", ret1.String())
+	fmt.Println("ret2 in main = ", ret2.String())
+}
+
 func main() {
 
 	//testPreCompute()
-	testBigInt()
-
+	//testBigInt()
+	testExp()
 }
