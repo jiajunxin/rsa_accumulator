@@ -58,9 +58,12 @@ func testExp() {
 	setup := *accumulator.TrustedSetup()
 	var ret1, ret2 big.Int
 	ret1.Exp(setup.G, setup.G, setup.N)
-	ret2 = *big.MultiExp(setup.G, setup.G, setup.G, setup.N)[0]
+	ret2.Exp(setup.G, setup.N, setup.N)
+	temp := big.MultiExp(setup.G, setup.G, setup.N, setup.N)
 	fmt.Println("ret1 in main = ", ret1.String())
-	fmt.Println("ret2 in main = ", ret2.String())
+	fmt.Println("ret1.2 in main = ", ret2.String())
+	fmt.Println("ret2 in main = ", temp[0].String())
+	fmt.Println("ret3 in main = ", temp[1].String())
 }
 
 func main() {
