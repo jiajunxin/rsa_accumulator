@@ -1,7 +1,6 @@
 package accumulator
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -34,7 +33,7 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 		}
 		i += 64
 	}
-	_ = big.MultiExp(g, g, g, g)
+	_ = big.DoubleExp(g, g, g, g)
 	return &output
 }
 
@@ -51,17 +50,14 @@ func GCB(a, b *big.Int) *big.Int {
 	} else {
 		maxBitLen = len(bitStringA)
 	}
-	fmt.Println("test 0 ")
 	bitStingsRet := make([]big.Word, maxBitLen)
 	for i := 0; i < maxBitLen; i++ {
 		bitStingsRet[i] = CommonBits(bitStringA[i], bitStringB[i])
 		bitStringA[i] = bitStringA[i] - bitStingsRet[i]
 		bitStringB[i] = bitStringB[i] - bitStingsRet[i]
 	}
-	fmt.Println("test 1 ")
 	var ret big.Int
 	ret.SetBits(bitStingsRet)
-	fmt.Println("test 2 ")
 	return &ret
 }
 

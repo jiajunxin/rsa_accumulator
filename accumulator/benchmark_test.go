@@ -162,11 +162,13 @@ func groupElementSquare(N *big.Int, set []*big.Int) {
 func BenchmarkExp(b *testing.B) {
 	setup := *TrustedSetup()
 
+	var largeTestNum big.Int
+	largeTestNum.Mul(setup.N, setup.N)
 	setSize := 10000
 	set := make([]*big.Int, setSize)
 	var err error
 	for i := range set {
-		set[i], err = crand.Int(crand.Reader, setup.N)
+		set[i], err = crand.Int(crand.Reader, &largeTestNum)
 	}
 	if err != nil {
 		b.Fatal(err)
@@ -179,7 +181,68 @@ func BenchmarkExp(b *testing.B) {
 	}
 }
 
+func BenchmarkDoubleExp(b *testing.B) {
+	setup := *TrustedSetup()
+
+	var largeTestNum big.Int
+	largeTestNum.Mul(setup.N, setup.N)
+	setSize := 10000
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, &largeTestNum)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 1; i < b.N; i++ {
+		big.DoubleExp(setup.G, set[i-1], set[i], setup.N)
+	}
+}
+
+func BenchmarkFourFoldExp(b *testing.B) {
+	setup := *TrustedSetup()
+
+	var largeTestNum big.Int
+	largeTestNum.Mul(setup.N, setup.N)
+	setSize := 10000
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, &largeTestNum)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 4; i < b.N; i++ {
+		big.FourFoldExp(setup.G, setup.N, set[0:4])
+	}
+}
+
 func BenchmarkSimpleExp(b *testing.B) {
+	setup := *TrustedSetup()
+
+	setSize := 100
+	set := make([]*big.Int, setSize)
+	var err error
+	for i := range set {
+		set[i], err = crand.Int(crand.Reader, setup.N)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < setSize; i++ {
+		_ = SimpleExp(setup.G, set[i], setup.N)
+	}
+}
+
+func BenchmarkGCB(b *testing.B) {
 	setup := *TrustedSetup()
 
 	setSize := 10000
@@ -193,7 +256,7 @@ func BenchmarkSimpleExp(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = SimpleExp(setup.G, set[i], setup.N)
+	for i := 1; i < setSize; i++ {
+		_ = GCB(set[i-1], set[i])
 	}
 }
