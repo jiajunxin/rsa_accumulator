@@ -71,6 +71,10 @@ func TestAccAndProve(t *testing.T) {
 	if acc2.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
+	acc3 = AccumulateNew(proofs[1], rep[1], setup.N)
+	if acc.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
 
 	// test another set size not a power of 2
 	testSetSize = 17

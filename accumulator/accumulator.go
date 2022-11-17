@@ -73,13 +73,33 @@ func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	// 	return set
 	// }
 	// the left part of proof need to accumulate the right part of the set, vice versa.
+	// x0x1Prod := bigfft.Mul(set[0], set[1])
+	// x2x3Prod := bigfft.Mul(set[2], set[3])
+	// x0Prod := bigfft.Mul(x2x3Prod, set[1])
+	// x1Prod := bigfft.Mul(x2x3Prod, set[0])
+	// x2Prod := bigfft.Mul(x0x1Prod, set[3])
+	// x3Prod := bigfft.Mul(x0x1Prod, set[2])
 	leftProd := SetProductRecursiveFast(set[len(set)/2:])
 	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	bases := big.DoubleExp(base, leftProd, rightProd, N)
+	leftleftProd := SetProductRecursiveFast(set[len(set)/4 : len(set)/2])
+	leftrightProd := SetProductRecursiveFast(set[0 : len(set)/4])
+	rightleftProd := SetProductRecursiveFast(set[len(set)*3/4:])
+	rightrightProd := SetProductRecursiveFast(set[len(set)/2 : len(set)*3/4])
+
+	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	inputExp := make([]*big.Int, 4)
+	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
+	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
+	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
+	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
+	bases := big.FourFoldExp(base, N, inputExp)
 	// leftBase := accumulateNew(base, N, set[len(set)/2:])
 	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
-	proofs := ProveMembership(bases[0], N, set[0:len(set)/2])
-	proofs = append(proofs, ProveMembership(bases[1], N, set[len(set)/2:])...)
+	proofs := ProveMembership(bases[0], N, set[0:len(set)/4])
+	proofs = append(proofs, ProveMembership(bases[1], N, set[len(set)/4:len(set)/2])...)
+	proofs = append(proofs, ProveMembership(bases[2], N, set[len(set)/2:len(set)*3/4])...)
+	proofs = append(proofs, ProveMembership(bases[3], N, set[len(set)*3/4:])...)
 	return proofs
 }
 
