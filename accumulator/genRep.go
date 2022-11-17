@@ -26,3 +26,16 @@ func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 	}
 	return ret
 }
+
+func genRepWithMultiDIHashFromPoseidon(set []string) []*big.Int {
+	ret := make([]*big.Int, len(set))
+	for i := range set {
+		ret[i] = new(big.Int)
+		temp, err := poseidon.HashBytes([]byte(set[i]))
+		if err != nil {
+			panic(err)
+		}
+		ret[i].Add(ret[i], temp)
+	}
+	return ret
+}

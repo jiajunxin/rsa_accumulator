@@ -5,33 +5,37 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/jiajunxin/rsa_accumulator/experiments"
-
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
-	"github.com/jiajunxin/rsa_accumulator/precompute"
 )
 
 func testPreCompute() {
-	setSize := 65536 // 2 ^ 16
+	setSize := 65536 // 2 ^ 16 65536
+	fmt.Println("Test set size = ", setSize)
+	fmt.Println("GenRepresentatives with MultiDIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
-	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
 
-	elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 2047)
 	startingTime := time.Now().UTC()
-	t := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize), 102400)
+	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 2)
 	duration := time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running NewTable Takes [%.3f] Seconds \n", duration.Seconds())
-
-	startingTime = time.Now().UTC()
-	experiments.ProveMembershipParallel2(t, setup.G, setup.N, rep, 4, 16)
-	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
 
-	startingTime = time.Now().UTC()
-	experiments.ProveMembershipParallel3(t, setup.G, setup.N, rep, 4, 16)
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallel3 Takes [%.3f] Seconds \n", duration.Seconds())
+	// elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 255) //255 is the length of MultiDIHashFromPoseidon
+	// startingTime := time.Now().UTC()
+	// t := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize), 102400)
+	// duration := time.Now().UTC().Sub(startingTime)
+	// fmt.Printf("Running NewTable Takes [%.3f] Seconds \n", duration.Seconds())
+
+	// startingTime = time.Now().UTC()
+	// experiments.ProveMembershipParallel2(t, setup.G, setup.N, rep, 2, 4)
+	// duration = time.Now().UTC().Sub(startingTime)
+	// fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
+
+	// startingTime = time.Now().UTC()
+	// experiments.ProveMembershipParallel3(t, setup.G, setup.N, rep, 2, 4)
+	// duration = time.Now().UTC().Sub(startingTime)
+	// fmt.Printf("Running ProveMembershipParallel3 Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
 func testBigInt() {
@@ -60,15 +64,20 @@ func testExp() {
 	ret1.Exp(setup.G, setup.G, setup.N)
 	ret2.Exp(setup.G, setup.N, setup.N)
 	temp := big.DoubleExp(setup.G, setup.G, setup.N, setup.N)
+	temp2 := big.FourFoldExp(setup.G, setup.N, []*big.Int{setup.G, setup.N, setup.G, setup.N})
 	fmt.Println("ret1 in main = ", ret1.String())
 	fmt.Println("ret1.2 in main = ", ret2.String())
 	fmt.Println("ret2 in main = ", temp[0].String())
 	fmt.Println("ret3 in main = ", temp[1].String())
+	fmt.Println("---ret4 in main = ", temp2[0].String())
+	fmt.Println("ret5 in main = ", temp2[1].String())
+	fmt.Println("ret6 in main = ", temp2[2].String())
+	fmt.Println("ret7 in main = ", temp2[3].String())
 }
 
 func main() {
 
-	//testPreCompute()
+	testPreCompute()
 	//testBigInt()
-	testExp()
+	//testExp()
 }

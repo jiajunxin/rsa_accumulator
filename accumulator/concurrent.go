@@ -48,21 +48,23 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 	}
 	limit--
 
-	if len(set) <= 2 {
+	if len(set) <= 4 {
 		return handleSmallSet(base, N, set)
 	}
 
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	startingTime := time.Now().UTC()
-	leftBase, rightBase := calBaseParallel(base, N, set)
+	leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	bases := big.DoubleExp(base, leftProd, rightProd, N)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
 		duration.Seconds())
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
-	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
-	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	go proveMembershipWithChan(bases[0], N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan(bases[1], N, set[len(set)/2:], limit, c2)
 	proofs1 := <-c1
 	proofs2 := <-c2
 
@@ -78,25 +80,20 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan
 		return
 	}
 	limit--
-	if len(set) <= 2 {
+	if len(set) <= 4 {
 		c <- handleSmallSet(base, N, set)
 		close(c)
 		return
 	}
 
-	// if len(set) <= 1024 {
-	// 	c <- set[:]
-	// 	//c <- handleSmallSet(base, N, set)
-	// 	close(c)
-	// 	return
-	// }
-
 	// the left part of proof need to accumulate the right part of the set, vice versa.
-	leftBase, rightBase := calBaseParallel(base, N, set)
+	leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	bases := big.DoubleExp(base, leftProd, rightProd, N)
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
-	go proveMembershipWithChan(leftBase, N, set[0:len(set)/2], limit, c1)
-	go proveMembershipWithChan(rightBase, N, set[len(set)/2:], limit, c2)
+	go proveMembershipWithChan(bases[0], N, set[0:len(set)/2], limit, c1)
+	go proveMembershipWithChan(bases[1], N, set[len(set)/2:], limit, c2)
 	proofs1 := <-c1
 	proofs2 := <-c2
 	proofs1 = append(proofs1, proofs2...)
