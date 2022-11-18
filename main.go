@@ -17,9 +17,19 @@ func testPreCompute() {
 	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
 
 	startingTime := time.Now().UTC()
-	accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 2)
+	//accumulator.ProveMembershipParallel(setup.G, setup.N, rep, 2)
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	maxLen := setSize * 256 / big.GetWidth()
+	table := big.PreCompute(setup.G, setup.N, maxLen)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running PreCompute Takes [%.3f] Seconds \n", duration.Seconds())
+	startingTime = time.Now().UTC()
+	accumulator.ProveMembershipParallelWithTable(setup.G, setup.N, rep, 2, table)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallelWithTable Takes [%.3f] Seconds \n", duration.Seconds())
 
 	// elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 255) //255 is the length of MultiDIHashFromPoseidon
 	// startingTime := time.Now().UTC()
