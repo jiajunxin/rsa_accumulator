@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	multiexp "github.com/jiajunxin/multiExp"
+	"github.com/jiajunxin/multiexp"
 	"github.com/remyoudompheng/bigfft"
 )
 

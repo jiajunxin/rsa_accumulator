@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	multiexp "github.com/jiajunxin/multiexp"
+	"github.com/jiajunxin/multiexp"
 
 	"github.com/remyoudompheng/bigfft"
 )
