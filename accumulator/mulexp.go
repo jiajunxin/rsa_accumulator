@@ -2,6 +2,8 @@ package accumulator
 
 import (
 	"math/big"
+
+	"github.com/jiajunxin/multiexp"
 )
 
 // SimpleExp should calculate g^x mod n.
@@ -33,7 +35,7 @@ func SimpleExp(g, x, n *big.Int) *big.Int {
 		}
 		i += 64
 	}
-	_ = big.DoubleExp(g, g, g, g)
+	multiexp.DoubleExp(g, g, g, g)
 	return &output
 }
 

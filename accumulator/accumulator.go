@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"time"
 
+	multiexp "github.com/jiajunxin/multiexp"
+
 	"github.com/remyoudompheng/bigfft"
 )
 
@@ -93,7 +95,7 @@ func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
 	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
 	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
-	bases := big.FourFoldExp(base, N, inputExp)
+	bases := multiexp.FourFoldExp(base, N, inputExp)
 	// leftBase := accumulateNew(base, N, set[len(set)/2:])
 	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
 	proofs := ProveMembership(bases[0], N, set[0:len(set)/4])
@@ -171,17 +173,17 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 		x1Prod := bigfft.Mul(x2x3Prod, set[0])
 		x2Prod := bigfft.Mul(x0x1Prod, set[3])
 		x3Prod := bigfft.Mul(x0x1Prod, set[2])
-		return big.FourFoldExp(base, N, []*big.Int{x0Prod, x1Prod, x2Prod, x3Prod})
+		return multiexp.FourFoldExp(base, N, []*big.Int{x0Prod, x1Prod, x2Prod, x3Prod})
 	}
 	if len(set) == 3 {
 		// suppose the set is x0, x1, x2, the membership for x0 is base^{x1x2}
 		x0Prod := bigfft.Mul(set[1], set[2])
 		x1Prod := bigfft.Mul(set[0], set[2])
 		x2Prod := bigfft.Mul(set[0], set[1])
-		return append(big.DoubleExp(base, x0Prod, x1Prod, N), AccumulateNew(base, x2Prod, N))
+		return append(multiexp.DoubleExp(base, x0Prod, x1Prod, N), AccumulateNew(base, x2Prod, N))
 	}
 	if len(set) == 2 {
-		return big.DoubleExp(base, set[1], set[0], N)
+		return multiexp.DoubleExp(base, set[1], set[0], N)
 	}
 	if len(set) == 1 {
 		ret := make([]*big.Int, 1)

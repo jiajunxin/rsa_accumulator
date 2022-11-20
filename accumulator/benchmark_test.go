@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/dihash"
 )
 
@@ -198,7 +199,7 @@ func BenchmarkDoubleExp(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 1; i < b.N; i++ {
-		big.DoubleExp(setup.G, set[i-1], set[i], setup.N)
+		multiexp.DoubleExp(setup.G, set[i-1], set[i], setup.N)
 	}
 }
 
@@ -219,7 +220,7 @@ func BenchmarkFourFoldExp(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 4; i < b.N; i++ {
-		big.FourFoldExp(setup.G, setup.N, set[0:4])
+		multiexp.FourFoldExp(setup.G, setup.N, set[0:4])
 	}
 }
 
