@@ -10,6 +10,8 @@ require (
 	lukechampine.com/frand v1.4.2
 )
 
+replace github.com/jiajunxin/multiexp v0.0.3 => C:\Users\jxin\go\src\github.com\jiajunxin\multiexp
+
 require (
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
