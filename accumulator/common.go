@@ -25,6 +25,8 @@ const (
 	HashToPrimeFromSha256 = iota
 	// DIHashFromPoseidon is a division intractable Hash output
 	DIHashFromPoseidon
+	// MultiDIHashFromPoseidon is an special division intractable Hash output
+	MultiDIHashFromPoseidon
 )
 
 var (

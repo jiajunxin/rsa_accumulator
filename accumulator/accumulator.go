@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/jiajunxin/multiexp"
+
+	"github.com/remyoudompheng/bigfft"
 )
 
 func init() {
@@ -28,6 +32,8 @@ func GenRepresentatives(set []string, encodeType EncodeType) []*big.Int {
 		return genRepWithHashToPrimeFromSHA256(set)
 	case DIHashFromPoseidon:
 		return genRepWithDIHashFromPoseidon(set)
+	case MultiDIHashFromPoseidon:
+		return genRepWithMultiDIHashFromPoseidon(set)
 	default:
 		return genRepWithHashToPrimeFromSHA256(set)
 	}
@@ -62,17 +68,40 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.In
 
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
-	if len(set) <= 2 {
+	if len(set) <= 4 {
 		return handleSmallSet(base, N, set)
 	}
 	// if len(set) <= 1024 {
 	// 	return set
 	// }
 	// the left part of proof need to accumulate the right part of the set, vice versa.
-	leftBase := *accumulateNew(base, N, set[len(set)/2:])
-	rightBase := *accumulateNew(base, N, set[0:len(set)/2])
-	proofs := ProveMembership(&leftBase, N, set[0:len(set)/2])
-	proofs = append(proofs, ProveMembership(&rightBase, N, set[len(set)/2:])...)
+	// x0x1Prod := bigfft.Mul(set[0], set[1])
+	// x2x3Prod := bigfft.Mul(set[2], set[3])
+	// x0Prod := bigfft.Mul(x2x3Prod, set[1])
+	// x1Prod := bigfft.Mul(x2x3Prod, set[0])
+	// x2Prod := bigfft.Mul(x0x1Prod, set[3])
+	// x3Prod := bigfft.Mul(x0x1Prod, set[2])
+	leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	leftleftProd := SetProductRecursiveFast(set[len(set)/4 : len(set)/2])
+	leftrightProd := SetProductRecursiveFast(set[0 : len(set)/4])
+	rightleftProd := SetProductRecursiveFast(set[len(set)*3/4:])
+	rightrightProd := SetProductRecursiveFast(set[len(set)/2 : len(set)*3/4])
+
+	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	inputExp := make([]*big.Int, 4)
+	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
+	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
+	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
+	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
+	bases := multiexp.FourFoldExp(base, N, inputExp)
+	// leftBase := accumulateNew(base, N, set[len(set)/2:])
+	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
+	proofs := ProveMembership(bases[0], N, set[0:len(set)/4])
+	proofs = append(proofs, ProveMembership(bases[1], N, set[len(set)/4:len(set)/2])...)
+	proofs = append(proofs, ProveMembership(bases[2], N, set[len(set)/2:len(set)*3/4])...)
+	proofs = append(proofs, ProveMembership(bases[3], N, set[len(set)*3/4:])...)
 	return proofs
 }
 
@@ -136,17 +165,32 @@ func insertNewProofNode(iter *proofNode, N *big.Int, set []*big.Int) *proofNode 
 }
 
 func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
+	if len(set) == 4 {
+		// suppose the set is x0, x1, x2, x3, the membership for x0 is base^{x1x2x3}
+		x0x1Prod := bigfft.Mul(set[0], set[1])
+		x2x3Prod := bigfft.Mul(set[2], set[3])
+		x0Prod := bigfft.Mul(x2x3Prod, set[1])
+		x1Prod := bigfft.Mul(x2x3Prod, set[0])
+		x2Prod := bigfft.Mul(x0x1Prod, set[3])
+		x3Prod := bigfft.Mul(x0x1Prod, set[2])
+		return multiexp.FourFoldExp(base, N, []*big.Int{x0Prod, x1Prod, x2Prod, x3Prod})
+	}
+	if len(set) == 3 {
+		// suppose the set is x0, x1, x2, the membership for x0 is base^{x1x2}
+		x0Prod := bigfft.Mul(set[1], set[2])
+		x1Prod := bigfft.Mul(set[0], set[2])
+		x2Prod := bigfft.Mul(set[0], set[1])
+		return append(multiexp.DoubleExp(base, x0Prod, x1Prod, N), AccumulateNew(base, x2Prod, N))
+	}
+	if len(set) == 2 {
+		return multiexp.DoubleExp(base, set[1], set[0], N)
+	}
 	if len(set) == 1 {
 		ret := make([]*big.Int, 1)
 		ret[0] = base
 		return ret
 	}
-	if len(set) == 2 {
-		ret := make([]*big.Int, 2)
-		ret[0] = AccumulateNew(base, set[1], N)
-		ret[1] = AccumulateNew(base, set[0], N)
-		return ret
-	}
+
 	// Should never reach here
 	fmt.Println("Error in handleSmallSet, set size =", len(set))
 	panic("Error in handleSmallSet, set size")

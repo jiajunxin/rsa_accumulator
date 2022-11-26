@@ -71,6 +71,10 @@ func TestAccAndProve(t *testing.T) {
 	if acc2.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
+	acc3 = AccumulateNew(proofs[1], rep[1], setup.N)
+	if acc.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
 
 	// test another set size not a power of 2
 	testSetSize = 17
@@ -98,7 +102,7 @@ func TestAccAndProve(t *testing.T) {
 	}
 	rep = GenRepresentatives(set, HashToPrimeFromSha256)
 	acc2 = accumulateNew(setup.G, setup.N, rep)
-	acc3 = AccumulateNew(proofs[253], rep[253], setup.N)
+	acc3 = AccumulateNew(proofs[252], rep[252], setup.N)
 	if acc.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
