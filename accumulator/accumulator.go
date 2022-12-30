@@ -90,12 +90,12 @@ func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 
 	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
 	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	inputExp := make([]*big.Int, 4)
+	var inputExp [4]*big.Int
 	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
 	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
 	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
 	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
-	bases := multiexp.FourFoldExp(base, N, inputExp)
+	bases := multiexp.FourfoldExp(base, N, inputExp)
 	// leftBase := accumulateNew(base, N, set[len(set)/2:])
 	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
 	proofs := ProveMembership(bases[0], N, set[0:len(set)/4])
@@ -173,17 +173,22 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 		x1Prod := bigfft.Mul(x2x3Prod, set[0])
 		x2Prod := bigfft.Mul(x0x1Prod, set[3])
 		x3Prod := bigfft.Mul(x0x1Prod, set[2])
-		return multiexp.FourFoldExp(base, N, []*big.Int{x0Prod, x1Prod, x2Prod, x3Prod})
+		fourfold := multiexp.FourfoldExp(base, N, [4]*big.Int{x0Prod, x1Prod, x2Prod, x3Prod})
+		return fourfold[:]
 	}
 	if len(set) == 3 {
 		// suppose the set is x0, x1, x2, the membership for x0 is base^{x1x2}
 		x0Prod := bigfft.Mul(set[1], set[2])
 		x1Prod := bigfft.Mul(set[0], set[2])
 		x2Prod := bigfft.Mul(set[0], set[1])
-		return append(multiexp.DoubleExp(base, x0Prod, x1Prod, N), AccumulateNew(base, x2Prod, N))
+		doubleExp := multiexp.DoubleExp(base, [2]*big.Int{x0Prod, x1Prod}, N)
+		ret := doubleExp[:]
+		ret = append(ret, AccumulateNew(base, x2Prod, N))
+		return ret
 	}
 	if len(set) == 2 {
-		return multiexp.DoubleExp(base, set[1], set[0], N)
+		doubleExp := multiexp.DoubleExp(base, [2]*big.Int{set[1], set[0]}, N)
+		return doubleExp[:]
 	}
 	if len(set) == 1 {
 		ret := make([]*big.Int, 1)
@@ -198,8 +203,7 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 
 // AccumulateNew calculates g^{power} mod N
 func AccumulateNew(g, power, N *big.Int) *big.Int {
-	ret := &big.Int{}
-	ret.Set(g)
+	ret := new(big.Int).Set(g)
 	ret.Exp(g, power, N)
 	return ret
 }
@@ -226,7 +230,6 @@ func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
 // }
 
 func accumulateNew(g, N *big.Int, set []*big.Int) *big.Int {
-	acc := &big.Int{}
-	acc.Set(g)
+	acc := new(big.Int).Set(g)
 	return accumulate(acc, N, set)
 }
