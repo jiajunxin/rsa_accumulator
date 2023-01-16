@@ -116,7 +116,7 @@ func TestProduct3() {
 func genDIMin(size int) []*big.Int {
 	ret := make([]*big.Int, size)
 	for i := 0; i < size; i++ {
-		ret[i] = accumulator.Min2048
+		ret[i] = accumulator.Min1024
 	}
 	return ret
 }
@@ -128,7 +128,7 @@ func genDIMax(size int) []*big.Int {
 	min257.Lsh(&min257, 256)
 	for i := 0; i < size; i++ {
 		ret[i] = new(big.Int)
-		ret[i].Add(accumulator.Min2048, &min257)
+		ret[i].Add(accumulator.Min1024, &min257)
 	}
 	//fmt.Println("2048 = ", accumulator.Min2048.String())
 	// fmt.Println("257 = ", min257.String())

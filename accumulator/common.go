@@ -11,7 +11,7 @@ import (
 
 const (
 	securityPara      = 128
-	RSABitLength      = 2048
+	RSABitLength      = 1024
 	randomizerSetSize = 256
 	// Note that the securityParaHashToPrime is running securityParaHashToPrime rounds of Miller-Robin test
 	// together with one time Baillie-PSW test. Totally heuristic value for now.
@@ -43,9 +43,9 @@ var (
 	big29 = big.NewInt(29)
 	big31 = big.NewInt(31)
 	big37 = big.NewInt(37)
-	// Min2048 is set to a 2048 bits number with most significant bit 1 and other bits 0
+	// Min1024 is set to a 1024 bits number with most significant bit 1 and other bits 0
 	// This can speed up the calculation
-	Min2048 = big.NewInt(0)
+	Min1024 = big.NewInt(0)
 )
 
 // Setup is a basic struct for a hidden order group
@@ -355,7 +355,7 @@ func getRanQR(p, q *big.Int) *big.Int {
 
 	flag := false
 	for !flag {
-		ranNum, err := crand.Int(crand.Reader, Min2048)
+		ranNum, err := crand.Int(crand.Reader, Min1024)
 		if err != nil {
 			panic(err)
 		}
