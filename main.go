@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"math/bits"
 	"time"
 
 	"github.com/jiajunxin/multiexp"
@@ -23,8 +24,8 @@ func testPreCompute() {
 	fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
 
 	startingTime = time.Now().UTC()
-	maxLen := setSize * 256 / multiexp.GetWidth()
-	table := multiexp.PreCompute(setup.G, setup.N, maxLen)
+	maxLen := setSize * 256 / bits.UintSize
+	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running PreCompute Takes [%.3f] Seconds \n", duration.Seconds())
 	startingTime = time.Now().UTC()
@@ -60,11 +61,11 @@ func testBigInt() {
 	temp2.SetBytes(bytes)
 	fmt.Println("temp2 = ", temp2.String())
 
-	bits := temp.Bits()
-	fmt.Println("bit[0] = ", bits[0])
-	bits[0]++
+	tempBits := temp.Bits()
+	fmt.Println("bit[0] = ", tempBits[0])
+	tempBits[0]++
 	//fmt.Println("bit[1] = ", bits[1])
-	temp2.SetBits(bits)
+	temp2.SetBits(tempBits)
 	fmt.Println("temp = ", temp.String())
 	fmt.Println("temp2 = ", temp2.String())
 }
@@ -74,8 +75,8 @@ func testExp() {
 	var ret1, ret2 big.Int
 	ret1.Exp(setup.G, setup.G, setup.N)
 	ret2.Exp(setup.G, setup.N, setup.N)
-	temp := multiexp.DoubleExp(setup.G, setup.G, setup.N, setup.N)
-	temp2 := multiexp.FourFoldExp(setup.G, setup.N, []*big.Int{setup.G, setup.N, setup.G, setup.N})
+	temp := multiexp.DoubleExp(setup.G, [2]*big.Int{setup.G, setup.N}, setup.N)
+	temp2 := multiexp.FourfoldExp(setup.G, setup.N, [4]*big.Int{setup.G, setup.N, setup.G, setup.N})
 	fmt.Println("ret1 in main = ", ret1.String())
 	fmt.Println("ret1.2 in main = ", ret2.String())
 	fmt.Println("ret2 in main = ", temp[0].String())

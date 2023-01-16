@@ -199,11 +199,11 @@ func BenchmarkDoubleExp(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 1; i < b.N; i++ {
-		multiexp.DoubleExp(setup.G, set[i-1], set[i], setup.N)
+		multiexp.DoubleExp(setup.G, [2]*big.Int{set[i-1], set[i]}, setup.N)
 	}
 }
 
-func BenchmarkFourFoldExp(b *testing.B) {
+func BenchmarkFourfoldExp(b *testing.B) {
 	setup := *TrustedSetup()
 
 	var largeTestNum big.Int
@@ -220,7 +220,7 @@ func BenchmarkFourFoldExp(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 4; i < b.N; i++ {
-		multiexp.FourFoldExp(setup.G, setup.N, set[0:4])
+		multiexp.FourfoldExp(setup.G, setup.N, *(*[4]*big.Int)(set[0:4]))
 	}
 }
 

@@ -65,12 +65,12 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 
 	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
 	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	inputExp := make([]*big.Int, 4)
+	var inputExp [4]*big.Int
 	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
 	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
 	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
 	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
-	bases := multiexp.FourFoldExp(base, N, inputExp)
+	bases := multiexp.FourfoldExp(base, N, inputExp)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
@@ -138,12 +138,12 @@ func ProveMembershipParallelWithTable(base, N *big.Int, set []*big.Int, limit in
 
 	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
 	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	inputExp := make([]*big.Int, 4)
+	var inputExp [4]*big.Int
 	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
 	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
 	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
 	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
-	bases := multiexp.FourFoldExpWithPreComputeTableParallel(base, N, inputExp, table)
+	bases := multiexp.FourfoldExpPrecomputedParallel(base, N, inputExp, table)
 	endingTime := time.Now().UTC()
 	var duration = endingTime.Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
@@ -206,7 +206,7 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan
 	// the left part of proof need to accumulate the right part of the set, vice versa.
 	leftProd := SetProductRecursiveFast(set[len(set)/2:])
 	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	bases := multiexp.DoubleExp(base, leftProd, rightProd, N)
+	bases := multiexp.DoubleExp(base, [2]*big.Int{leftProd, rightProd}, N)
 	c1 := make(chan []*big.Int)
 	c2 := make(chan []*big.Int)
 	go proveMembershipWithChan(bases[0], N, set[0:len(set)/2], limit, c1)
