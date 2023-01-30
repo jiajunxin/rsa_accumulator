@@ -53,6 +53,20 @@ func TestSetup(t *testing.T) {
 	}
 }
 
+func TestMultiDIHash(t *testing.T) {
+	testSetSize := 16
+	set := GenTestSet(testSetSize)
+	rep := GenRepresentatives(set, MultiDIHashFromPoseidon)
+	if len(rep) != testSetSize*3 {
+		t.Errorf("Representatives are not consistent for MultiDIHashFromPoseidon")
+	}
+	for i, v := range rep {
+		if v.Cmp(big1) != 1 {
+			t.Errorf("Representatives are not correct for position %d", i)
+		}
+	}
+}
+
 func TestAccAndProve(t *testing.T) {
 	setup := TrustedSetup()
 

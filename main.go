@@ -8,7 +8,6 @@ import (
 
 	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
-	"github.com/jiajunxin/rsa_accumulator/experiments"
 )
 
 func testPreCompute() {
@@ -89,8 +88,9 @@ func testExp() {
 }
 
 func main() {
-	experiments.TestBasiczkRSA()
-	testPreCompute()
+	// experiments.TestBasiczkRSA()
+	// testPreCompute()
 	//testBigInt()
 	//testExp()
+	accumulator.RandomSetupForUniversalHash()
 }

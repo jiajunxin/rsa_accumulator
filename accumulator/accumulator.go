@@ -11,7 +11,11 @@ import (
 )
 
 func init() {
-	_ = Min2048.Lsh(big1, RSABitLength-1)
+	_ = Min1024.Lsh(big1, 1024)
+	_ = Min1024.Lsh(big1, RSABitLength-1)
+	P.SetString(PString, 10)
+	A.SetString(AString, 10)
+	B.SetString(BString, 10)
 }
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length

@@ -34,3 +34,13 @@ func SHA256ToInt(input []byte) *big.Int {
 	ret.SetBytes(hashTemp)
 	return &ret
 }
+
+// output = input * A + B mod P
+func UniversalHashToInt(input *big.Int) *big.Int {
+	var ret big.Int
+	ret.Mul(input, A)
+	ret.Mod(&ret, P)
+	ret.Add(&ret, B)
+	ret.Mod(&ret, P)
+	return &ret
+}
