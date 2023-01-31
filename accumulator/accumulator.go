@@ -186,34 +186,23 @@ func insertNewProofNode(iter *proofNode, N *big.Int, set []*big.Int) *proofNode 
 func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 	if len(set) == 4 {
 		// suppose the set is x0, x1, x2, x3, the membership for x0 is base^{x1x2x3}
-		var x0Prod, x1Prod, x2Prod, x3Prod, x0x1Prod, x2x3Prod big.Int
-		x0x1Prod.Mul(set[0], set[1])
-		x2x3Prod.Mul(set[2], set[3])
-		x0Prod.Mul(&x2x3Prod, set[1])
-		x1Prod.Mul(&x2x3Prod, set[0])
-		x2Prod.Mul(&x0x1Prod, set[3])
-		x3Prod.Mul(&x0x1Prod, set[2])
-		// x0x1Prod := bigfft.Mul(set[0], set[1])
-		// x2x3Prod := bigfft.Mul(set[2], set[3])
-		// x0Prod := bigfft.Mul(x2x3Prod, set[1])
-		// x1Prod := bigfft.Mul(x2x3Prod, set[0])
-		// x2Prod := bigfft.Mul(x0x1Prod, set[3])
-		// x3Prod := bigfft.Mul(x0x1Prod, set[2])
-		fourfold := multiexp.FourfoldExp(base, N, [4]*big.Int{&x0Prod, &x1Prod, &x2Prod, &x3Prod})
+		x0x1Prod := bigfft.Mul(set[0], set[1])
+		x2x3Prod := bigfft.Mul(set[2], set[3])
+		x0Prod := bigfft.Mul(x2x3Prod, set[1])
+		x1Prod := bigfft.Mul(x2x3Prod, set[0])
+		x2Prod := bigfft.Mul(x0x1Prod, set[3])
+		x3Prod := bigfft.Mul(x0x1Prod, set[2])
+		fourfold := multiexp.FourfoldExp(base, N, [4]*big.Int{x0Prod, x1Prod, x2Prod, x3Prod})
 		return fourfold[:]
 	}
 	if len(set) == 3 {
 		// suppose the set is x0, x1, x2, the membership for x0 is base^{x1x2}
-		var x0Prod, x1Prod, x2Prod big.Int
-		x0Prod.Mul(set[1], set[2])
-		x1Prod.Mul(set[0], set[2])
-		x2Prod.Mul(set[0], set[1])
-		// x0Prod := bigfft.Mul(set[1], set[2])
-		// x1Prod := bigfft.Mul(set[0], set[2])
-		// x2Prod := bigfft.Mul(set[0], set[1])
-		doubleExp := multiexp.DoubleExp(base, [2]*big.Int{&x0Prod, &x1Prod}, N)
+		x0Prod := bigfft.Mul(set[1], set[2])
+		x1Prod := bigfft.Mul(set[0], set[2])
+		x2Prod := bigfft.Mul(set[0], set[1])
+		doubleExp := multiexp.DoubleExp(base, [2]*big.Int{x0Prod, x1Prod}, N)
 		ret := doubleExp[:]
-		ret = append(ret, AccumulateNew(base, &x2Prod, N))
+		ret = append(ret, AccumulateNew(base, x2Prod, N))
 		return ret
 	}
 	if len(set) == 2 {

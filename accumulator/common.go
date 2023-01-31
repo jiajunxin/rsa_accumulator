@@ -143,23 +143,15 @@ func SetProductRecursiveFast(inputSet []*big.Int) *big.Int {
 	var ret big.Int
 	if length <= 2 {
 		ret.SetInt64(1)
-		// ret is set to 1
 		for i := 0; i < length; i++ {
 			ret.Set(bigfft.Mul(&ret, inputSet[i]))
-			//ret.Mul(&ret, inputSet[i])
 		}
 		return &ret
 	}
 	var prod1, prod2 big.Int
 	prod1 = *SetProductRecursiveFast(inputSet[0 : length/2])
 	prod2 = *SetProductRecursiveFast(inputSet[length/2:])
-	// startingTime := time.Now().UTC()
 	ret.Set(bigfft.Mul(&prod1, &prod2))
-	//ret.Mul(&prod1, &prod2)
-	// endingTime := time.Now().UTC()
-	// duration := endingTime.Sub(startingTime)
-	// fmt.Printf("Running multiplication for last two large number Takes [%.3f] Seconds \n",
-	// 	duration.Seconds())
 	return &ret
 }
 
