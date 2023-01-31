@@ -8,6 +8,7 @@ import (
 
 	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/experiments"
 )
 
 func testPreCompute() {
@@ -92,5 +93,6 @@ func main() {
 	// testPreCompute()
 	//testBigInt()
 	//testExp()
-	accumulator.RandomSetupForUniversalHash()
+	//setSize := 65536 // 2 ^ 16 65536
+	experiments.TestDifferentMembership()
 }

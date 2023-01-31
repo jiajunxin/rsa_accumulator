@@ -29,6 +29,10 @@ func GenRandomizer() *big.Int {
 	if err != nil {
 		panic(err)
 	}
+	// due to a issue of multiExponent, we want this random number to be odd
+	if ranNum.Bit(0) == 0 {
+		ranNum.Add(ranNum, big1)
+	}
 	return ranNum
 }
 

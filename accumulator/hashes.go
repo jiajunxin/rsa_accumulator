@@ -42,5 +42,8 @@ func UniversalHashToInt(input *big.Int) *big.Int {
 	ret.Mod(&ret, P)
 	ret.Add(&ret, B)
 	ret.Mod(&ret, P)
+	if ret.Bit(0) == 0 {
+		ret.Add(&ret, big1)
+	}
 	return &ret
 }

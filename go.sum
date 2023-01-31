@@ -7,6 +7,8 @@ github.com/iden3/go-iden3-crypto v0.0.13 h1:ixWRiaqDULNyIDdOWz2QQJG5t4PpNHkQk2P6
 github.com/iden3/go-iden3-crypto v0.0.13/go.mod h1:swXIv0HFbJKobbQBtsB50G7IHr6PbTowutSew/iBEoo=
 github.com/jiajunxin/multiexp v0.0.4 h1:E/MucAtWOCW/1YEhu/BXi/fg9wLm3kFYVQhvFa7gH/g=
 github.com/jiajunxin/multiexp v0.0.4/go.mod h1:TteAErHqU1VTwD3YWOs8mCMS5FyITQAE7Oodi9qryV8=
+github.com/jiajunxin/multiexp v0.0.5 h1:F0uFPSa1Gku+yXcVJ59QeFZuhE1xeTJS8KjXLX3tvRM=
+github.com/jiajunxin/multiexp v0.0.5/go.mod h1:TteAErHqU1VTwD3YWOs8mCMS5FyITQAE7Oodi9qryV8=
 github.com/leanovate/gopter v0.2.9 h1:fQjYxZaynp97ozCzfOyOuAGOU4aU/z37zf/tOujFk7c=
 github.com/leanovate/gopter v0.2.9/go.mod h1:U2L/78B+KVFIx2VmW6onHJQzXtFb+p5y3y2Sh+Jxxv8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
