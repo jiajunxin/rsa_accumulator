@@ -7,12 +7,13 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/sha256"
+	"fmt"
 	"math/big"
 )
 
 const (
 	zkAoPChallengeStatement = "c = (g^x)(h^r), x is non-negative"
-	zkAoPCommitLen          = sha256Len * 5
+	zkAoPCommitLen          = sha256Len * 4
 )
 
 var zkAoPB = big.NewInt(4096) // bound B
@@ -48,19 +49,16 @@ type zkAoPCommitment [zkAoPCommitLen]byte
 type zkAoPChallenge struct {
 	statement string   // the statement for the challenge
 	g, h, n   *big.Int // public parameters: G, H, N
-	a, b      *big.Int // the range [a, b]
 	c3        Int3     // commitment of x containing c1, c2, c3
 }
 
 // newZKAoPChallenge generates a new argument of positivity
-func newZKAoPChallenge(pp PublicParameters, a, b *big.Int, c3 Int3) *zkAoPChallenge {
+func newZKAoPChallenge(pp PublicParameters, c3 Int3) *zkAoPChallenge {
 	return &zkAoPChallenge{
 		statement: zkAoPChallengeStatement,
 		g:         pp.G,
 		h:         pp.H,
 		n:         pp.N,
-		a:         a,
-		b:         b,
 		c3:        c3,
 	}
 }
@@ -72,8 +70,6 @@ func (r *zkAoPChallenge) serialize() []byte {
 	buf.WriteString(r.g.String())
 	buf.WriteString(r.h.String())
 	buf.WriteString(r.n.String())
-	buf.WriteString(r.a.String())
-	buf.WriteString(r.b.String())
 	for _, c := range r.c3 {
 		buf.WriteString(c.String())
 	}
@@ -97,20 +93,19 @@ func (r *zkAoPChallenge) bigInt() *big.Int {
 
 // zkAoPResponse is the response sent by the prover after receiving verifier's challenge
 type zkAoPResponse struct {
-	Z4  Int4
-	T4  Int4
-	TAU *big.Int
+	Z3 Int3
+	T3 Int3
+	T  *big.Int
 }
 
 // newZKAoPCommitment generates a new commitment for the argument of positivity
-func newZKAoPCommitment(d4 Int4, d *big.Int) zkAoPCommitment {
-	var dByteList [int4Len][]byte
-	for i := 0; i < int4Len; i++ {
-		dByteList[i] = d4[i].Bytes()
+func newZKAoPCommitment(d3 Int3, d *big.Int) zkAoPCommitment {
+	var dByteList [int3Len][]byte
+	for i := 0; i < int3Len; i++ {
+		dByteList[i] = d3[i].Bytes()
 	}
-	dBytes := d.Bytes()
 	hashF := crypto.SHA256.New()
-	var sha256List [int4Len][]byte
+	var sha256List [int3Len][]byte
 	for i, dByte := range dByteList {
 		hashF.Write(dByte)
 		sha256List[i] = hashF.Sum(nil)
@@ -120,6 +115,7 @@ func newZKAoPCommitment(d4 Int4, d *big.Int) zkAoPCommitment {
 	for idx, s := range sha256List {
 		copy(commitment[idx*sha256Len:(idx+1)*sha256Len], s)
 	}
+	dBytes := d.Bytes()
 	hashF.Write(dBytes)
 	copy(commitment[zkAoPCommitLen-sha256Len:], hashF.Sum(nil))
 	return commitment
@@ -127,27 +123,23 @@ func newZKAoPCommitment(d4 Int4, d *big.Int) zkAoPCommitment {
 
 // ZKAoPProver refers to the Prover in zero-knowledge integer argument of positivity
 type ZKAoPProver struct {
-	pp   PublicParameters // public parameters
-	r    *big.Int         // r
-	sp   *big.Int         // security parameter, kappa
-	c    *big.Int         // c = (g^x)(h^r)
-	a, b *big.Int         // a, b, range [a, b]
-	//ca     *big.Int         // ca = (c * g^(-a))^4 mod n
-	sigma  *big.Int // random selected parameter sigma in [0, 2^(B + 2kappa)*n]
-	x4     Int4     // x0 = (b-x), and three square sum of 4(b-x)(x-a) + 1 = x1^2 + x2^2 + x3^2
-	c3     Int3     // commitment of three square sum of x: c1, c2, c3, ci = (g^xi)(h^ri)
-	randM4 Int4     // random coins: m0, m1, m2, m3, mi is in [0, 2^(B + 2kappa)]
-	r4     Int4     // r0 = -r, and random coins: r1, r2, r3, ri is in [0, n]
-	randS4 Int4     // random coins: s0, s1, s2, s3, si is in [0, 2^(2kappa)*n]
+	pp     PublicParameters // public parameters
+	r      *big.Int         // r
+	sp     *big.Int         // security parameter, kappa
+	C      *big.Int         // c = (g^x)(h^r)
+	s      *big.Int         // random selected parameter s in [0, 2^(B/2 + 2kappa)*n]
+	x3     Int3             // three square sum of 4x + 1 = x0^2 + x2^1 + x2^2
+	c3     Int3             // commitment of three square sum of x: c0, c1, c2, ci = (g^xi)(h^ri)
+	randM3 Int3             // random coins: m0, m1, m2, mi is in [0, 2^(B + 2kappa)]
+	r3     Int3             // random coins: r0, r1, r2, ri is in [0, n]
+	randS3 Int3             // random coins: s0, s1, s2, si is in [0, 2^(2kappa)*n]
 }
 
 // NewZKAoPProver generates a new argument-of-positivity prover
-func NewZKAoPProver(pp PublicParameters, r, a, b *big.Int) *ZKAoPProver {
+func NewZKAoPProver(pp PublicParameters, r *big.Int) *ZKAoPProver {
 	prover := &ZKAoPProver{
 		pp: pp,
 		r:  r,
-		a:  a,
-		b:  b,
 		sp: big.NewInt(securityParam),
 	}
 	return prover
@@ -155,10 +147,7 @@ func NewZKAoPProver(pp PublicParameters, r, a, b *big.Int) *ZKAoPProver {
 
 // Prove generates the proof for range proof
 func (r *ZKAoPProver) Prove(x *big.Int) (*ArgOfPositivity, error) {
-	r.c = calC(r.pp, r.r, x)
-	//r.ca = calCa(r.pp, r.a, r.c)
-	r.x4[0] = new(big.Int).Sub(r.b, x)
-	r.r4[0] = r.r
+	r.C = calC(r.pp, r.r, x)
 	cx, err := r.commitForX(x)
 	if err != nil {
 		return nil, err
@@ -171,44 +160,36 @@ func (r *ZKAoPProver) Prove(x *big.Int) (*ArgOfPositivity, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewArgOfPositivity(r.c, cx, commitment, response), nil
+	return NewArgOfPositivity(r.C, cx, commitment, response), nil
 }
 
 // commitForX generates the commitment for x
 func (r *ZKAoPProver) commitForX(x *big.Int) (Int3, error) {
-	// calculate three squares that 4(b-x)(x-a) + 1 = x1^2 + x2^2 + x3^2
-	target := iPool.Get().(*big.Int).Sub(r.b, x)
+	// calculate three squares that 4x + 1 = x0^2 + x1^2 + x2^2
+	target := iPool.Get().(*big.Int).Set(x)
 	defer iPool.Put(target)
-	opt := iPool.Get().(*big.Int).Sub(x, r.a)
-	defer iPool.Put(opt)
-	r.x4[0].Sub(r.b, x)
-	target.Mul(target, opt)
 	target.Lsh(target, 2)
 	target.Add(target, big1)
 	ts, err := ThreeSquares(target)
 	if err != nil {
 		return Int3{}, err
 	}
-	for i := 0; i < int3Len; i++ {
-		r.x4[i+1] = ts[i]
-	}
-	// TODO: different from paper, to be clarified
-	r.r4[0] = new(big.Int).Neg(r.r)
+	r.x3 = ts
 	// calculate commitment for x
 	var rc Int3
 	if rc, err = newThreeRandCoins(r.pp.N); err != nil {
 		return Int3{}, err
 	}
 	for i := 0; i < int3Len; i++ {
-		r.r4[i+1] = rc[i]
+		r.r3[i] = rc[i]
 	}
-	c3 := newZKAoPCommitFromFS(r.pp, rc, ts)
+	c3 := newZKAoPCommitFromTS(r.pp, rc, ts)
 	r.c3 = c3
 	return c3, nil
 }
 
-// newZKAoPCommitFromFS generates a range proof commitment for a given integer
-func newZKAoPCommitFromFS(pp PublicParameters, coins Int3, ts Int3) (cList Int3) {
+// newZKAoPCommitFromTS generates an argument-of-positivity commitment for a given integer
+func newZKAoPCommitFromTS(pp PublicParameters, coins Int3, ts Int3) (cList Int3) {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	for i := 0; i < int3Len; i++ {
@@ -221,120 +202,114 @@ func newZKAoPCommitFromFS(pp PublicParameters, coins Int3, ts Int3) (cList Int3)
 
 // commit composes the commitment for range proof
 func (r *ZKAoPProver) commit() (zkAoPCommitment, error) {
-	// pick m0, m1, m2, m3, mi is in [0, 2^(B + 2kappa)]
+	// pick m0, m1, m2, mi is in [0, 2^(B + 2kappa)]
 	powMLmt := iPool.Get().(*big.Int).Set(r.sp)
 	defer iPool.Put(powMLmt)
 	powMLmt.Lsh(powMLmt, 1)
 	powMLmt.Add(powMLmt, zkAoPB)
 	mLmt := iPool.Get().(*big.Int).Exp(big2, powMLmt, nil)
 	defer iPool.Put(mLmt)
-	m4, err := newFourRandCoins(mLmt)
+	m3, err := newThreeRandCoins(mLmt)
 	if err != nil {
 		return zkAoPCommitment{}, err
 	}
-	r.randM4 = m4
-	// pick s0, s1, s2, s3, si is in [0, 2^(2kappa)*n]
+	r.randM3 = m3
+	// pick s0, s1, s2, si is in [0, 2^(2kappa)*n]
 	sLmt := iPool.Get().(*big.Int).Exp(big4, r.sp, nil)
 	defer iPool.Put(sLmt)
 	sLmt.Mul(sLmt, r.pp.N)
-	var s4 Int4
-	if s4, err = newFourRandCoins(sLmt); err != nil {
+	var s3 Int3
+	if s3, err = newThreeRandCoins(sLmt); err != nil {
 		return zkAoPCommitment{}, err
 	}
-	r.randS4 = s4
-	// pick sigma in [0, 2^(B + 2kappa)*n]
-	sLmt.Lsh(sLmt, uint(zkAoPB.Int64()))
-	var sigma *big.Int
-	if sigma, err = freshRandCoin(sLmt); err != nil {
+	r.randS3 = s3
+	// pick s in [0, 2^(B/2 + 2kappa)*n]
+	sLmt.Lsh(sLmt, uint(zkAoPB.Int64())/2)
+	var s *big.Int
+	if s, err = freshRandCoin(sLmt); err != nil {
 		return zkAoPCommitment{}, err
 	}
-	r.sigma = sigma
+	r.s = s
 	// calculate commitment
-	d4 := r.firstPartH(m4, s4)
-	d := r.secondPartH(m4)
-	c := newZKAoPCommitment(d4, d)
+	d3 := r.firstPartD(m3, s3)
+	d := r.secondPartD(m3)
+	c := newZKAoPCommitment(d3, d)
 	return c, nil
 }
 
-// firstPartH calculates h0, h1, h2, h3, hi = (g^mi)(h^si) mod n
-func (r *ZKAoPProver) firstPartH(m, s Int4) Int4 {
-	var h4 Int4
+// firstPartD calculates h0, h1, h2, hi = (g^mi)(h^si) mod n
+func (r *ZKAoPProver) firstPartD(m, s Int3) Int3 {
+	var h3 Int3
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	for i := 0; i < int4Len; i++ {
+	for i := 0; i < int3Len; i++ {
 		h := new(big.Int).Exp(r.pp.G, m[i], r.pp.N)
 		h.Mul(h, opt.Exp(r.pp.H, s[i], r.pp.N))
-		h4[i] = h.Mod(h, r.pp.N)
+		h3[i] = h.Mod(h, r.pp.N)
 	}
-	return h4
+	return h3
 }
 
-// secondPartH calculates h = (h^(sigma))*(c^(m0)_a)*(product of (ci^(-mi))) mod n
-func (r *ZKAoPProver) secondPartH(m Int4) *big.Int {
-	// prefix = h^sigma * c_a^m_0
-	result := iPool.Get().(*big.Int).Exp(r.pp.H, r.sigma, r.pp.N)
+// secondPartD calculates d = (product of (ci^mi)(h^s)) mod n
+func (r *ZKAoPProver) secondPartD(m Int3) *big.Int {
+	result := iPool.Get().(*big.Int).SetInt64(1)
 	defer iPool.Put(result)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	//opt.Exp(r.ca, r.randM4[0], r.pp.N)
 	result.Mul(result, opt)
 	result.Mod(result, r.pp.N)
-	// ci^(-mi)
-	negM := iPool.Get().(*big.Int)
-	defer iPool.Put(negM)
-	// product of ci^(-mi) mod n, for i = 1, 2, 3
+	hPowS := iPool.Get().(*big.Int).Exp(r.pp.H, r.s, r.pp.N)
+	// product of (ci^mi)(h^s) mod n, for i = 0, 1, 2
 	for i := 0; i < int3Len; i++ {
 		result.Mul(
 			result,
-			opt.Exp(r.c3[i], negM.Neg(m[i+1]), r.pp.N),
+			opt.Exp(r.c3[i], m[i], r.pp.N),
 		)
 		result.Mod(result, r.pp.N)
+		result.Mul(result, hPowS)
+		result.Mod(result, r.pp.N)
 	}
-	// product of ci^(-mi)
 	return result
 }
 
 // calChallengeBigInt calculates the challenge for range proof in big integer format
 func (r *ZKAoPProver) calChallengeBigInt() *big.Int {
-	challenge := newZKAoPChallenge(r.pp, r.a, r.b, r.c3)
+	challenge := newZKAoPChallenge(r.pp, r.c3)
 	return challenge.bigInt()
 }
 
 // response generates the response for verifier's challenge
 func (r *ZKAoPProver) response() (*zkAoPResponse, error) {
 	e := r.calChallengeBigInt()
-	// zi = e * xi + mi, for i = 0, 1, 2, 3
-	var z4 Int4
-	for i := 0; i < int4Len; i++ {
-		z4[i] = new(big.Int).Mul(e, r.x4[i])
-		z4[i].Add(z4[i], r.randM4[i])
+	fmt.Println("e", e)
+	// zi = e * xi + mi, for i = 0, 1, 2
+	var z3 Int3
+	for i := 0; i < int3Len; i++ {
+		z3[i] = new(big.Int).Mul(e, r.x3[i])
+		fmt.Println(r.x3[i])
+		z3[i].Add(z3[i], r.randM3[i])
 	}
-	// ti = e * ri + si, for i = 0, 1, 2, 3
-	var t4 Int4
-	for i := 0; i < int4Len; i++ {
-		t4[i] = new(big.Int).Mul(e, r.r4[i])
-		t4[i].Add(t4[i], r.randS4[i])
+	// ti = e * ri + si, for i = 0, 1, 2
+	var t3 Int3
+	for i := 0; i < int3Len; i++ {
+		t3[i] = new(big.Int).Mul(e, r.r3[i])
+		t3[i].Add(t3[i], r.randS3[i])
 	}
 
-	// tau = sigma + e * (4 * x0 * r0 - product of xi * ri, for i = 1, 2, 3)
-	sumXR := iPool.Get().(*big.Int)
-	defer iPool.Put(sumXR)
-	sumXR.SetInt64(0)
+	// t =e(r - prod of xi*ri) + s
+	t := new(big.Int).Set(r.s)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	for i := 1; i < int4Len; i++ {
-		sumXR.Add(sumXR, opt.Mul(r.x4[i], r.r4[i]))
+	for i := 0; i < int3Len; i++ {
+		opt.Mul(r.x3[i], r.r3[i])
+		opt.Sub(r.r, opt)
+		opt.Mul(opt, e)
+		t.Add(t, opt)
 	}
-	tau := new(big.Int).Mul(r.x4[0], r.r4[0])
-	// TODO: different from paper, to be clarified
-	tau.Lsh(tau, 2)
-	tau.Add(tau, sumXR)
-	tau.Mul(tau, e)
-	tau.Add(tau, r.sigma)
 	response := &zkAoPResponse{
-		Z4:  z4,
-		T4:  t4,
-		TAU: tau,
+		Z3: z3,
+		T3: t3,
+		T:  t,
 	}
 	return response, nil
 }
@@ -343,38 +318,28 @@ func (r *ZKAoPProver) response() (*zkAoPResponse, error) {
 type ZKAoPVerifier struct {
 	pp         PublicParameters // public parameters
 	sp         *big.Int         // security parameters
-	a, b       *big.Int         // the range [a, b]
 	commitment zkAoPCommitment  // commitment, delta = H(d1, d2, d3, d4, d)
-	c4         Int4             // c0 = c^(-1)*g^b mod n, c1, c2, c3 are the commitments of x
-	ca         *big.Int         // ca = (c*g(-a))^4 mod n
+	c3         Int3             // c0, c1, c2 are the commitments of x
+	c          *big.Int
 }
 
 // NewZKAoPVerifier generates a new integer argument of positivity verifier
-func NewZKAoPVerifier(pp PublicParameters, a, b *big.Int) *ZKAoPVerifier {
+func NewZKAoPVerifier(pp PublicParameters, c *big.Int) *ZKAoPVerifier {
 	verifier := &ZKAoPVerifier{
 		pp: pp,
 		sp: big.NewInt(securityParam),
-		a:  a,
-		b:  b,
+		c:  c,
 	}
 	return verifier
 }
 
 // Verify verifies the arugment of positivity
 func (r *ZKAoPVerifier) Verify(proof *ArgOfPositivity) bool {
-	r.c4[0] = new(big.Int).ModInverse(proof.c, r.pp.N)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	r.c4[0].Mul(r.c4[0], opt.Exp(r.pp.G, r.b, r.pp.N))
-	r.c4[0].Mod(r.c4[0], r.pp.N)
-	for i := 1; i < int4Len; i++ {
-		r.c4[i] = proof.commit3[i-1]
+	for i := 0; i < int3Len; i++ {
+		r.c3[i] = proof.commit3[i]
 	}
-	opt.Neg(r.a)
-	opt.Exp(r.pp.G, opt, r.pp.N)
-	r.ca = new(big.Int).Mul(proof.c, opt)
-	r.ca.Mod(r.ca, r.pp.N)
-	r.ca.Exp(r.ca, big4, r.pp.N)
 	r.commitment = proof.commitment
 	return r.VerifyResponse(proof.response)
 }
@@ -383,64 +348,67 @@ func (r *ZKAoPVerifier) Verify(proof *ArgOfPositivity) bool {
 func (r *ZKAoPVerifier) challenge() *big.Int {
 	var c3 Int3
 	for i := 0; i < int3Len; i++ {
-		c3[i] = r.c4[i+1]
+		c3[i] = r.c3[i]
 	}
-	challenge := newZKAoPChallenge(r.pp, r.a, r.b, c3)
+	challenge := newZKAoPChallenge(r.pp, c3)
 	return challenge.bigInt()
 }
 
 // VerifyResponse verifies the response, if accepts, return true; otherwise, return false
 func (r *ZKAoPVerifier) VerifyResponse(response *zkAoPResponse) bool {
-	c := r.challenge()
-	// the first 4 parameters: (g^zi)(h^ti)(ci^(-e)) mod n
-	var firstFourParams Int4
-	negC := iPool.Get().(*big.Int).Neg(c)
-	defer iPool.Put(negC)
+	e := r.challenge()
+	// the first 3 parameters: (g^zi)(h^ti)(ci^(-e)) mod n
+	var firstThreeParams Int3
+	negE := iPool.Get().(*big.Int).Neg(e)
+	defer iPool.Put(negE)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	for i := 0; i < int4Len; i++ {
-		firstFourParams[i] = new(big.Int).Exp(r.pp.G, response.Z4[i], r.pp.N)
-		firstFourParams[i].Mul(
-			firstFourParams[i],
-			opt.Exp(r.pp.H, response.T4[i], r.pp.N),
+	for i := 0; i < int3Len; i++ {
+		firstThreeParams[i] = new(big.Int).Exp(r.pp.G, response.Z3[i], r.pp.N)
+		firstThreeParams[i].Mul(
+			firstThreeParams[i],
+			opt.Exp(r.pp.H, response.T3[i], r.pp.N),
 		)
-		firstFourParams[i].Mul(
-			firstFourParams[i],
-			opt.Exp(r.c4[i], negC, r.pp.N),
+		firstThreeParams[i].Mul(
+			firstThreeParams[i],
+			opt.Exp(r.c3[i], negE, r.pp.N),
 		)
-		firstFourParams[i].Mod(firstFourParams[i], r.pp.N)
+		firstThreeParams[i].Mod(firstThreeParams[i], r.pp.N)
 	}
 
 	// prefix = h^tau * g^e * c_a^z_0 mod n
-	lastH := new(big.Int).Exp(r.pp.H, response.TAU, r.pp.N)
+	lastH := new(big.Int).SetInt64(1)
 	defer iPool.Put(lastH)
-	lastH.Mul(lastH, opt.Exp(r.pp.G, c, r.pp.N))
-	lastH.Mod(lastH, r.pp.N)
-	lastH.Mul(lastH, opt.Exp(r.ca, response.Z4[0], r.pp.N))
-	lastH.Mod(lastH, r.pp.N)
+	hPowTMulCPowNegE := iPool.Get().(*big.Int)
+	defer iPool.Put(hPowTMulCPowNegE)
+	hPowTMulCPowNegE.Exp(r.pp.H, response.T, r.pp.N)
+	hPowTMulCPowNegE.Mul(hPowTMulCPowNegE, opt.Exp(r.c, negE, r.pp.N))
+	hPowTMulCPowNegE.Mod(hPowTMulCPowNegE, r.pp.N)
 	//product of (ci^zi)(h^t)(c^(-e)) mod n
-	for i := 1; i < int4Len; i++ {
-		opt.Neg(response.Z4[i])
+	for i := 0; i < int3Len; i++ {
+		opt.Neg(response.Z3[i])
 		lastH.Mul(
 			lastH,
-			opt.Exp(r.c4[i], opt, r.pp.N),
+			opt.Exp(r.c3[i], opt, r.pp.N),
 		)
+		lastH.Mul(lastH, hPowTMulCPowNegE)
 		lastH.Mod(lastH, r.pp.N)
 	}
 
 	hashF := sha256.New()
-	var sha256List [int4Len][]byte
-	for i := 0; i < int4Len; i++ {
-		hashF.Write(firstFourParams[i].Bytes())
+	var sha256List [int3Len][]byte
+	for i := 0; i < int3Len; i++ {
+		hashF.Write(firstThreeParams[i].Bytes())
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
 	hashF.Write(lastH.Bytes())
 	h := hashF.Sum(nil)
 	var commitment zkAoPCommitment
-	for i := 0; i < int4Len; i++ {
+	for i := 0; i < int3Len; i++ {
 		copy(commitment[i*sha256Len:(i+1)*sha256Len], sha256List[i])
 	}
 	copy(commitment[zkAoPCommitLen-sha256Len:], h)
+	fmt.Println(commitment, r.commitment)
 	return commitment == r.commitment
 }

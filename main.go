@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"math/bits"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
-	"github.com/jiajunxin/rsa_accumulator/experiments"
+	"github.com/jiajunxin/rsa_accumulator/proof"
 )
 
 func testPreCompute() {
@@ -89,8 +90,27 @@ func testExp() {
 }
 
 func main() {
-	experiments.TestBasiczkRSA()
-	testPreCompute()
+	//experiments.TestBasiczkRSA()
+	//testPreCompute()
 	//testBigInt()
 	//testExp()
+	setup := accumulator.TrustedSetup()
+	r, err := rand.Prime(rand.Reader, 10)
+	handleErr(err)
+	h, err := rand.Prime(rand.Reader, setup.G.BitLen())
+	handleErr(err)
+	pp := proof.NewPublicParameters(setup.N, setup.G, h)
+	prover := proof.NewZKAoPProver(pp, r)
+	aop, err := prover.Prove(big.NewInt(100))
+	handleErr(err)
+	verifier := proof.NewZKAoPVerifier(pp, prover.C)
+	if !verifier.Verify(aop) {
+		panic("verification failed")
+	}
+}
+
+func handleErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
