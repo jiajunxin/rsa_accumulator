@@ -88,7 +88,7 @@ func TestDifferentMembership() {
 }
 
 // Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
-func TestRSAMembershipPreComputeMultiDIParallel(setSize int) {
+func TestRSAMembershipPreComputeMultiDIParallel(setSize int, limit int) {
 	fmt.Println("Test set size = ", setSize)
 	fmt.Println("GenRepresentatives with MultiDIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
@@ -110,9 +110,9 @@ func TestRSAMembershipPreComputeMultiDIParallel(setSize int) {
 	c2 := make(chan []*big.Int)
 	c3 := make(chan []*big.Int)
 	startingTime = time.Now().UTC()
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r1, setup.N, rep[:setSize], 2, table, c1)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r2, setup.N, rep[setSize:2*setSize], 2, table, c2)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r3, setup.N, rep[2*setSize:], 2, table, c3)
+	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r1, setup.N, rep[:setSize], limit, table, c1)
+	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r2, setup.N, rep[setSize:2*setSize], limit, table, c2)
+	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r3, setup.N, rep[2*setSize:], limit, table, c3)
 	proofs1 := <-c1
 	proofs2 := <-c2
 	proofs3 := <-c3
@@ -132,7 +132,7 @@ func TestRSAMembershipPreComputeMultiDIParallel(setSize int) {
 }
 
 // Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
-func TestRSAMembershipPreComputeDIParallel(setSize int) {
+func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 	fmt.Println("Test set size = ", setSize)
 	fmt.Println("GenRepresentatives with DIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
@@ -149,7 +149,7 @@ func TestRSAMembershipPreComputeDIParallel(setSize int) {
 	fmt.Printf("Running PreComputeTable Takes [%.3f] Seconds \n", duration.Seconds())
 
 	startingTime = time.Now().UTC()
-	proofs := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:setSize], 4, table)
+	proofs := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:setSize], limit, table)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallelWithTableWithRandomizer with 16 cores for three RSA accumulators Takes [%.3f] Seconds \n", duration.Seconds())
 	startingTime = time.Now().UTC()
@@ -159,4 +159,14 @@ func TestRSAMembershipPreComputeDIParallel(setSize int) {
 	}()
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
+}
+
+func TestDifferentMembershipForDI() {
+	TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
+	TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
+	TestRSAMembershipPreComputeDIParallel(65536, 4) //2^16, 16 cores
+
+	TestRSAMembershipPreCompute(65536)                   //2^16, 1 core
+	TestRSAMembershipPreComputeMultiDIParallel(65536, 0) //2^16, 3 cores
+	TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
 }

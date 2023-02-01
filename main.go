@@ -96,5 +96,5 @@ func main() {
 	//setSize := 65536 // 2 ^ 16 65536
 	//experiments.TestDifferentMembership()
 	//experiments.TestRSAMembershipPreComputeMultiDIParallel(65536)
-	experiments.TestRSAMembershipPreComputeDIParallel(65536)
+	experiments.TestDifferentMembershipForDI()
 }
