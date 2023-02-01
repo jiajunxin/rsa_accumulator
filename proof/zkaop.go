@@ -233,6 +233,7 @@ func (r *ZKAoPProver) commit() (zkAoPCommitment, error) {
 	// calculate commitment
 	d3 := r.firstPartD(m3, s3)
 	d := r.secondPartD(m3)
+	fmt.Println("d", d)
 	c := newZKAoPCommitment(d3, d)
 	return c, nil
 }
@@ -252,24 +253,24 @@ func (r *ZKAoPProver) firstPartD(m, s Int3) Int3 {
 
 // secondPartD calculates d = (product of (ci^mi)(h^s)) mod n
 func (r *ZKAoPProver) secondPartD(m Int3) *big.Int {
-	result := iPool.Get().(*big.Int).SetInt64(1)
-	defer iPool.Put(result)
+	d := big.NewInt(1)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
-	result.Mul(result, opt)
-	result.Mod(result, r.pp.N)
-	hPowS := iPool.Get().(*big.Int).Exp(r.pp.H, r.s, r.pp.N)
+	d.Mul(d, opt)
+	d.Mod(d, r.pp.N)
 	// product of (ci^mi)(h^s) mod n, for i = 0, 1, 2
 	for i := 0; i < int3Len; i++ {
-		result.Mul(
-			result,
+		d.Mul(
+			d,
 			opt.Exp(r.c3[i], m[i], r.pp.N),
 		)
-		result.Mod(result, r.pp.N)
-		result.Mul(result, hPowS)
-		result.Mod(result, r.pp.N)
+		d.Mod(d, r.pp.N)
 	}
-	return result
+	hPowS := iPool.Get().(*big.Int).Exp(r.pp.H, r.s, r.pp.N)
+	defer iPool.Put(hPowS)
+	d.Mul(d, hPowS)
+	d.Mod(d, r.pp.N)
+	return d
 }
 
 // calChallengeBigInt calculates the challenge for range proof in big integer format
@@ -297,15 +298,16 @@ func (r *ZKAoPProver) response() (*zkAoPResponse, error) {
 	}
 
 	// t =e(r - prod of xi*ri) + s
-	t := new(big.Int).Set(r.s)
+	t := new(big.Int).Set(r.r)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
+	opt.SetInt64(1)
 	for i := 0; i < int3Len; i++ {
 		opt.Mul(r.x3[i], r.r3[i])
-		opt.Sub(r.r, opt)
-		opt.Mul(opt, e)
-		t.Add(t, opt)
 	}
+	t.Sub(t, opt)
+	t.Mul(t, e)
+	t.Add(t, r.s)
 	response := &zkAoPResponse{
 		Z3: z3,
 		T3: t3,
@@ -333,7 +335,7 @@ func NewZKAoPVerifier(pp PublicParameters, c *big.Int) *ZKAoPVerifier {
 	return verifier
 }
 
-// Verify verifies the arugment of positivity
+// Verify verifies the argument of positivity
 func (r *ZKAoPVerifier) Verify(proof *ArgOfPositivity) bool {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
@@ -379,11 +381,6 @@ func (r *ZKAoPVerifier) VerifyResponse(response *zkAoPResponse) bool {
 	// prefix = h^tau * g^e * c_a^z_0 mod n
 	lastH := new(big.Int).SetInt64(1)
 	defer iPool.Put(lastH)
-	hPowTMulCPowNegE := iPool.Get().(*big.Int)
-	defer iPool.Put(hPowTMulCPowNegE)
-	hPowTMulCPowNegE.Exp(r.pp.H, response.T, r.pp.N)
-	hPowTMulCPowNegE.Mul(hPowTMulCPowNegE, opt.Exp(r.c, negE, r.pp.N))
-	hPowTMulCPowNegE.Mod(hPowTMulCPowNegE, r.pp.N)
 	//product of (ci^zi)(h^t)(c^(-e)) mod n
 	for i := 0; i < int3Len; i++ {
 		opt.Neg(response.Z3[i])
@@ -391,9 +388,15 @@ func (r *ZKAoPVerifier) VerifyResponse(response *zkAoPResponse) bool {
 			lastH,
 			opt.Exp(r.c3[i], opt, r.pp.N),
 		)
-		lastH.Mul(lastH, hPowTMulCPowNegE)
 		lastH.Mod(lastH, r.pp.N)
 	}
+	hPowTMulCPowNegE := iPool.Get().(*big.Int)
+	defer iPool.Put(hPowTMulCPowNegE)
+	hPowTMulCPowNegE.Exp(r.pp.H, response.T, r.pp.N)
+	hPowTMulCPowNegE.Mul(hPowTMulCPowNegE, opt.Exp(r.c, negE, r.pp.N))
+	hPowTMulCPowNegE.Mod(hPowTMulCPowNegE, r.pp.N)
+	lastH.Mul(lastH, hPowTMulCPowNegE)
+	lastH.Mod(lastH, r.pp.N)
 
 	hashF := sha256.New()
 	var sha256List [int3Len][]byte
@@ -409,6 +412,7 @@ func (r *ZKAoPVerifier) VerifyResponse(response *zkAoPResponse) bool {
 		copy(commitment[i*sha256Len:(i+1)*sha256Len], sha256List[i])
 	}
 	copy(commitment[zkAoPCommitLen-sha256Len:], h)
-	fmt.Println(commitment, r.commitment)
+	fmt.Println(commitment)
+	fmt.Println(r.commitment)
 	return commitment == r.commitment
 }
