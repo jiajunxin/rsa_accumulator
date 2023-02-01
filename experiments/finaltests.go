@@ -162,11 +162,27 @@ func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 }
 
 func TestDifferentMembershipForDI() {
-	TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
-	TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
-	TestRSAMembershipPreComputeDIParallel(65536, 4) //2^16, 16 cores
+	// TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
+	// TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
+	// TestRSAMembershipPreComputeDIParallel(65536, 4) //2^16, 16 cores
 
-	TestRSAMembershipPreCompute(65536)                   //2^16, 1 core
-	TestRSAMembershipPreComputeMultiDIParallel(65536, 0) //2^16, 3 cores
-	TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	// TestRSAMembershipPreCompute(65536)                   //2^16, 1 core
+	// TestRSAMembershipPreComputeMultiDIParallel(65536, 0) //2^16, 3 cores
+	// TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+
+	TestRSAMembershipPreComputeDIParallel(262144, 0) //2^18, 1 core
+	TestRSAMembershipPreComputeDIParallel(262144, 2) //2^18, 4 cores
+	TestRSAMembershipPreComputeDIParallel(262144, 4) //2^18, 16 cores
+
+	TestRSAMembershipPreCompute(262144)                   //2^18, 1 core
+	TestRSAMembershipPreComputeMultiDIParallel(262144, 0) //2^18, 3 cores
+	TestRSAMembershipPreComputeMultiDIParallel(262144, 2) //2^18, 12 cores
+
+	TestRSAMembershipPreComputeDIParallel(1048576, 0) //2^20, 1 core
+	TestRSAMembershipPreComputeDIParallel(1048576, 2) //2^20, 4 cores
+	TestRSAMembershipPreComputeDIParallel(1048576, 4) //2^20, 16 cores
+
+	TestRSAMembershipPreCompute(1048576)                   //2^20, 1 core
+	TestRSAMembershipPreComputeMultiDIParallel(1048576, 0) //2^20, 3 cores
+	TestRSAMembershipPreComputeMultiDIParallel(1048576, 2) //2^20, 12 cores
 }
