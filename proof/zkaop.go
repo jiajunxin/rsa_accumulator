@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/sha256"
-	"fmt"
 	"math/big"
 )
 
@@ -53,7 +52,7 @@ type zkAoPChallenge struct {
 }
 
 // newZKAoPChallenge generates a new argument of positivity
-func newZKAoPChallenge(pp PublicParameters, c3 Int3) *zkAoPChallenge {
+func newZKAoPChallenge(pp *PublicParameters, c3 Int3) *zkAoPChallenge {
 	return &zkAoPChallenge{
 		statement: zkAoPChallengeStatement,
 		g:         pp.G,
@@ -123,20 +122,20 @@ func newZKAoPCommitment(d3 Int3, d *big.Int) zkAoPCommitment {
 
 // ZKAoPProver refers to the Prover in zero-knowledge integer argument of positivity
 type ZKAoPProver struct {
-	pp     PublicParameters // public parameters
-	r      *big.Int         // r
-	sp     *big.Int         // security parameter, kappa
-	C      *big.Int         // c = (g^x)(h^r)
-	s      *big.Int         // random selected parameter s in [0, 2^(B/2 + 2kappa)*n]
-	x3     Int3             // three square sum of 4x + 1 = x0^2 + x2^1 + x2^2
-	c3     Int3             // commitment of three square sum of x: c0, c1, c2, ci = (g^xi)(h^ri)
-	randM3 Int3             // random coins: m0, m1, m2, mi is in [0, 2^(B + 2kappa)]
-	r3     Int3             // random coins: r0, r1, r2, ri is in [0, n]
-	randS3 Int3             // random coins: s0, s1, s2, si is in [0, 2^(2kappa)*n]
+	pp     *PublicParameters // public parameters
+	r      *big.Int          // r
+	sp     *big.Int          // security parameter, kappa
+	C      *big.Int          // c = (g^x)(h^r)
+	s      *big.Int          // random selected parameter s in [0, 2^(B/2 + 2kappa)*n]
+	x3     Int3              // three square sum of 4x + 1 = x0^2 + x2^1 + x2^2
+	c3     Int3              // commitment of three square sum of x: c0, c1, c2, ci = (g^xi)(h^ri)
+	randM3 Int3              // random coins: m0, m1, m2, mi is in [0, 2^(B + 2kappa)]
+	r3     Int3              // random coins: r0, r1, r2, ri is in [0, n]
+	randS3 Int3              // random coins: s0, s1, s2, si is in [0, 2^(2kappa)*n]
 }
 
 // NewZKAoPProver generates a new argument-of-positivity prover
-func NewZKAoPProver(pp PublicParameters, r *big.Int) *ZKAoPProver {
+func NewZKAoPProver(pp *PublicParameters, r *big.Int) *ZKAoPProver {
 	prover := &ZKAoPProver{
 		pp: pp,
 		r:  r,
@@ -189,7 +188,7 @@ func (r *ZKAoPProver) commitForX(x *big.Int) (Int3, error) {
 }
 
 // newZKAoPCommitFromTS generates an argument-of-positivity commitment for a given integer
-func newZKAoPCommitFromTS(pp PublicParameters, coins Int3, ts Int3) (cList Int3) {
+func newZKAoPCommitFromTS(pp *PublicParameters, coins Int3, ts Int3) (cList Int3) {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	for i := 0; i < int3Len; i++ {
@@ -233,7 +232,6 @@ func (r *ZKAoPProver) commit() (zkAoPCommitment, error) {
 	// calculate commitment
 	d3 := r.firstPartD(m3, s3)
 	d := r.secondPartD(m3)
-	fmt.Println("d", d)
 	c := newZKAoPCommitment(d3, d)
 	return c, nil
 }
@@ -313,15 +311,15 @@ func (r *ZKAoPProver) response() (*zkAoPResponse, error) {
 
 // ZKAoPVerifier refers to the Verifier in zero-knowledge integer argument of positivity
 type ZKAoPVerifier struct {
-	pp         PublicParameters // public parameters
-	sp         *big.Int         // security parameters
-	commitment zkAoPCommitment  // commitment, delta = H(d1, d2, d3, d4, d)
-	c3         Int3             // c0, c1, c2 are the commitments of x
+	pp         *PublicParameters // public parameters
+	sp         *big.Int          // security parameters
+	commitment zkAoPCommitment   // commitment, delta = H(d1, d2, d3, d4, d)
+	c3         Int3              // c0, c1, c2 are the commitments of x
 	c          *big.Int
 }
 
 // NewZKAoPVerifier generates a new integer argument of positivity verifier
-func NewZKAoPVerifier(pp PublicParameters, c *big.Int) *ZKAoPVerifier {
+func NewZKAoPVerifier(pp *PublicParameters, c *big.Int) *ZKAoPVerifier {
 	verifier := &ZKAoPVerifier{
 		pp: pp,
 		sp: big.NewInt(securityParam),
@@ -410,7 +408,5 @@ func (r *ZKAoPVerifier) VerifyResponse(response *zkAoPResponse) bool {
 		copy(commitment[i*sha256Len:(i+1)*sha256Len], sha256List[i])
 	}
 	copy(commitment[zkAoPCommitLen-sha256Len:], h)
-	fmt.Println(commitment[zkAoPCommitLen-sha256Len:])
-	fmt.Println(r.commitment[zkAoPCommitLen-sha256Len:])
 	return commitment == r.commitment
 }

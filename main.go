@@ -94,17 +94,32 @@ func main() {
 	//testPreCompute()
 	//testBigInt()
 	//testExp()
+
+	// Set up
 	setup := accumulator.TrustedSetup()
 	r, err := rand.Prime(rand.Reader, 10)
 	handleErr(err)
 	h, err := rand.Prime(rand.Reader, setup.G.BitLen())
 	handleErr(err)
 	pp := proof.NewPublicParameters(setup.N, setup.G, h)
+	// zkAoP
 	prover := proof.NewZKAoPProver(pp, r)
 	aop, err := prover.Prove(big.NewInt(100))
 	handleErr(err)
 	verifier := proof.NewZKAoPVerifier(pp, prover.C)
 	if !verifier.Verify(aop) {
+		panic("verification failed")
+	}
+
+	// zkPoKE
+	a := big.NewInt(123)
+	b := big.NewInt(54)
+	aPowB := new(big.Int).Exp(a, b, nil)
+	prover1 := proof.NewZKPoKEProver(pp)
+	poke, err := prover1.Prove(aPowB, a)
+	handleErr(err)
+	verifier1 := proof.NewZKPoKEVerifier(pp)
+	if ok, err := verifier1.Verify(poke, aPowB, a); !ok || err != nil {
 		panic("verification failed")
 	}
 }

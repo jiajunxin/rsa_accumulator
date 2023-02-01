@@ -54,7 +54,7 @@ type rpChallenge struct {
 }
 
 // newRPChallenge generates a new challenge for range proof
-func newRPChallenge(pp PublicParameters, a, b *big.Int, c3 Int3) *rpChallenge {
+func newRPChallenge(pp *PublicParameters, a, b *big.Int, c3 Int3) *rpChallenge {
 	return &rpChallenge{
 		statement: rpChallengeStatement,
 		g:         pp.G,
@@ -128,22 +128,22 @@ func newRPCommitment(d4 Int4, d *big.Int) rpCommitment {
 
 // RPProver refers to the Prover in zero-knowledge integer range proof
 type RPProver struct {
-	pp     PublicParameters // public parameters
-	r      *big.Int         // r
-	sp     *big.Int         // security parameter, kappa
-	c      *big.Int         // c = (g^x)(h^r)
-	a, b   *big.Int         // a, b, range [a, b]
-	ca     *big.Int         // ca = (c * g^(-a))^4 mod n
-	sigma  *big.Int         // random selected parameter sigma in [0, 2^(B + 2kappa)*n]
-	x4     Int4             // x0 = (b-x), and three square sum of 4(b-x)(x-a) + 1 = x1^2 + x2^2 + x3^2
-	c3     Int3             // commitment of three square sum of x: c1, c2, c3, ci = (g^xi)(h^ri)
-	randM4 Int4             // random coins: m0, m1, m2, m3, mi is in [0, 2^(B + 2kappa)]
-	r4     Int4             // r0 = -r, and random coins: r1, r2, r3, ri is in [0, n]
-	randS4 Int4             // random coins: s0, s1, s2, s3, si is in [0, 2^(2kappa)*n]
+	pp     *PublicParameters // public parameters
+	r      *big.Int          // r
+	sp     *big.Int          // security parameter, kappa
+	c      *big.Int          // c = (g^x)(h^r)
+	a, b   *big.Int          // a, b, range [a, b]
+	ca     *big.Int          // ca = (c * g^(-a))^4 mod n
+	sigma  *big.Int          // random selected parameter sigma in [0, 2^(B + 2kappa)*n]
+	x4     Int4              // x0 = (b-x), and three square sum of 4(b-x)(x-a) + 1 = x1^2 + x2^2 + x3^2
+	c3     Int3              // commitment of three square sum of x: c1, c2, c3, ci = (g^xi)(h^ri)
+	randM4 Int4              // random coins: m0, m1, m2, m3, mi is in [0, 2^(B + 2kappa)]
+	r4     Int4              // r0 = -r, and random coins: r1, r2, r3, ri is in [0, n]
+	randS4 Int4              // random coins: s0, s1, s2, s3, si is in [0, 2^(2kappa)*n]
 }
 
 // NewRPProver generates a new range proof prover
-func NewRPProver(pp PublicParameters, r, a, b *big.Int) *RPProver {
+func NewRPProver(pp *PublicParameters, r, a, b *big.Int) *RPProver {
 	prover := &RPProver{
 		pp: pp,
 		r:  r,
@@ -176,7 +176,7 @@ func (r *RPProver) Prove(x *big.Int) (*RangeProof, error) {
 }
 
 // calculate parameter c, c = (g^x)(h^r) mod n
-func calC(pp PublicParameters, r, x *big.Int) (c *big.Int) {
+func calC(pp *PublicParameters, r, x *big.Int) (c *big.Int) {
 	c = new(big.Int).Exp(pp.G, x, pp.N)
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
@@ -186,7 +186,7 @@ func calC(pp PublicParameters, r, x *big.Int) (c *big.Int) {
 }
 
 // calculate parameter Ca, Ca = (c * g^(-a))^4 mod n
-func calCa(pp PublicParameters, a, c *big.Int) (ca *big.Int) {
+func calCa(pp *PublicParameters, a, c *big.Int) (ca *big.Int) {
 	negA := new(big.Int).Neg(a)
 	defer iPool.Put(negA)
 	opt := new(big.Int).Exp(pp.G, negA, pp.N)
@@ -231,7 +231,7 @@ func (r *RPProver) commitForX(x *big.Int) (Int3, error) {
 }
 
 // newRPCommitFromFS generates a range proof commitment for a given integer
-func newRPCommitFromFS(pp PublicParameters, coins Int3, ts Int3) (cList Int3) {
+func newRPCommitFromFS(pp *PublicParameters, coins Int3, ts Int3) (cList Int3) {
 	opt := iPool.Get().(*big.Int)
 	defer iPool.Put(opt)
 	for i := 0; i < int3Len; i++ {
@@ -364,16 +364,16 @@ func (r *RPProver) response() (*rpResponse, error) {
 
 // RPVerifier refers to the Verifier in zero-knowledge integer range proof
 type RPVerifier struct {
-	pp         PublicParameters // public parameters
-	sp         *big.Int         // security parameters
-	a, b       *big.Int         // the range [a, b]
-	commitment rpCommitment     // commitment, delta = H(d1, d2, d3, d4, d)
-	c4         Int4             // c0 = c^(-1)*g^b mod n, c1, c2, c3 are the commitments of x
-	ca         *big.Int         // ca = (c*g(-a))^4 mod n
+	pp         *PublicParameters // public parameters
+	sp         *big.Int          // security parameters
+	a, b       *big.Int          // the range [a, b]
+	commitment rpCommitment      // commitment, delta = H(d1, d2, d3, d4, d)
+	c4         Int4              // c0 = c^(-1)*g^b mod n, c1, c2, c3 are the commitments of x
+	ca         *big.Int          // ca = (c*g(-a))^4 mod n
 }
 
 // NewRPVerifier generates a new range proof verifier
-func NewRPVerifier(pp PublicParameters, a, b *big.Int) *RPVerifier {
+func NewRPVerifier(pp *PublicParameters, a, b *big.Int) *RPVerifier {
 	verifier := &RPVerifier{
 		pp: pp,
 		sp: big.NewInt(securityParam),
