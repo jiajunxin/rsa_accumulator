@@ -90,10 +90,11 @@ func testExp() {
 
 func main() {
 	// experiments.TestBasiczkRSA()
-	// testPreCompute()
+	//testPreCompute()
 	//testBigInt()
 	//testExp()
 	//setSize := 65536 // 2 ^ 16 65536
 	//experiments.TestDifferentMembership()
-	experiments.TestRSAMembershipPreComputeMultiDIParallel(65536)
+	//experiments.TestRSAMembershipPreComputeMultiDIParallel(65536)
+	experiments.TestRSAMembershipPreComputeDIParallel(65536)
 }

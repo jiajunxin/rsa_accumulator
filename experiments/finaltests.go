@@ -89,7 +89,6 @@ func TestDifferentMembership() {
 
 // Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestRSAMembershipPreComputeMultiDIParallel(setSize int) {
-	//setSize := 65536 // 2 ^ 16 65536
 	fmt.Println("Test set size = ", setSize)
 	fmt.Println("GenRepresentatives with MultiDIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
@@ -126,6 +125,36 @@ func TestRSAMembershipPreComputeMultiDIParallel(setSize int) {
 		tempProof = proofs2[0]
 		_ = tempProof.BitLen()
 		tempProof = proofs3[0]
+		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
+	}()
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
+}
+
+// Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
+func TestRSAMembershipPreComputeDIParallel(setSize int) {
+	fmt.Println("Test set size = ", setSize)
+	fmt.Println("GenRepresentatives with DIHashFromPoseidon")
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	// generate a zero-knowledge RSA accumulator
+	r1 := accumulator.GenRandomizer()
+
+	maxLen := setSize * 256 / bits.UintSize
+	startingTime := time.Now().UTC()
+	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running PreComputeTable Takes [%.3f] Seconds \n", duration.Seconds())
+
+	startingTime = time.Now().UTC()
+	proofs := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:setSize], 4, table)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running ProveMembershipParallelWithTableWithRandomizer with 16 cores for three RSA accumulators Takes [%.3f] Seconds \n", duration.Seconds())
+	startingTime = time.Now().UTC()
+	func() {
+		tempProof := proofs[0]
 		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
 	}()
 	duration = time.Now().UTC().Sub(startingTime)
