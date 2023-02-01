@@ -161,6 +161,21 @@ func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
 }
 
+// Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
+func TestPreComputeTableSize(setSize int) {
+	//setSize := 65536 // 2 ^ 16 65536
+	fmt.Println("Test set size = ", setSize)
+	setup := *accumulator.TrustedSetup()
+
+	maxLen := setSize * 256 / bits.UintSize
+	startingTime := time.Now().UTC()
+	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running PreComputeTable Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Println("The table size = ", table.TableSize, "rows, ", bits.UintSize, " columns, each element size = ", bits.UintSize)
+	fmt.Println("Totally ", table.TableSize*bits.UintSize*bits.UintSize/8, "bytes")
+}
+
 func TestDifferentMembershipForDI() {
 	// TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
 	// TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
@@ -185,4 +200,13 @@ func TestDifferentMembershipForDI() {
 	TestRSAMembershipPreCompute(1048576)                   //2^20, 1 core
 	TestRSAMembershipPreComputeMultiDIParallel(1048576, 0) //2^20, 3 cores
 	TestRSAMembershipPreComputeMultiDIParallel(1048576, 2) //2^20, 12 cores
+}
+
+func TestDifferentPrecomputationTableSize() {
+	TestPreComputeTableSize(1024)    //2^10
+	TestPreComputeTableSize(4096)    //2^12
+	TestPreComputeTableSize(16384)   //2^14
+	TestPreComputeTableSize(65536)   //2^16
+	TestPreComputeTableSize(262144)  //2^18
+	TestPreComputeTableSize(1048576) //2^20
 }
