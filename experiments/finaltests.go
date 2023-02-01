@@ -142,7 +142,7 @@ func TestRSAMembershipPreComputeDIParallel(setSize int) {
 	// generate a zero-knowledge RSA accumulator
 	r1 := accumulator.GenRandomizer()
 
-	maxLen := setSize * 256 / bits.UintSize
+	maxLen := setSize * 1024 / bits.UintSize
 	startingTime := time.Now().UTC()
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
 	duration := time.Now().UTC().Sub(startingTime)
