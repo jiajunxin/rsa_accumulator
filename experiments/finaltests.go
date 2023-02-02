@@ -232,6 +232,8 @@ func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable)
 	}()
 }
 
+// We only test till 5 sets with 12*5 threads because in our test environment we have 64 threads.
+// You may need to adjust the parameters based on your own test environments.
 func TestPreComputeMultiDIParallelRepeated() {
 	setSize := 65536 //2^16, 12 cores
 	setup := *accumulator.TrustedSetup()
@@ -247,10 +249,8 @@ func TestPreComputeMultiDIParallelRepeated() {
 	repeatNum := 1
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
-		go func() {
-			defer wg.Done()
-			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-		}()
+		defer wg.Done()
+		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 	}
 	wg.Wait()
 	duration := time.Now().UTC().Sub(startingTime)
@@ -261,10 +261,8 @@ func TestPreComputeMultiDIParallelRepeated() {
 	repeatNum = 2
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
-		go func() {
-			defer wg.Done()
-			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-		}()
+		defer wg.Done()
+		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
@@ -275,10 +273,8 @@ func TestPreComputeMultiDIParallelRepeated() {
 	repeatNum = 3
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
-		go func() {
-			defer wg.Done()
-			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-		}()
+		defer wg.Done()
+		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
@@ -289,10 +285,8 @@ func TestPreComputeMultiDIParallelRepeated() {
 	repeatNum = 4
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
-		go func() {
-			defer wg.Done()
-			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-		}()
+		defer wg.Done()
+		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
@@ -303,10 +297,8 @@ func TestPreComputeMultiDIParallelRepeated() {
 	repeatNum = 5
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
-		go func() {
-			defer wg.Done()
-			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-		}()
+		defer wg.Done()
+		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
