@@ -235,7 +235,7 @@ func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable)
 // We only test till 5 sets with 12*5 threads because in our test environment we have 64 threads.
 // You may need to adjust the parameters based on your own test environments.
 func TestPreComputeMultiDIParallelRepeated() {
-	setSize := 65536 //2^16, 12 cores
+	setSize := 262144 //2^18, 12 cores
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
 	tables := make([]*multiexp.PreTable, 5)
@@ -257,7 +257,7 @@ func TestPreComputeMultiDIParallelRepeated() {
 	}
 	wg.Wait()
 	duration := time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running First trial Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running the first trial Takes [%.3f] Seconds \n", duration.Seconds())
 
 	fmt.Println("Second trial: run PreComputeMultiDIParallel with 12*2 cores for 2 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
@@ -271,7 +271,7 @@ func TestPreComputeMultiDIParallelRepeated() {
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running second trial Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running the second trial Takes [%.3f] Seconds \n", duration.Seconds())
 
 	fmt.Println("Third trial: run PreComputeMultiDIParallel with 12*3 cores for 3 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
@@ -285,7 +285,7 @@ func TestPreComputeMultiDIParallelRepeated() {
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running third trial Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running the third trial Takes [%.3f] Seconds \n", duration.Seconds())
 
 	fmt.Println("Fourth trial: run PreComputeMultiDIParallel with 12*4 cores for 4 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
@@ -299,21 +299,21 @@ func TestPreComputeMultiDIParallelRepeated() {
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running the fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
 
-	fmt.Println("Fifth trial: run PreComputeMultiDIParallel with 12*5 cores for 5 sets of", setSize, " elements")
-	startingTime = time.Now().UTC()
-	repeatNum = 5
-	wg.Add(repeatNum)
-	for i := 0; i < repeatNum; i++ {
-		go func(i int) {
-			defer wg.Done()
-			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-		}(i)
-	}
-	wg.Wait()
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running fifth trial Takes [%.3f] Seconds \n", duration.Seconds())
+	// fmt.Println("Fifth trial: run PreComputeMultiDIParallel with 12*5 cores for 5 sets of", setSize, " elements")
+	// startingTime = time.Now().UTC()
+	// repeatNum = 5
+	// wg.Add(repeatNum)
+	// for i := 0; i < repeatNum; i++ {
+	// 	go func(i int) {
+	// 		defer wg.Done()
+	// 		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
+	// 	}(i)
+	// }
+	// wg.Wait()
+	// duration = time.Now().UTC().Sub(startingTime)
+	// fmt.Printf("Running the fifth trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
 func TestDifferentPrecomputationTableSize() {
