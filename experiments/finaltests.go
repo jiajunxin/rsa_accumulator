@@ -236,7 +236,7 @@ func TestPreComputeMultiDIParallelRepeated() {
 	fmt.Println("Third trial: run PreComputeMultiDIParallel with 12*4 cores for 4 set of 2^16 elements")
 
 	startingTime = time.Now().UTC()
-	wg.Add(2)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
