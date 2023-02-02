@@ -236,7 +236,7 @@ func TestPreComputeMultiDIParallelRepeated() {
 	setSize := 131072 //2^17, 12 cores
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
-	tables := make([]*multiexp.PreTable, 5)
+	tables := make([]*multiexp.PreTable, 8)
 	fmt.Println("TestPreComputeMultiDIParallelRepeated, Test set size = ", setSize)
 	fmt.Println("Generating precomputation tables")
 	for i := 0; i < 8; i++ {
