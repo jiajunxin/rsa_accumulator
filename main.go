@@ -95,7 +95,9 @@ func main() {
 	//testExp()
 	//setSize := 65536 // 2 ^ 16 65536
 	//experiments.TestDifferentMembership()
-	//experiments.TestRSAMembershipPreComputeMultiDIParallel(65536)
-	//experiments.TestDifferentMembershipForDI()
-	experiments.TestDifferentPrecomputationTableSize()
+
+	// experiments.TestDifferentMembershipForDI()
+	// experiments.TestDifferentPrecomputationTableSize()
+
+	experiments.TestPreComputeMultiDIParallelRepeated()
 }

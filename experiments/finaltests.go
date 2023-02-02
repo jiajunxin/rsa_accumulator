@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/bits"
+	"sync"
 	"time"
 
 	"github.com/jiajunxin/multiexp"
@@ -201,6 +202,60 @@ func TestDifferentMembershipForDI() {
 	TestRSAMembershipPreCompute(262144)                   //2^18, 1 core
 	TestRSAMembershipPreComputeMultiDIParallel(262144, 0) //2^18, 3 cores
 	TestRSAMembershipPreComputeMultiDIParallel(262144, 2) //2^18, 12 cores
+}
+
+func TestPreComputeMultiDIParallelRepeated() {
+	fmt.Println("First trial: run PreComputeMultiDIParallel with 12 cores for one set of 2^16 elements")
+	var wg sync.WaitGroup
+	startingTime := time.Now().UTC()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	wg.Wait()
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running First trial Takes [%.3f] Seconds \n", duration.Seconds())
+
+	fmt.Println("Second trial: run PreComputeMultiDIParallel with 12*2 cores for two set of 2^16 elements")
+	startingTime = time.Now().UTC()
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	wg.Wait()
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running second trial Takes [%.3f] Seconds \n", duration.Seconds())
+
+	fmt.Println("Third trial: run PreComputeMultiDIParallel with 12*4 cores for 4 set of 2^16 elements")
+
+	startingTime = time.Now().UTC()
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	go func() {
+		defer wg.Done()
+		TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	}()
+	wg.Wait()
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running third trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
 func TestDifferentPrecomputationTableSize() {
