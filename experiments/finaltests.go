@@ -203,8 +203,45 @@ func TestDifferentMembershipForDI() {
 	TestRSAMembershipPreComputeMultiDIParallel(262144, 2) //2^18, 12 cores
 }
 
+func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable) {
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+
+	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
+	// generate a zero-knowledge RSA accumulator
+	r1 := accumulator.GenRandomizer()
+	r2 := accumulator.GenRandomizer()
+	r3 := accumulator.GenRandomizer()
+
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	c3 := make(chan []*big.Int)
+	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r1, setup.N, rep[:setSize], limit, table, c1)
+	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r2, setup.N, rep[setSize:2*setSize], limit, table, c2)
+	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r3, setup.N, rep[2*setSize:], limit, table, c3)
+	proofs1 := <-c1
+	proofs2 := <-c2
+	proofs3 := <-c3
+	func() {
+		tempProof := proofs1[0]
+		_ = tempProof.BitLen()
+		tempProof = proofs2[0]
+		_ = tempProof.BitLen()
+		tempProof = proofs3[0]
+		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
+	}()
+}
+
 func TestPreComputeMultiDIParallelRepeated() {
-	fmt.Println("First trial: run PreComputeMultiDIParallel with 12 cores for one set of 2^16 elements")
+	setSize := 65536 //2^16, 12 cores
+	setup := *accumulator.TrustedSetup()
+	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
+	tables := make([]*multiexp.PreTable, 5)
+	for i := 0; i < 5; i++ {
+		tables[i] = multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
+	}
+	fmt.Println("TestPreComputeMultiDIParallelRepeated, Test set size = ", setSize)
+	fmt.Println("First trial: run PreComputeMultiDIParallel with 12 cores for 1 set of", setSize, " elements")
 	var wg sync.WaitGroup
 	startingTime := time.Now().UTC()
 	repeatNum := 1
@@ -212,63 +249,63 @@ func TestPreComputeMultiDIParallelRepeated() {
 	for i := 0; i < repeatNum; i++ {
 		go func() {
 			defer wg.Done()
-			TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 		}()
 	}
 	wg.Wait()
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running First trial Takes [%.3f] Seconds \n", duration.Seconds())
 
-	fmt.Println("Second trial: run PreComputeMultiDIParallel with 12*2 cores for two set of 2^16 elements")
+	fmt.Println("Second trial: run PreComputeMultiDIParallel with 12*2 cores for 2 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
 	repeatNum = 2
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
 		go func() {
 			defer wg.Done()
-			TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 		}()
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running second trial Takes [%.3f] Seconds \n", duration.Seconds())
 
-	fmt.Println("Third trial: run PreComputeMultiDIParallel with 12*3 cores for 3 set of 2^16 elements")
+	fmt.Println("Third trial: run PreComputeMultiDIParallel with 12*3 cores for 3 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
 	repeatNum = 3
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
 		go func() {
 			defer wg.Done()
-			TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 		}()
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running third trial Takes [%.3f] Seconds \n", duration.Seconds())
 
-	fmt.Println("Fourth trial: run PreComputeMultiDIParallel with 12*4 cores for 4 set of 2^16 elements")
+	fmt.Println("Fourth trial: run PreComputeMultiDIParallel with 12*4 cores for 4 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
 	repeatNum = 4
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
 		go func() {
 			defer wg.Done()
-			TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 		}()
 	}
 	wg.Wait()
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
 
-	fmt.Println("Fifth trial: run PreComputeMultiDIParallel with 12*5 cores for 5 set of 2^16 elements")
+	fmt.Println("Fifth trial: run PreComputeMultiDIParallel with 12*5 cores for 5 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
 	repeatNum = 5
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
 		go func() {
 			defer wg.Done()
-			TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+			preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
 		}()
 	}
 	wg.Wait()
