@@ -134,6 +134,7 @@ func TestRSAMembershipPreComputeMultiDIParallel(setSize int, limit int) {
 // Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 	fmt.Println("Test set size = ", setSize)
+	fmt.Println("Core limit = ", limit)
 	fmt.Println("GenRepresentatives with DIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
@@ -151,7 +152,7 @@ func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 	startingTime = time.Now().UTC()
 	proofs := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:setSize], limit, table)
 	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallelWithTableWithRandomizer with 16 cores for three RSA accumulators Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running ProveMembershipParallelWithTableWithRandomizer for three RSA accumulators Takes [%.3f] Seconds \n", duration.Seconds())
 	startingTime = time.Now().UTC()
 	func() {
 		tempProof := proofs[0]
@@ -185,22 +186,21 @@ func TestDifferentMembershipForDI() {
 	TestRSAMembershipPreComputeMultiDIParallel(16384, 0) //2^14, 3 cores
 	TestRSAMembershipPreComputeMultiDIParallel(16384, 2) //2^14, 12 cores
 
-	// TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
-	// TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
-	// TestRSAMembershipPreComputeDIParallel(65536, 4) //2^16, 16 cores
+	TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
+	TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
+	TestRSAMembershipPreComputeDIParallel(65536, 4) //2^16, 16 cores
 
-	// TestRSAMembershipPreCompute(65536)                   //2^16, 1 core
-	// TestRSAMembershipPreComputeMultiDIParallel(65536, 0) //2^16, 3 cores
-	// TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	TestRSAMembershipPreCompute(65536)                   //2^16, 1 core
+	TestRSAMembershipPreComputeMultiDIParallel(65536, 0) //2^16, 3 cores
+	TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
 
-	// TestRSAMembershipPreComputeDIParallel(262144, 0) //2^18, 1 core
-	// TestRSAMembershipPreComputeDIParallel(262144, 2) //2^18, 4 cores
-	// TestRSAMembershipPreComputeDIParallel(262144, 4) //2^18, 16 cores
+	TestRSAMembershipPreComputeDIParallel(262144, 0) //2^18, 1 core
+	TestRSAMembershipPreComputeDIParallel(262144, 2) //2^18, 4 cores
+	TestRSAMembershipPreComputeDIParallel(262144, 4) //2^18, 16 cores
 
-	// TestRSAMembershipPreCompute(262144)                   //2^18, 1 core
-	// TestRSAMembershipPreComputeMultiDIParallel(262144, 0) //2^18, 3 cores
-	// TestRSAMembershipPreComputeMultiDIParallel(262144, 2) //2^18, 12 cores
-
+	TestRSAMembershipPreCompute(262144)                   //2^18, 1 core
+	TestRSAMembershipPreComputeMultiDIParallel(262144, 0) //2^18, 3 cores
+	TestRSAMembershipPreComputeMultiDIParallel(262144, 2) //2^18, 12 cores
 }
 
 func TestDifferentPrecomputationTableSize() {
