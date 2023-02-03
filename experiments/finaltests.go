@@ -380,8 +380,12 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	var currentEpoch int64
 	currentEpoch = 500
 	// generate the RemovedSet and insertedSet
-	var removed1, removed2, removed3 []*big.Int
-	var insert1, insert2, insert3 []*big.Int
+	removed1 := make([]*big.Int, updatedSetSize)
+	removed2 := make([]*big.Int, updatedSetSize)
+	removed3 := make([]*big.Int, updatedSetSize)
+	insert1 := make([]*big.Int, updatedSetSize)
+	insert2 := make([]*big.Int, updatedSetSize)
+	insert3 := make([]*big.Int, updatedSetSize)
 	if updatedSetSize < 1 {
 		panic("invalid updatedSetSize")
 	}

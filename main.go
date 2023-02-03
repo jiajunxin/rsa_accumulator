@@ -102,5 +102,6 @@ func main() {
 	//experiments.TestPreComputeMultiDIParallelRepeated()
 
 	experiments.TestNotusSingleThread(16384, 16) //2^14
-	experiments.TestNotusSingleThread(32768, 32) //2^14
+	experiments.TestNotusSingleThread(32768, 32) //2^15
+	experiments.TestNotusSingleThread(65536, 64) //2^15
 }
