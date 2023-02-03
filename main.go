@@ -99,5 +99,8 @@ func main() {
 	// experiments.TestDifferentMembershipForDI()
 	// experiments.TestDifferentPrecomputationTableSize()
 
-	experiments.TestPreComputeMultiDIParallelRepeated()
+	//experiments.TestPreComputeMultiDIParallelRepeated()
+
+	experiments.TestNotusSingleThread(16384, 16) //2^14
+	experiments.TestNotusSingleThread(32768, 32) //2^14
 }
