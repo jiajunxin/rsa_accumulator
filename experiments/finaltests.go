@@ -233,16 +233,13 @@ func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable)
 }
 
 func TestPreComputeMultiDIParallelRepeated() {
-	setSize := 32768 //2^15, 3 cores
+	setSize := 16384 //2^14, 3 cores
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
 	//tables := make([]*multiexp.PreTable, 8)
 	fmt.Println("TestPreComputeMultiDIParallelRepeated, Test set size = ", setSize)
 	fmt.Println("Generating precomputation tables")
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	// for i := 0; i < 8; i++ {
-	// 	tables[i] = multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	// }
 	fmt.Println("First trial: run PreComputeMultiDIParallel with 3 cores for 1 set of", setSize, " elements")
 	var wg sync.WaitGroup
 	startingTime := time.Now().UTC()
@@ -314,19 +311,19 @@ func TestPreComputeMultiDIParallelRepeated() {
 	// duration = time.Now().UTC().Sub(startingTime)
 	// fmt.Printf("Running the fifth trial Takes [%.3f] Seconds \n", duration.Seconds())
 
-	fmt.Println("Eighth trial: run PreComputeMultiDIParallel with 3 cores for 8 sets of", setSize, " elements")
-	startingTime = time.Now().UTC()
-	repeatNum = 8
-	wg.Add(repeatNum)
-	for i := 0; i < repeatNum; i++ {
-		go func(i int) {
-			defer wg.Done()
-			preComputeMultiDIParallel(setSize, 2, table)
-		}(i)
-	}
-	wg.Wait()
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running the fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
+	// fmt.Println("Eighth trial: run PreComputeMultiDIParallel with 3 cores for 8 sets of", setSize, " elements")
+	// startingTime = time.Now().UTC()
+	// repeatNum = 8
+	// wg.Add(repeatNum)
+	// for i := 0; i < repeatNum; i++ {
+	// 	go func(i int) {
+	// 		defer wg.Done()
+	// 		preComputeMultiDIParallel(setSize, 0, table)
+	// 	}(i)
+	// }
+	// wg.Wait()
+	// duration = time.Now().UTC().Sub(startingTime)
+	// fmt.Printf("Running the fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
 
 	fmt.Println("32 trial: run PreComputeMultiDIParallel with 3 cores for 32 sets of", setSize, " elements")
 	startingTime = time.Now().UTC()
