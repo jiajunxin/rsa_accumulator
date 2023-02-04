@@ -233,8 +233,7 @@ func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable)
 	}()
 }
 
-func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK() {
-	setSize := 16384 //2^14, 3 cores
+func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
 	//tables := make([]*multiexp.PreTable, 8)
@@ -243,7 +242,6 @@ func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK() {
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
 	var wg sync.WaitGroup
 	fmt.Println("32 trial: run PreComputeMultiDIParallel with 3 cores for 32 sets of", setSize, " elements")
-	fmt.Println("2^19 users, takes 96 cores in total")
 	startingTime := time.Now().UTC()
 	repeatNum := 32
 	wg.Add(repeatNum)
