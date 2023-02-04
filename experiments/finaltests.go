@@ -233,7 +233,7 @@ func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable)
 	}()
 }
 
-func TestPreComputeMultiDIParallelRepeated() {
+func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK() {
 	setSize := 16384 //2^14, 3 cores
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
@@ -243,8 +243,11 @@ func TestPreComputeMultiDIParallelRepeated() {
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
 	fmt.Println("First trial: run PreComputeMultiDIParallel with 3 cores for 1 set of", setSize, " elements")
 	var wg sync.WaitGroup
+
+	fmt.Println("32 trial: run PreComputeMultiDIParallel with 3 cores for 32 sets of", setSize, " elements")
+	fmt.Println("2^19 users, takes 96 cores in total")
 	startingTime := time.Now().UTC()
-	repeatNum := 1
+	repeatNum := 32
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
 		go func(i int) {
@@ -254,91 +257,7 @@ func TestPreComputeMultiDIParallelRepeated() {
 	}
 	wg.Wait()
 	duration := time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running the first trial Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// fmt.Println("Second trial: run PreComputeMultiDIParallel with 3 cores for 2 sets of", setSize, " elements")
-	// startingTime = time.Now().UTC()
-	// repeatNum = 2
-	// wg.Add(repeatNum)
-	// for i := 0; i < repeatNum; i++ {
-	// 	go func(i int) {
-	// 		defer wg.Done()
-	// 		preComputeMultiDIParallel(setSize, 0, tables[i]) //2^16, 12 cores
-	// 	}(i)
-	// }
-	// wg.Wait()
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running the second trial Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// fmt.Println("Third trial: run PreComputeMultiDIParallel with 12*3 cores for 3 sets of", setSize, " elements")
-	// startingTime = time.Now().UTC()
-	// repeatNum = 3
-	// wg.Add(repeatNum)
-	// for i := 0; i < repeatNum; i++ {
-	// 	go func(i int) {
-	// 		defer wg.Done()
-	// 		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-	// 	}(i)
-	// }
-	// wg.Wait()
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running the third trial Takes [%.3f] Seconds \n", duration.Seconds())
-
-	fmt.Println("Fourth trial: run PreComputeMultiDIParallel with 3 cores for 4 sets of", setSize, " elements")
-	startingTime = time.Now().UTC()
-	repeatNum = 4
-	wg.Add(repeatNum)
-	for i := 0; i < repeatNum; i++ {
-		go func(i int) {
-			defer wg.Done()
-			preComputeMultiDIParallel(setSize, 0, table)
-		}(i)
-	}
-	wg.Wait()
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running the fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// fmt.Println("Fifth trial: run PreComputeMultiDIParallel with 12*5 cores for 5 sets of", setSize, " elements")
-	// startingTime = time.Now().UTC()
-	// repeatNum = 5
-	// wg.Add(repeatNum)
-	// for i := 0; i < repeatNum; i++ {
-	// 	go func(i int) {
-	// 		defer wg.Done()
-	// 		preComputeMultiDIParallel(65536, 2, tables[i]) //2^16, 12 cores
-	// 	}(i)
-	// }
-	// wg.Wait()
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running the fifth trial Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// fmt.Println("Eighth trial: run PreComputeMultiDIParallel with 3 cores for 8 sets of", setSize, " elements")
-	// startingTime = time.Now().UTC()
-	// repeatNum = 8
-	// wg.Add(repeatNum)
-	// for i := 0; i < repeatNum; i++ {
-	// 	go func(i int) {
-	// 		defer wg.Done()
-	// 		preComputeMultiDIParallel(setSize, 0, table)
-	// 	}(i)
-	// }
-	// wg.Wait()
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running the fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
-
-	fmt.Println("32 trial: run PreComputeMultiDIParallel with 3 cores for 32 sets of", setSize, " elements")
-	startingTime = time.Now().UTC()
-	repeatNum = 32
-	wg.Add(repeatNum)
-	for i := 0; i < repeatNum; i++ {
-		go func(i int) {
-			defer wg.Done()
-			preComputeMultiDIParallel(setSize, 0, table)
-		}(i)
-	}
-	wg.Wait()
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running the fourth trial Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Running the 32 th trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
 func TestDifferentPrecomputationTableSize() {
@@ -566,14 +485,3 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
 	}()
 }
-
-// c1 := make(chan []*big.Int)
-// 	c2 := make(chan []*big.Int)
-// 	c3 := make(chan []*big.Int)
-// 	startingTime = time.Now().UTC()
-// 	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r1, setup.N, rep[:setSize], limit, table, c1)
-// 	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r2, setup.N, rep[setSize:2*setSize], limit, table, c2)
-// 	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r3, setup.N, rep[2*setSize:], limit, table, c3)
-// 	proofs1 := <-c1
-// 	proofs2 := <-c2
-// 	proofs3 := <-c3
