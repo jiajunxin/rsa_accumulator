@@ -352,13 +352,13 @@ func TestDifferentPrecomputationTableSize() {
 
 func PoKE(base, exp, newAcc, N *big.Int) {
 	l := accumulator.HashToPrime(append(newAcc.Bytes(), base.Bytes()...))
-	fmt.Println("primeChallenge = ", l.String())
+	//fmt.Println("primeChallenge = ", l.String())
 	remainder := big.NewInt(1)
 	quotient := big.NewInt(1)
 	quotient, remainder = quotient.DivMod(exp, l, remainder)
-	Q := accumulator.AccumulateNew(base, quotient, N)
-	fmt.Println("Q = ", Q.String())
-	fmt.Println("r = ", remainder.String())
+	_ = accumulator.AccumulateNew(base, quotient, N)
+	//fmt.Println("Q = ", Q.String())
+	//fmt.Println("r = ", remainder.String())
 	// AccTest1 := accumulator.AccumulateNew(Q, l, N)
 	// fmt.Println("Q^l = ", AccTest1.String())
 	// AccTest2 := accumulator.AccumulateNew(base, remainder, N)
