@@ -241,9 +241,7 @@ func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK() {
 	fmt.Println("TestPreComputeMultiDIParallelRepeated, Test set size = ", setSize)
 	fmt.Println("Generating precomputation tables")
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	fmt.Println("First trial: run PreComputeMultiDIParallel with 3 cores for 1 set of", setSize, " elements")
 	var wg sync.WaitGroup
-
 	fmt.Println("32 trial: run PreComputeMultiDIParallel with 3 cores for 32 sets of", setSize, " elements")
 	fmt.Println("2^19 users, takes 96 cores in total")
 	startingTime := time.Now().UTC()
