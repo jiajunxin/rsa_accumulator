@@ -256,6 +256,38 @@ func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
 	fmt.Printf("Running the 32 th trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
+func TestDifferentGroupingSize(setSize int) {
+	max := 262144 //2^18
+	setup := *accumulator.TrustedSetup()
+	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
+	//tables := make([]*multiexp.PreTable, 8)
+	fmt.Println("TestDifferentGroupingSize, Test set size = ", setSize)
+	repeatNum := max / setSize
+	fmt.Println("To have same number of users, repeatNum = ", repeatNum)
+	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
+	var wg sync.WaitGroup
+	fmt.Println("Start timer for precomputation of membership proofs")
+	startingTime := time.Now().UTC()
+	wg.Add(repeatNum)
+	for i := 0; i < repeatNum; i++ {
+		go func(i int) {
+			defer wg.Done()
+			preComputeMultiDIParallel(setSize, 0, table)
+		}(i)
+	}
+	wg.Wait()
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running the trial Takes [%.3f] Seconds \n", duration.Seconds())
+}
+
+func TestDifferentGroupSize() {
+	TestDifferentGroupingSize(1024)   //2^10
+	TestDifferentGroupingSize(4096)   //2^12
+	TestDifferentGroupingSize(16384)  //2^14
+	TestDifferentGroupingSize(65536)  //2^16
+	TestDifferentGroupingSize(262144) //2^18
+}
+
 func TestDifferentPrecomputationTableSize() {
 	TestPreComputeTableSize(1024)    //2^10
 	TestPreComputeTableSize(4096)    //2^12
