@@ -279,14 +279,11 @@ func TestDifferentGroupingSize(setSize int) {
 	repeatNum := max / setSize
 	fmt.Println("To have same number of users, repeatNum = ", repeatNum)
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	var wg sync.WaitGroup
 	fmt.Println("Start timer for precomputation of membership proofs")
 	startingTime := time.Now().UTC()
-	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
 		preComputeMultiDISingleThread(setSize, table)
 	}
-	wg.Wait()
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running the trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
