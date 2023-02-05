@@ -233,6 +233,20 @@ func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable)
 	}()
 }
 
+func preComputeMultiDISingleThread(setSize int, table *multiexp.PreTable) {
+	set := accumulator.GenBenchSet(setSize)
+	setup := *accumulator.TrustedSetup()
+
+	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
+	// generate a zero-knowledge RSA accumulator
+	r1 := accumulator.GenRandomizer()
+	r2 := accumulator.GenRandomizer()
+	r3 := accumulator.GenRandomizer()
+	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r1, setup.N, rep[:setSize], table)
+	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r2, setup.N, rep[:setSize], table)
+	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r3, setup.N, rep[:setSize], table)
+}
+
 func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
@@ -270,10 +284,7 @@ func TestDifferentGroupingSize(setSize int) {
 	startingTime := time.Now().UTC()
 	wg.Add(repeatNum)
 	for i := 0; i < repeatNum; i++ {
-		go func(i int) {
-			defer wg.Done()
-			preComputeMultiDIParallel(setSize, 0, table)
-		}(i)
+		preComputeMultiDISingleThread(setSize, table)
 	}
 	wg.Wait()
 	duration := time.Now().UTC().Sub(startingTime)
