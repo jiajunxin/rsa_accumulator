@@ -20,8 +20,8 @@ type PublicParameters struct {
 }
 
 // NewPublicParameters generates a new public parameter configuration
-func NewPublicParameters(n, g, h *big.Int) PublicParameters {
-	return PublicParameters{
+func NewPublicParameters(n, g, h *big.Int) *PublicParameters {
+	return &PublicParameters{
 		N: n,
 		G: g,
 		H: h,
