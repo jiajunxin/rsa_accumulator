@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"math/bits"
@@ -9,7 +8,7 @@ import (
 
 	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
-	"github.com/jiajunxin/rsa_accumulator/proof"
+	"github.com/jiajunxin/rsa_accumulator/experiments"
 )
 
 func testPreCompute() {
@@ -95,57 +94,51 @@ func main() {
 	//testPreCompute()
 	//testBigInt()
 	//testExp()
-
-	// Set up
-	setup := accumulator.TrustedSetup()
-	r, err := rand.Prime(rand.Reader, 10)
-	handleErr(err)
-	h, err := rand.Prime(rand.Reader, setup.G.BitLen())
-	handleErr(err)
-	pp := proof.NewPublicParameters(setup.N, setup.G, h)
-	// zkAoP
-	prover := proof.NewZKAoPProver(pp, r)
-	aop, err := prover.Prove(big.NewInt(100))
-	handleErr(err)
-	verifier := proof.NewZKAoPVerifier(pp, prover.C)
-	if !verifier.Verify(aop) {
-		panic("verification failed")
-	}
-
-	// zkPoKE
-	a := big.NewInt(123)
-	b := big.NewInt(54)
-	aPowB := new(big.Int).Exp(a, b, nil)
-	prover1 := proof.NewZKPoKEProver(pp)
-	poke, err := prover1.Prove(aPowB, a)
-	handleErr(err)
-	verifier1 := proof.NewZKPoKEVerifier(pp)
-	if ok, err := verifier1.Verify(poke, aPowB, a); !ok || err != nil {
-		panic("verification failed")
-	}
-}
-
-func handleErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-
-	// experiments.TestBasiczkRSA()
-	//testPreCompute()
-	//testBigInt()
-	//testExp()
-	//setSize := 65536 // 2 ^ 16 65536
-	//experiments.TestDifferentMembership()
-
-	// experiments.TestDifferentMembershipForDI()
-	// experiments.TestDifferentPrecomputationTableSize()
-
-	//experiments.TestPreComputeMultiDIParallelRepeated()
-
-	//experiments.TestNotusSingleThread(16384, 16) //2^14
-	//experiments.TestNotusSingleThread(32768, 32) //2^15
-	//experiments.TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(8192)
-	//experiments.TestNotusSingleThread(65536, 64) //2^15
 	experiments.TestDifferentGroupSize()
+	// Set up
 
 }
+
+// setup := accumulator.TrustedSetup()
+// r, err := rand.Prime(rand.Reader, 10)
+// handleErr(err)
+// h, err := rand.Prime(rand.Reader, setup.G.BitLen())
+// handleErr(err)
+// pp := proof.NewPublicParameters(setup.N, setup.G, h)
+// // zkAoP
+// prover := proof.NewZKAoPProver(pp, r)
+// aop, err := prover.Prove(big.NewInt(100))
+// handleErr(err)
+// verifier := proof.NewZKAoPVerifier(pp, prover.C)
+// if !verifier.Verify(aop) {
+// 	panic("verification failed")
+// }
+
+// // zkPoKE
+// a := big.NewInt(123)
+// b := big.NewInt(54)
+// aPowB := new(big.Int).Exp(a, b, nil)
+// prover1 := proof.NewZKPoKEProver(pp)
+// poke, err := prover1.Prove(aPowB, a)
+// handleErr(err)
+// verifier1 := proof.NewZKPoKEVerifier(pp)
+// if ok, err := verifier1.Verify(poke, aPowB, a); !ok || err != nil {
+// 	panic("verification failed")
+// }
+
+// experiments.TestBasiczkRSA()
+//testPreCompute()
+//testBigInt()
+//testExp()
+//setSize := 65536 // 2 ^ 16 65536
+//experiments.TestDifferentMembership()
+
+// experiments.TestDifferentMembershipForDI()
+// experiments.TestDifferentPrecomputationTableSize()
+
+//experiments.TestPreComputeMultiDIParallelRepeated()
+
+//experiments.TestNotusSingleThread(16384, 16) //2^14
+//experiments.TestNotusSingleThread(32768, 32) //2^15
+//experiments.TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(8192)
+//experiments.TestNotusSingleThread(65536, 64) //2^15

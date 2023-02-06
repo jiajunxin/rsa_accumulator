@@ -1,6 +1,7 @@
 package experiments
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"math/bits"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/proof"
 	"github.com/remyoudompheng/bigfft"
 )
 
@@ -30,6 +32,33 @@ func TestBasiczkRSA() {
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Generating a zero-knowledge RSA accumulator with set size = %d, takes [%.3f] Seconds \n", setSize, duration.Seconds())
 
+	// Set up
+	r, err := rand.Prime(rand.Reader, 10)
+	handleErr(err)
+	h, err := rand.Prime(rand.Reader, setup.G.BitLen())
+	handleErr(err)
+	pp := proof.NewPublicParameters(setup.N, setup.G, h)
+	// zkAoP
+	prover := proof.NewZKAoPProver(pp, r)
+	aop, err := prover.Prove(big.NewInt(100))
+	handleErr(err)
+	verifier := proof.NewZKAoPVerifier(pp, prover.C)
+	if !verifier.Verify(aop) {
+		panic("verification failed")
+	}
+
+	// zkPoKE
+	a := big.NewInt(123)
+	b := big.NewInt(54)
+	aPowB := new(big.Int).Exp(a, b, nil)
+	prover1 := proof.NewZKPoKEProver(pp)
+	poke, err := prover1.Prove(aPowB, a)
+	handleErr(err)
+	verifier1 := proof.NewZKPoKEVerifier(pp)
+	if ok, err := verifier1.Verify(poke, aPowB, a); !ok || err != nil {
+		panic("verification failed")
+	}
+
 	// startingTime = time.Now().UTC()
 	// maxLen := setSize * 256 / bits.UintSize
 	// table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
@@ -39,6 +68,11 @@ func TestBasiczkRSA() {
 	// accumulator.ProveMembershipParallelWithTable(setup.G, setup.N, rep, 2, table)
 	// duration = time.Now().UTC().Sub(startingTime)
 	// fmt.Printf("Running ProveMembershipParallelWithTable Takes [%.3f] Seconds \n", duration.Seconds())
+}
+func handleErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
@@ -243,8 +277,8 @@ func preComputeMultiDISingleThread(setSize int, table *multiexp.PreTable) {
 	r2 := accumulator.GenRandomizer()
 	r3 := accumulator.GenRandomizer()
 	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r1, setup.N, rep[:setSize], table)
-	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r2, setup.N, rep[:setSize], table)
-	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r3, setup.N, rep[:setSize], table)
+	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r2, setup.N, rep[setSize:2*setSize], table)
+	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r3, setup.N, rep[2*setSize:], table)
 }
 
 func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
