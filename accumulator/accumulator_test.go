@@ -2,11 +2,14 @@ package accumulator
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"math/big"
+	"math/bits"
 	"math/rand"
 	"strconv"
 	"testing"
 
+	"github.com/jiajunxin/multiexp"
 	"github.com/jiajunxin/rsa_accumulator/dihash"
 )
 
@@ -53,10 +56,24 @@ func TestSetup(t *testing.T) {
 	}
 }
 
+func TestMultiDIHash(t *testing.T) {
+	testSetSize := 2048
+	set := GenTestSet(testSetSize)
+	rep := GenRepresentatives(set, MultiDIHashFromPoseidon)
+	if len(rep) != testSetSize*3 {
+		t.Errorf("Representatives are not consistent for MultiDIHashFromPoseidon")
+	}
+	for i, v := range rep {
+		if v.Cmp(big1) != 1 {
+			t.Errorf("Representatives are not correct for position %d", i)
+		}
+	}
+}
+
 func TestAccAndProve(t *testing.T) {
 	setup := TrustedSetup()
 
-	testSetSize := 16
+	testSetSize := 3072
 	set := GenTestSet(testSetSize)
 	acc, proofs := AccAndProve(set, HashToPrimeFromSha256, setup)
 	if len(set) != len(proofs) {
@@ -109,6 +126,157 @@ func TestAccAndProve(t *testing.T) {
 	if acc2.Cmp(acc3) != 0 {
 		t.Errorf("proofs generated are not consistent")
 	}
+}
+
+func TestAccAndProveWithMultiDI(t *testing.T) {
+	setup := TrustedSetup()
+
+	testSetSize := 256
+	set := GenTestSet(testSetSize)
+	//rep := GenRepresentatives(set, DIHashFromPoseidon)
+	rep2 := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep3 := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep1 := make([]*big.Int, testSetSize)
+	//rep2 := make([]*big.Int, testSetSize)
+	//rep3 := make([]*big.Int, testSetSize)
+	for i := range rep1 {
+		rep1[i] = new(big.Int)
+		rep1[i] = GenRandomizer()
+		if rep1[i].Bit(0) == 0 {
+			rep1[i].Add(rep1[i], big1)
+		}
+		//rep1[i] = getPrime256()
+		//rep2[i] = GenRandomizer()
+		//rep2[i] = getPrime256()
+		//	fmt.Println("rep1[", i, "] = ", rep1[i].String())
+	}
+
+	proofs1 := ProveMembership(setup.G, setup.N, rep1)
+	proofs2 := ProveMembership(setup.G, setup.N, rep2)
+	proofs3 := ProveMembership(setup.G, setup.N, rep3)
+	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+
+	if len(set) != len(proofs1) {
+		t.Errorf("proofs have different size as the input set")
+	}
+	//fmt.Println("rep1[1] = ", rep1[1].String())
+	acc1 := accumulateNew(setup.G, setup.N, rep1)
+	//fmt.Println("rep1[1] = ", rep1[1].String())
+	acc1Temp := AccumulateNew(proofs1[3], rep1[3], setup.N)
+	// for i := range rep {
+	// 	fmt.Println("rep1[", i, "] = ", rep1[i].String())
+	// }
+	if acc1.Cmp(acc1Temp) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+	acc2 := accumulateNew(setup.G, setup.N, rep2)
+	acc2Temp := AccumulateNew(proofs2[1], rep2[1], setup.N)
+	if acc2.Cmp(acc2Temp) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+	prod3 := SetProductRecursiveFast(rep3)
+	acc3 := AccumulateNew(setup.G, prod3, setup.N)
+	acc3Temp := AccumulateNew(proofs3[7], rep3[7], setup.N)
+	if acc3.Cmp(acc3Temp) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+}
+
+func TestAccAndProveWithMultiDI2(t *testing.T) {
+	setup := TrustedSetup()
+
+	testSetSize := 80
+	set := GenTestSet(testSetSize)
+	rep := GenRepresentatives(set, MultiDIHashFromPoseidon)
+
+	proofs1 := ProveMembership(setup.G, setup.N, rep[:testSetSize])
+	proofs2 := ProveMembership(setup.G, setup.N, rep[testSetSize:2*testSetSize])
+	proofs3 := ProveMembership(setup.G, setup.N, rep[2*testSetSize:])
+	// we generate the accumulator by anyone of the membership proof raised to its power to save some calculation
+
+	if len(set) != len(proofs1) {
+		t.Errorf("proofs have different size as the input set")
+	}
+	acc1 := accumulateNew(setup.G, setup.N, rep[0:testSetSize])
+	acc1Temp := AccumulateNew(proofs1[0], rep[0], setup.N)
+	if acc1.Cmp(acc1Temp) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+	acc2 := accumulateNew(setup.G, setup.N, rep[testSetSize:2*testSetSize])
+	acc2Temp := AccumulateNew(proofs2[5], rep[testSetSize+5], setup.N)
+	if acc2.Cmp(acc2Temp) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+	prod3 := SetProductRecursiveFast(rep[2*testSetSize:])
+	acc3 := AccumulateNew(setup.G, prod3, setup.N)
+	acc3Temp := AccumulateNew(proofs3[7], rep[2*testSetSize+7], setup.N)
+	if acc3.Cmp(acc3Temp) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
+}
+
+func TestProveMembershipParallelWithTableWithRandomizer(t *testing.T) {
+	setSize := 256
+	set := GenBenchSet(setSize)
+	setup := *TrustedSetup()
+
+	rep := GenRepresentatives(set, MultiDIHashFromPoseidon)
+	fmt.Println("set size = ", len(rep))
+	// generate a zero-knowledge RSA accumulator
+	r1 := GenRandomizer()
+	r2 := GenRandomizer()
+	r3 := GenRandomizer()
+	// fmt.Println("r1 = ", r1.String())
+	// fmt.Println("r2 = ", r2.String())
+
+	randomizedbase1 := AccumulateNew(setup.G, r1, setup.N)
+	randomizedbase2 := AccumulateNew(setup.G, r2, setup.N)
+	randomizedbase3 := AccumulateNew(setup.G, r3, setup.N)
+	// calculate the exponentation
+	exp1 := SetProductRecursiveFast(rep[:setSize])
+	exp2 := SetProductRecursiveFast(rep[setSize : 2*setSize])
+	exp3 := SetProductRecursiveFast(rep[2*setSize:])
+	acc1 := AccumulateNew(randomizedbase1, exp1, setup.N)
+	acc2 := AccumulateNew(randomizedbase2, exp2, setup.N)
+	acc3 := AccumulateNew(randomizedbase3, exp3, setup.N)
+	fmt.Println("acc1 = ", acc1.String())
+	// fmt.Println("acc3 = ", acc3.String())
+	// temp := append
+	var tempProd1 big.Int
+	tempProd1.Mul(exp1, r1)
+	acc1temp := AccumulateNew(setup.G, &tempProd1, setup.N)
+	fmt.Println("acc1temp = ", acc1temp.String())
+	tempProd1.Mod(&tempProd1, setup.N)
+	fmt.Println("tempProd1 = ", tempProd1.String())
+
+	maxLen := setSize * 256 / bits.UintSize
+	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
+	proofs1 := ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:setSize], 0, table)
+	proofs2 := ProveMembershipParallelWithTableWithRandomizer(setup.G, r2, setup.N, rep[setSize:2*setSize], 0, table)
+	proofs3 := ProveMembershipParallelWithTableWithRandomizer(setup.G, r3, setup.N, rep[2*setSize:], 0, table)
+
+	temp1 := AccumulateNew(proofs1[0], rep[0], setup.N)
+	if temp1.Cmp(acc1) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+	temp2 := AccumulateNew(proofs2[5], rep[setSize+5], setup.N)
+	// fmt.Println("size of memberships2 = ", len(proofs2))
+	// fmt.Println("temp2 = ", temp2.String())
+	// fmt.Println("acc2 = ", acc2.String())
+	if temp2.Cmp(acc2) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+	temp3 := AccumulateNew(proofs3[9], rep[2*setSize+9], setup.N)
+	if temp3.Cmp(acc3) != 0 {
+		t.Errorf("proofs generated are not consistent")
+	}
+
 }
 
 func genAccts(set []string, setup *Setup, proofs []*big.Int, idx int) (acc1, acc2 *big.Int) {

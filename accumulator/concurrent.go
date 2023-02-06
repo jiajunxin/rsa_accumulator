@@ -189,6 +189,139 @@ func ProveMembershipParallelWithTable(base, N *big.Int, set []*big.Int, limit in
 	// return proofs1
 }
 
+// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+// It uses at most O(2^limit) Goroutines
+// It uses the same table with different randomizers
+func ProveMembershipParallelWithTableWithRandomizer(base, randomizer, N *big.Int, set []*big.Int, limit int, table *multiexp.PreTable) []*big.Int {
+	if limit <= 0 {
+		return ProveMembershipSingleThreadWithRandomizer(base, randomizer, N, set, table)
+	}
+	// if len(set) <= 4 {
+	// 	return handleSmallSet(base, N, set)
+	// }
+	limit -= 2
+
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	//startingTime := time.Now().UTC()
+	leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	leftleftProd := SetProductRecursiveFast(set[len(set)/4 : len(set)/2])
+	leftrightProd := SetProductRecursiveFast(set[0 : len(set)/4])
+	rightleftProd := SetProductRecursiveFast(set[len(set)*3/4:])
+	rightrightProd := SetProductRecursiveFast(set[len(set)/2 : len(set)*3/4])
+
+	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	var inputExp [4]*big.Int
+	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
+	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
+	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
+	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
+	bases := multiexp.FourfoldExpPrecomputedParallel(base, N, inputExp, table)
+	//endingTime := time.Now().UTC()
+	// var duration = endingTime.Sub(startingTime)
+	// fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
+	// 	duration.Seconds())
+	// leftBase := accumulateNew(base, N, set[len(set)/2:])
+	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	c3 := make(chan []*big.Int)
+	c4 := make(chan []*big.Int)
+
+	go proveMembershipWithChan(bases[0], N, set[0:len(set)/4], limit, c1)
+	go proveMembershipWithChan(bases[1], N, set[len(set)/4:len(set)/2], limit, c2)
+	go proveMembershipWithChan(bases[2], N, set[len(set)/2:len(set)*3/4], limit, c3)
+	go proveMembershipWithChan(bases[3], N, set[len(set)*3/4:], limit, c4)
+	proofs1 := <-c1
+	proofs2 := <-c2
+	proofs3 := <-c3
+	proofs4 := <-c4
+
+	proofs1 = append(proofs1, proofs2...)
+	proofs1 = append(proofs1, proofs3...)
+	proofs1 = append(proofs1, proofs4...)
+	return proofs1
+
+	// // the left part of proof need to accumulate the right part of the set, vice versa.
+	// startingTime := time.Now().UTC()
+	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	// bases := big.DoubleExp(base, leftProd, rightProd, N)
+	// endingTime := time.Now().UTC()
+	// var duration = endingTime.Sub(startingTime)
+	// fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
+	// 	duration.Seconds())
+	// c1 := make(chan []*big.Int)
+	// c2 := make(chan []*big.Int)
+	// go proveMembershipWithChan(bases[0], N, set[0:len(set)/2], limit, c1)
+	// go proveMembershipWithChan(bases[1], N, set[len(set)/2:], limit, c2)
+	// proofs1 := <-c1
+	// proofs2 := <-c2
+
+	// proofs1 = append(proofs1, proofs2...)
+	// return proofs1
+}
+
+// ProveMembershipParallelWithTableWithRandomizerWithChan uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+// It uses at most O(2^limit) Goroutines
+// It uses the same table with different randomizers
+func ProveMembershipParallelWithTableWithRandomizerWithChan(base, randomizer, N *big.Int, set []*big.Int, limit int, table *multiexp.PreTable, c chan []*big.Int) {
+	if limit <= 0 {
+		c <- ProveMembershipSingleThreadWithRandomizer(base, randomizer, N, set, table)
+		close(c)
+		return
+	}
+	// if len(set) <= 4 {
+	// 	return handleSmallSet(base, N, set)
+	// }
+	limit -= 2
+
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	//startingTime := time.Now().UTC()
+	leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	leftleftProd := SetProductRecursiveFast(set[len(set)/4 : len(set)/2])
+	leftrightProd := SetProductRecursiveFast(set[0 : len(set)/4])
+	rightleftProd := SetProductRecursiveFast(set[len(set)*3/4:])
+	rightrightProd := SetProductRecursiveFast(set[len(set)/2 : len(set)*3/4])
+
+	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	var inputExp [4]*big.Int
+	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
+	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
+	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
+	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
+	bases := multiexp.FourfoldExpPrecomputedParallel(base, N, inputExp, table)
+	//endingTime := time.Now().UTC()
+	// var duration = endingTime.Sub(startingTime)
+	// fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
+	// 	duration.Seconds())
+	// leftBase := accumulateNew(base, N, set[len(set)/2:])
+	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
+	c1 := make(chan []*big.Int)
+	c2 := make(chan []*big.Int)
+	c3 := make(chan []*big.Int)
+	c4 := make(chan []*big.Int)
+
+	go proveMembershipWithChan(bases[0], N, set[0:len(set)/4], limit, c1)
+	go proveMembershipWithChan(bases[1], N, set[len(set)/4:len(set)/2], limit, c2)
+	go proveMembershipWithChan(bases[2], N, set[len(set)/2:len(set)*3/4], limit, c3)
+	go proveMembershipWithChan(bases[3], N, set[len(set)*3/4:], limit, c4)
+	proofs1 := <-c1
+	proofs2 := <-c2
+	proofs3 := <-c3
+	proofs4 := <-c4
+
+	proofs1 = append(proofs1, proofs2...)
+	proofs1 = append(proofs1, proofs3...)
+	proofs1 = append(proofs1, proofs4...)
+	c <- proofs1
+	close(c)
+	return
+}
+
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan []*big.Int) {
 	if limit <= 0 {

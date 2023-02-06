@@ -90,6 +90,7 @@ func testExp() {
 }
 
 func main() {
+
 	//experiments.TestBasiczkRSA()
 	//testPreCompute()
 	//testBigInt()
@@ -128,4 +129,23 @@ func handleErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+
+	// experiments.TestBasiczkRSA()
+	//testPreCompute()
+	//testBigInt()
+	//testExp()
+	//setSize := 65536 // 2 ^ 16 65536
+	//experiments.TestDifferentMembership()
+
+	// experiments.TestDifferentMembershipForDI()
+	// experiments.TestDifferentPrecomputationTableSize()
+
+	//experiments.TestPreComputeMultiDIParallelRepeated()
+
+	//experiments.TestNotusSingleThread(16384, 16) //2^14
+	//experiments.TestNotusSingleThread(32768, 32) //2^15
+	//experiments.TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(8192)
+	//experiments.TestNotusSingleThread(65536, 64) //2^15
+	experiments.TestDifferentGroupSize()
+
 }

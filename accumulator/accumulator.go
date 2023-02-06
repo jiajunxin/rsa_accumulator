@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/jiajunxin/multiexp"
-
 	"github.com/remyoudompheng/bigfft"
 )
 
 func init() {
+	_ = Min1024.Lsh(big1, 1024)
 	_ = Min2048.Lsh(big1, RSABitLength-1)
+	P.SetString(PString, 10)
+	A.SetString(AString, 10)
+	B.SetString(BString, 10)
 }
 
 // TrustedSetup returns a pointer to AccumulatorSetup with 2048 bits key length
@@ -66,21 +69,40 @@ func AccAndProveIter(set []string, encodeType EncodeType, setup *Setup) (*big.In
 	return acc, proofs
 }
 
+// ProveMembershipSingleThreadWithRandomizer uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+func ProveMembershipSingleThreadWithRandomizer(base, randomizer, N *big.Int, set []*big.Int, table *multiexp.PreTable) []*big.Int {
+	// the left part of proof need to accumulate the right part of the set, vice versa.
+	leftProd := SetProductRecursiveFast(set[len(set)/2:])
+	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
+	leftProd = bigfft.Mul(leftProd, randomizer)
+	rightProd = bigfft.Mul(rightProd, randomizer)
+
+	leftleftProd := SetProductRecursiveFast(set[len(set)/4 : len(set)/2])
+	leftrightProd := SetProductRecursiveFast(set[0 : len(set)/4])
+	rightleftProd := SetProductRecursiveFast(set[len(set)*3/4:])
+	rightrightProd := SetProductRecursiveFast(set[len(set)/2 : len(set)*3/4])
+
+	var inputExp [4]*big.Int
+	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
+	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
+	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
+	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
+	bases := multiexp.FourfoldExpPrecomputed(base, N, inputExp, table)
+
+	proofs := ProveMembership(bases[0], N, set[0:len(set)/4])
+	proofs = append(proofs, ProveMembership(bases[1], N, set[len(set)/4:len(set)/2])...)
+	proofs = append(proofs, ProveMembership(bases[2], N, set[len(set)/2:len(set)*3/4])...)
+	proofs = append(proofs, ProveMembership(bases[3], N, set[len(set)*3/4:])...)
+	return proofs
+}
+
 // ProveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
+
 	if len(set) <= 4 {
 		return handleSmallSet(base, N, set)
 	}
-	// if len(set) <= 1024 {
-	// 	return set
-	// }
-	// the left part of proof need to accumulate the right part of the set, vice versa.
-	// x0x1Prod := bigfft.Mul(set[0], set[1])
-	// x2x3Prod := bigfft.Mul(set[2], set[3])
-	// x0Prod := bigfft.Mul(x2x3Prod, set[1])
-	// x1Prod := bigfft.Mul(x2x3Prod, set[0])
-	// x2Prod := bigfft.Mul(x0x1Prod, set[3])
-	// x3Prod := bigfft.Mul(x0x1Prod, set[2])
+
 	leftProd := SetProductRecursiveFast(set[len(set)/2:])
 	rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
 	leftleftProd := SetProductRecursiveFast(set[len(set)/4 : len(set)/2])
@@ -88,16 +110,13 @@ func ProveMembership(base, N *big.Int, set []*big.Int) []*big.Int {
 	rightleftProd := SetProductRecursiveFast(set[len(set)*3/4:])
 	rightrightProd := SetProductRecursiveFast(set[len(set)/2 : len(set)*3/4])
 
-	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
-	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
 	var inputExp [4]*big.Int
 	inputExp[0] = bigfft.Mul(leftProd, leftleftProd)
 	inputExp[1] = bigfft.Mul(leftProd, leftrightProd)
 	inputExp[2] = bigfft.Mul(rightProd, rightleftProd)
 	inputExp[3] = bigfft.Mul(rightProd, rightrightProd)
+
 	bases := multiexp.FourfoldExp(base, N, inputExp)
-	// leftBase := accumulateNew(base, N, set[len(set)/2:])
-	// rightBase := accumulateNew(base, N, set[0:len(set)/2])
 	proofs := ProveMembership(bases[0], N, set[0:len(set)/4])
 	proofs = append(proofs, ProveMembership(bases[1], N, set[len(set)/4:len(set)/2])...)
 	proofs = append(proofs, ProveMembership(bases[2], N, set[len(set)/2:len(set)*3/4])...)
@@ -192,7 +211,8 @@ func handleSmallSet(base, N *big.Int, set []*big.Int) []*big.Int {
 	}
 	if len(set) == 1 {
 		ret := make([]*big.Int, 1)
-		ret[0] = base
+		ret[0] = new(big.Int)
+		ret[0].Set(base)
 		return ret
 	}
 
