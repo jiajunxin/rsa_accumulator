@@ -14,8 +14,8 @@ import (
 	"github.com/remyoudompheng/bigfft"
 )
 
-// TestBasiczkRSA test a naive case of zero-knowledge RSA accumulator
-func TestBasiczkRSA() {
+// TestBasicZKrsa test a naive case of zero-knowledge RSA accumulator
+func TestBasicZKrsa() {
 	setSize := 65536 // 2 ^ 16 65536
 	fmt.Println("Test set size = ", setSize)
 	fmt.Println("GenRepresentatives with MultiDIHashFromPoseidon")
@@ -25,18 +25,24 @@ func TestBasiczkRSA() {
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	// generate a zero-knowledge RSA accumulator
 	r := accumulator.GenRandomizer()
-	randomizedbase := AccumulateNew(setup.G, r, setup.N)
+	randomizedBase := AccumulateNew(setup.G, r, setup.N)
 	// calculate the exponentation
 	exp := accumulator.SetProductRecursiveFast(rep)
-	accumulator.AccumulateNew(randomizedbase, exp, setup.N)
+	accumulator.AccumulateNew(randomizedBase, exp, setup.N)
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Generating a zero-knowledge RSA accumulator with set size = %d, takes [%.3f] Seconds \n", setSize, duration.Seconds())
 
 	// Set up
 	r, err := rand.Prime(rand.Reader, 10)
 	handleErr(err)
-	h, err := rand.Prime(rand.Reader, setup.G.BitLen())
-	handleErr(err)
+	h, coprime, big1 := new(big.Int), new(big.Int), big.NewInt(1)
+	for {
+		h, err = rand.Int(rand.Reader, setup.N)
+		handleErr(err)
+		if coprime.GCD(nil, nil, h, setup.N).Cmp(big1) == 0 {
+			break
+		}
+	}
 	pp := proof.NewPublicParameters(setup.N, setup.G, h)
 	// zkAoP
 	prover := proof.NewZKAoPProver(pp, r)
@@ -44,7 +50,7 @@ func TestBasiczkRSA() {
 	handleErr(err)
 	verifier := proof.NewZKAoPVerifier(pp, prover.C)
 	if !verifier.Verify(aop) {
-		panic("verification failed")
+		panic("zkAoP verification failed")
 	}
 
 	// zkPoKE
@@ -417,7 +423,7 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	unchanged2 = rep[setSize-updatedSetSize : 2*(setSize-updatedSetSize)]
 	unchanged3 = rep[2*(setSize-updatedSetSize):]
 
-	// This is also fro test purpose only.
+	// This is for test purpose only.
 	// We use Hash of tau as the random source, generate 6 different 2048 bits random numbers
 	// Each 2048 bits random number is composed by 8 256 bits random number, therefore, we
 	// need 48 256 bits random numbers.

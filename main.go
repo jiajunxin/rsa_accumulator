@@ -33,22 +33,6 @@ func testPreCompute() {
 	accumulator.ProveMembershipParallelWithTable(setup.G, setup.N, rep, 2, table)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallelWithTable Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// elementUpperBound := new(big.Int).Lsh(big.NewInt(1), 255) //255 is the length of MultiDIHashFromPoseidon
-	// startingTime := time.Now().UTC()
-	// t := precompute.NewTable(setup.G, setup.N, elementUpperBound, uint64(setSize), 102400)
-	// duration := time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running NewTable Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// startingTime = time.Now().UTC()
-	// experiments.ProveMembershipParallel2(t, setup.G, setup.N, rep, 2, 4)
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running ProveMembershipParallel2 Takes [%.3f] Seconds \n", duration.Seconds())
-
-	// startingTime = time.Now().UTC()
-	// experiments.ProveMembershipParallel3(t, setup.G, setup.N, rep, 2, 4)
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running ProveMembershipParallel3 Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
 func testBigInt() {
@@ -89,56 +73,15 @@ func testExp() {
 }
 
 func main() {
-
-	//experiments.TestBasiczkRSA()
-	//testPreCompute()
-	//testBigInt()
-	//testExp()
+	experiments.TestBasicZKrsa()
 	experiments.TestDifferentGroupSize()
-	// Set up
-
+	experiments.TestDifferentMembership()
+	experiments.TestDifferentMembershipForDI()
+	experiments.TestDifferentPrecomputationTableSize()
+	experiments.TestFirstLayerPercentage()
+	experiments.TestMembership()
+	experiments.TestProduct()
+	experiments.TestProduct2()
+	experiments.TestProduct3()
+	experiments.TestRange()
 }
-
-// setup := accumulator.TrustedSetup()
-// r, err := rand.Prime(rand.Reader, 10)
-// handleErr(err)
-// h, err := rand.Prime(rand.Reader, setup.G.BitLen())
-// handleErr(err)
-// pp := proof.NewPublicParameters(setup.N, setup.G, h)
-// // zkAoP
-// prover := proof.NewZKAoPProver(pp, r)
-// aop, err := prover.Prove(big.NewInt(100))
-// handleErr(err)
-// verifier := proof.NewZKAoPVerifier(pp, prover.C)
-// if !verifier.Verify(aop) {
-// 	panic("verification failed")
-// }
-
-// // zkPoKE
-// a := big.NewInt(123)
-// b := big.NewInt(54)
-// aPowB := new(big.Int).Exp(a, b, nil)
-// prover1 := proof.NewZKPoKEProver(pp)
-// poke, err := prover1.Prove(aPowB, a)
-// handleErr(err)
-// verifier1 := proof.NewZKPoKEVerifier(pp)
-// if ok, err := verifier1.Verify(poke, aPowB, a); !ok || err != nil {
-// 	panic("verification failed")
-// }
-
-// experiments.TestBasiczkRSA()
-//testPreCompute()
-//testBigInt()
-//testExp()
-//setSize := 65536 // 2 ^ 16 65536
-//experiments.TestDifferentMembership()
-
-// experiments.TestDifferentMembershipForDI()
-// experiments.TestDifferentPrecomputationTableSize()
-
-//experiments.TestPreComputeMultiDIParallelRepeated()
-
-//experiments.TestNotusSingleThread(16384, 16) //2^14
-//experiments.TestNotusSingleThread(32768, 32) //2^15
-//experiments.TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(8192)
-//experiments.TestNotusSingleThread(65536, 64) //2^15

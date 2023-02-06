@@ -19,8 +19,6 @@ var zkAoPB = big.NewInt(4096) // bound B
 
 // ArgOfPositivity is the argument of positivity of an integer
 type ArgOfPositivity struct {
-	// c = (g^x)(h^r)
-	c *big.Int
 	// commitment of x,
 	// containing c1, c2, c3, ci = (g^xi)(h^ri),
 	// which x = x1^2 + x2^2 + x3^2
@@ -32,9 +30,8 @@ type ArgOfPositivity struct {
 }
 
 // NewArgOfPositivity generates a new argument of positivity
-func NewArgOfPositivity(c *big.Int, commit3 Int3, commitment zkAoPCommitment, response *zkAoPResponse) *ArgOfPositivity {
+func NewArgOfPositivity(commit3 Int3, commitment zkAoPCommitment, response *zkAoPResponse) *ArgOfPositivity {
 	return &ArgOfPositivity{
-		c:          c,
 		commit3:    commit3,
 		commitment: commitment,
 		response:   response,
@@ -159,7 +156,7 @@ func (r *ZKAoPProver) Prove(x *big.Int) (*ArgOfPositivity, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewArgOfPositivity(r.C, cx, commitment, response), nil
+	return NewArgOfPositivity(cx, commitment, response), nil
 }
 
 // commitForX generates the commitment for x
