@@ -129,6 +129,33 @@ func TestDifferentMembership() {
 	TestRSAMembershipPreCompute(1048576) //2^20
 }
 
+func TestPoKE() {
+	setup := *accumulator.TrustedSetup()
+	set := accumulator.GenBenchSet(10)
+	rep := accumulator.GenRepresentatives(set, accumulator.HashToPrimeFromSha256)
+	exp := accumulator.SetProductRecursiveFast(rep)
+	accNew := accumulator.AccumulateNew(setup.G, exp, setup.N)
+	l := accumulator.HashToPrime(append([]byte(setup.G.String()), []byte(accNew.String())...))
+	remainder := big.NewInt(1)
+	quotient := big.NewInt(1)
+	quotient, remainder = quotient.DivMod(exp, l, remainder)
+	Q := accumulator.AccumulateNew(setup.G, quotient, setup.N)
+
+	startingTime := time.Now().UTC()
+	repeatNum := 100
+	for i := 0; i < repeatNum; i++ {
+		l := accumulator.HashToPrime(append([]byte(setup.G.String()), []byte(accNew.String())...))
+		AccTest1 := accumulator.AccumulateNew(Q, l, setup.N)
+		//	fmt.Println("Q^l = ", AccTest1.String())
+		AccTest2 := accumulator.AccumulateNew(setup.G, remainder, setup.N)
+		//	fmt.Println("g^r = ", AccTest2.String())
+		AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
+		AccTest3.Mod(AccTest3, setup.N)
+	}
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running PoKE for 100 rounds Takes [%.3f] Seconds \n", duration.Seconds())
+}
+
 // Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestRSAMembershipPreComputeMultiDIParallel(setSize int, limit int) {
 	fmt.Println("Test set size = ", setSize)

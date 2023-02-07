@@ -84,4 +84,5 @@ func main() {
 	experiments.TestProduct2()
 	experiments.TestProduct3()
 	experiments.TestRange()
+	experiments.TestPoKE()
 }
