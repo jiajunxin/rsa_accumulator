@@ -51,6 +51,10 @@ func TestSetup(t *testing.T) {
 		t.Errorf("g and N not co-prime! We win the RSA-2048 challenge!")
 	}
 	bitLen := Min1024.BitLen()
+	if bitLen != 1024 {
+		t.Errorf("Min1024 is not 1024 bits")
+	}
+	bitLen = Min2048.BitLen()
 	if bitLen != 2048 {
 		t.Errorf("Min2048 is not 2048 bits")
 	}
@@ -131,7 +135,7 @@ func TestAccAndProve(t *testing.T) {
 func TestAccAndProveWithMultiDI(t *testing.T) {
 	setup := TrustedSetup()
 
-	testSetSize := 256
+	testSetSize := 512
 	set := GenTestSet(testSetSize)
 	//rep := GenRepresentatives(set, DIHashFromPoseidon)
 	rep2 := GenRepresentatives(set, HashToPrimeFromSha256)
@@ -222,7 +226,7 @@ func TestAccAndProveWithMultiDI2(t *testing.T) {
 }
 
 func TestProveMembershipParallelWithTableWithRandomizer(t *testing.T) {
-	setSize := 256
+	setSize := 128
 	set := GenBenchSet(setSize)
 	setup := *TrustedSetup()
 

@@ -16,7 +16,6 @@ func genRepWithHashToPrimeFromSHA256(set []string) []*big.Int {
 
 func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 	ret := make([]*big.Int, len(set))
-	//fmt.Println("set size = ", len(set))
 	var err error
 	for i := range set {
 		ret[i], err = poseidon.HashBytes([]byte(set[i]))
@@ -24,15 +23,7 @@ func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 			panic(err)
 		}
 		ret[i].Add(ret[i], Min1024)
-		if ret[i].Bit(0) == 0 {
-			ret[i].Add(ret[i], big1)
-		}
-		//fmt.Println("Inside DI hash, ret = ", ret[i].String())
 	}
-	// fmt.Println("Inside DI hash, loop ret ")
-	// for i := range ret {
-	// 		fmt.Println("i = ", i, "ret[i] = ", ret[i].String())
-	// }
 	return ret
 }
 
@@ -50,9 +41,6 @@ func genRepWithMultiDIHashFromPoseidon(set []string) []*big.Int {
 			panic(err)
 		}
 		ret[i].Add(ret[i], temp)
-		if ret[i].Bit(0) == 0 {
-			ret[i].Add(ret[i], big1)
-		}
 	}
 	for i := 0; i < setSize; i++ {
 		ret[i+setSize] = new(big.Int)

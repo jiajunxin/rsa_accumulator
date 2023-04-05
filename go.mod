@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/iden3/go-iden3-crypto v0.0.13
-	github.com/jiajunxin/multiexp v0.0.5
+	github.com/jiajunxin/multiexp v0.1.0
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa
 	github.com/txaty/go-bigcomplex v0.1.6
 	lukechampine.com/frand v1.4.2

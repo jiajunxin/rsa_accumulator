@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	_ = Min1024.Lsh(big1, 1024)
+	_ = Min1024.Lsh(big1, 1024-1)
 	_ = Min2048.Lsh(big1, RSABitLength-1)
 	P.SetString(PString, 10)
 	A.SetString(AString, 10)
