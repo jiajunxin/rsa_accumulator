@@ -5,7 +5,7 @@ import (
 	"math/big"
 )
 
-const byteChunkSize = 125000
+// const byteChunkSize = 125000
 
 // Table is the precomputing table
 type Table struct {
