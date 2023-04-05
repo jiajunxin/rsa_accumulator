@@ -25,7 +25,7 @@ func TestBasicZKrsa() {
 	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	// generate a zero-knowledge RSA accumulator
 	r := accumulator.GenRandomizer()
-	randomizedBase := AccumulateNew(setup.G, r, setup.N)
+	randomizedBase := accumulator.AccumulateNew(setup.G, r, setup.N)
 	// calculate the exponentation
 	exp := accumulator.SetProductRecursiveFast(rep)
 	accumulator.AccumulateNew(randomizedBase, exp, setup.N)
@@ -81,7 +81,7 @@ func handleErr(err error) {
 	}
 }
 
-// Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
+// TestRSAMembershipPreCompute tests the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestRSAMembershipPreCompute(setSize int) {
 	//setSize := 65536 // 2 ^ 16 65536
 	fmt.Println("Test set size = ", setSize)
@@ -120,6 +120,7 @@ func TestRSAMembershipPreCompute(setSize int) {
 	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
 }
 
+// TestDifferentMembership test the RSAMembershipPreCompute time for different set size.
 func TestDifferentMembership() {
 	TestRSAMembershipPreCompute(1024)    //2^10
 	TestRSAMembershipPreCompute(4096)    //2^12
@@ -129,6 +130,7 @@ func TestDifferentMembership() {
 	TestRSAMembershipPreCompute(1048576) //2^20
 }
 
+// TestPoKE tests PoKE's running time.
 func TestPoKE() {
 	setup := *accumulator.TrustedSetup()
 	set := accumulator.GenBenchSet(10)
@@ -156,7 +158,7 @@ func TestPoKE() {
 	fmt.Printf("Running PoKE for 100 rounds Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
-// Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
+// TestRSAMembershipPreComputeMultiDIParallel tests the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestRSAMembershipPreComputeMultiDIParallel(setSize int, limit int) {
 	fmt.Println("Test set size = ", setSize)
 	set := accumulator.GenBenchSet(setSize)
@@ -199,7 +201,7 @@ func TestRSAMembershipPreComputeMultiDIParallel(setSize int, limit int) {
 	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
 }
 
-// Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
+// TestRSAMembershipPreComputeDIParallel tests the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 	fmt.Println("Test set size = ", setSize)
 	fmt.Println("Core limit = 2^", limit)
@@ -230,7 +232,7 @@ func TestRSAMembershipPreComputeDIParallel(setSize int, limit int) {
 	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
 }
 
-// Test the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
+// TestPreComputeTableSize tests the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
 func TestPreComputeTableSize(setSize int) {
 	//setSize := 65536 // 2 ^ 16 65536
 	fmt.Println("Test set size = ", setSize)
@@ -245,6 +247,8 @@ func TestPreComputeTableSize(setSize int) {
 	fmt.Println("Totally ", table.TableSize*bits.UintSize*bits.UintSize/8, "bytes")
 }
 
+// TestDifferentMembershipForDI tests RSAMembershipPreComputeDI in parallel with different set size and number of cores.
+// Make sure you have enough cores on your test machine.
 func TestDifferentMembershipForDI() {
 	TestRSAMembershipPreComputeDIParallel(16384, 0) //2^14, 1 core
 	TestRSAMembershipPreComputeDIParallel(16384, 2) //2^14, 4 cores
@@ -314,6 +318,7 @@ func preComputeMultiDISingleThread(setSize int, table *multiexp.PreTable) {
 	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r3, setup.N, rep[2*setSize:], table)
 }
 
+// TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK tests the case together with SNARK. We need to setup SNARK manually.
 func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
@@ -337,6 +342,7 @@ func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
 	fmt.Printf("Running the 32 th trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
+// TestDifferentGroupingSize tests the running time with different group size.
 func TestDifferentGroupingSize(setSize int) {
 	max := 262144 //2^18
 	setup := *accumulator.TrustedSetup()
@@ -355,6 +361,7 @@ func TestDifferentGroupingSize(setSize int) {
 	fmt.Printf("Running the trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
+// TestDifferentGroupSize tests the running time with different group size.
 func TestDifferentGroupSize() {
 	TestDifferentGroupingSize(1024)   //2^10
 	TestDifferentGroupingSize(4096)   //2^12
@@ -363,6 +370,7 @@ func TestDifferentGroupSize() {
 	TestDifferentGroupingSize(262144) //2^18
 }
 
+// TestDifferentPrecomputationTableSize tests the running time with different table size.
 func TestDifferentPrecomputationTableSize() {
 	TestPreComputeTableSize(1024)    //2^10
 	TestPreComputeTableSize(4096)    //2^12
@@ -372,6 +380,7 @@ func TestDifferentPrecomputationTableSize() {
 	TestPreComputeTableSize(1048576) //2^20
 }
 
+// PoKE tests the process of PoKE
 func PoKE(base, exp, newAcc, N *big.Int) {
 	l := accumulator.HashToPrime(append(newAcc.Bytes(), base.Bytes()...))
 	//fmt.Println("primeChallenge = ", l.String())
@@ -390,7 +399,7 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 	// fmt.Println("Accumulator_test3 = ", AccTest3.String()) //AccTest3 should be the same as the AccOld
 }
 
-// RemovedSet is generated to test performance.
+// TestNotusSingleThread tests the process of Notus. RemovedSet is generated to test performance.
 // The specific code here is to keep consistant with our SNARK experiments.
 func TestNotusSingleThread(setSize, updatedSetSize int) {
 	fmt.Println("Test code for Notus system. DO NOT use in production.")

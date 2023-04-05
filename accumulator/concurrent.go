@@ -116,7 +116,7 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 	// return proofs1
 }
 
-// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+// ProveMembershipParallelWithTable uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 // It uses at most O(2^limit) Goroutines
 func ProveMembershipParallelWithTable(base, N *big.Int, set []*big.Int, limit int, table *multiexp.PreTable) []*big.Int {
 	if limit <= 0 {
@@ -189,7 +189,7 @@ func ProveMembershipParallelWithTable(base, N *big.Int, set []*big.Int, limit in
 	// return proofs1
 }
 
-// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+// ProveMembershipParallelWithTableWithRandomizer uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 // It uses at most O(2^limit) Goroutines
 // It uses the same table with different randomizers
 func ProveMembershipParallelWithTableWithRandomizer(base, randomizer, N *big.Int, set []*big.Int, limit int, table *multiexp.PreTable) []*big.Int {

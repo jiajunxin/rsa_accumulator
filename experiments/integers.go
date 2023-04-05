@@ -22,6 +22,7 @@ func TestFirstLayerPercentage() {
 		duration.Seconds())
 }
 
+// TestMembership tests the running time to generate a membership proof without precomputation
 func TestMembership() {
 	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
@@ -43,7 +44,7 @@ func TestMembership() {
 		duration.Seconds())
 }
 
-// TestProduct test different ways to
+// TestProduct test different ways to calculate product of a large set
 func TestProduct() {
 	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
@@ -66,7 +67,7 @@ func TestProduct() {
 	fmt.Println("product length is", prod.BitLen())
 }
 
-// TestProduct test different ways to
+// TestProduct2 test different ways to calculate product of a large set
 func TestProduct2() {
 	setSize := 1000000
 	set := accumulator.GenBenchSet(setSize)
@@ -91,7 +92,7 @@ func TestProduct2() {
 	fmt.Println("product length is", prod.BitLen())
 }
 
-// TestProduct test different ways to
+// TestProduct3 test different ways to calculate product of a large set
 func TestProduct3() {
 	setSize := 10000
 	set := accumulator.GenBenchSet(setSize)
@@ -136,6 +137,7 @@ func genDIMax(size int) []*big.Int {
 	return ret
 }
 
+// TestRange tests the bit length of product with DI hash.
 func TestRange() {
 	setSize := 1000000
 

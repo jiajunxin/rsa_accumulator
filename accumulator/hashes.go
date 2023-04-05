@@ -48,7 +48,7 @@ func PoseidonWith2Inputs(inputs []*big.Int) *big.Int {
 	return ret
 }
 
-// output = input * A + B mod P
+// UniversalHashToInt calculates output = input * A + B mod P
 func UniversalHashToInt(input *big.Int) *big.Int {
 	var ret big.Int
 	ret.Mul(input, A)

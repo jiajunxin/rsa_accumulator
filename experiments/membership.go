@@ -55,7 +55,7 @@ func ProveMembershipParallel(table *precompute.Table, base, N *big.Int, set []*b
 	return proofs1
 }
 
-// ProveMembershipParallel uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
+// ProveMembershipParallel2 uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
 // It uses at most O(2^limit) Goroutines
 func ProveMembershipParallel2(table *precompute.Table, base, N *big.Int, set []*big.Int, limit, numRoutine int) []*big.Int {
 	if limit == 0 {
@@ -348,20 +348,6 @@ func accumulate(g, N *big.Int, set []*big.Int) *big.Int {
 	}
 	return g
 }
-
-// AccumulateParallel is a test function for Parallelly accumulating elements
-// func AccumulateParallel(g, N *big.Int, set []*big.Int) *big.Int {
-// 	// test function. Just parallel for 4 cores.
-// 	var prod big.Int
-// 	prod.SetInt64(1)
-// 	for _, v := range set {
-// 		prod.Mul(&prod, v)
-// 	}
-// 	bitLength := prod.BitLen()
-// 	// find the decimal for the bit length
-// 	g.Exp(g, &prod, N)
-// 	return g
-// }
 
 func accumulateNew(g, N *big.Int, set []*big.Int) *big.Int {
 	acc := &big.Int{}
