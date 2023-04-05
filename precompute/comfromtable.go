@@ -30,6 +30,7 @@ func PrintTable(p *PreTable) {
 	}
 }
 
+// GenPreTable generates a precomputation table for RSA accumulators
 func GenPreTable(base, N *big.Int, bitLen, tableSize int) *PreTable {
 	if bitLen <= tableSize {
 		panic("invalid table size, larger than intput bitLen")
@@ -55,6 +56,7 @@ func GenPreTable(base, N *big.Int, bitLen, tableSize int) *PreTable {
 	return &table
 }
 
+// ComputeFromTable computes g^x mod N with the pre-computation table.
 func ComputeFromTable(table *PreTable, x, N *big.Int) *big.Int {
 	// Todo: more checks for the validity of the table
 	if len(table.base) != len(table.n) {
@@ -129,6 +131,7 @@ func ComputeFromTable(table *PreTable, x, N *big.Int) *big.Int {
 	return &prod
 }
 
+// ComputeFromTableParallel computes g^x mod N with the pre-computation table in parallel.
 func ComputeFromTableParallel(table *PreTable, x, N *big.Int) *big.Int {
 	// Todo: more checks for the validity of the table
 	if len(table.base) != len(table.n) {

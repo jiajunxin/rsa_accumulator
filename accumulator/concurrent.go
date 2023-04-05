@@ -351,26 +351,6 @@ func proveMembershipWithChan(base, N *big.Int, set []*big.Int, limit int, c chan
 	close(c)
 }
 
-func calBaseParallel(base, N *big.Int, set []*big.Int) (*big.Int, *big.Int) {
-	// the left part of proof need to accumulate the right part of the set, vice versa.
-	c1 := make(chan *big.Int)
-	c2 := make(chan *big.Int)
-	go accumulateWithChan(set[len(set)/2:], base, N, c1)
-	go accumulateWithChan(set[0:len(set)/2], base, N, c2)
-	leftBase, rightBase := <-c1, <-c2
-	return leftBase, rightBase
-}
-
-func accumulateWithChan(set []*big.Int, g, N *big.Int, c chan *big.Int) {
-	var acc big.Int
-	acc.Set(g)
-	for _, v := range set {
-		acc.Exp(&acc, v, N)
-	}
-	c <- &acc
-	close(c)
-}
-
 type parallelReceiver struct {
 	left   int
 	right  int

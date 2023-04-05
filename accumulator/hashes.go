@@ -37,6 +37,7 @@ func SHA256ToInt(input []byte) *big.Int {
 	return &ret
 }
 
+// PoseidonWith2Inputs inputs 2 big.Int and generate a Poseidon hash result.
 func PoseidonWith2Inputs(inputs []*big.Int) *big.Int {
 	if len(inputs) != 2 {
 		panic("PoseidonWith2Inputs requires 2 inputs")
