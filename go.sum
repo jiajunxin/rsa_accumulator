@@ -5,8 +5,10 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/dchest/blake512 v1.0.0/go.mod h1:FV1x7xPPLWukZlpDpWQ88rF/SFwZ5qbskrzhLMB92JI=
 github.com/iden3/go-iden3-crypto v0.0.13 h1:ixWRiaqDULNyIDdOWz2QQJG5t4PpNHkQk2P6GV94cok=
 github.com/iden3/go-iden3-crypto v0.0.13/go.mod h1:swXIv0HFbJKobbQBtsB50G7IHr6PbTowutSew/iBEoo=
-github.com/jiajunxin/multiexp v0.1.0 h1:e7yAvz5iGGXWD9o6C/aC0Oh8y+9GcMqbiZMYhH//QgA=
-github.com/jiajunxin/multiexp v0.1.0/go.mod h1:TteAErHqU1VTwD3YWOs8mCMS5FyITQAE7Oodi9qryV8=
+github.com/jiajunxin/multiexp v0.1.1 h1:So8F/78HJag/xIJh3szE0LrBtedcN4fSjO5XFc4+QGM=
+github.com/jiajunxin/multiexp v0.1.1/go.mod h1:TteAErHqU1VTwD3YWOs8mCMS5FyITQAE7Oodi9qryV8=
+github.com/jiajunxin/multiexp v0.1.2 h1:Po/KAd4Tf3/YM8SdBjaFeBrAlH8uo928rmfc+vdzc38=
+github.com/jiajunxin/multiexp v0.1.2/go.mod h1:TteAErHqU1VTwD3YWOs8mCMS5FyITQAE7Oodi9qryV8=
 github.com/leanovate/gopter v0.2.9 h1:fQjYxZaynp97ozCzfOyOuAGOU4aU/z37zf/tOujFk7c=
 github.com/leanovate/gopter v0.2.9/go.mod h1:U2L/78B+KVFIx2VmW6onHJQzXtFb+p5y3y2Sh+Jxxv8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
