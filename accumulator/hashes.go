@@ -11,7 +11,10 @@ import (
 func HashToPrime(input []byte) *big.Int {
 	var ret big.Int
 	h := sha256.New()
-	h.Write(input)
+	_, err := h.Write(input)
+	if err != nil {
+		panic(err)
+	}
 	hashTemp := h.Sum(nil)
 	ret.SetBytes(hashTemp)
 	flag := false
@@ -19,7 +22,10 @@ func HashToPrime(input []byte) *big.Int {
 		flag = ret.ProbablyPrime(securityParaHashToPrime)
 		if !flag {
 			h.Reset()
-			h.Write(hashTemp)
+			_, err := h.Write(hashTemp)
+			if err != nil {
+				panic(err)
+			}
 			hashTemp = h.Sum(nil)
 			ret.SetBytes(hashTemp)
 		}
@@ -31,7 +37,10 @@ func HashToPrime(input []byte) *big.Int {
 func SHA256ToInt(input []byte) *big.Int {
 	var ret big.Int
 	h := sha256.New()
-	h.Write(input)
+	_, err := h.Write(input)
+	if err != nil {
+		panic(err)
+	}
 	hashTemp := h.Sum(nil)
 	ret.SetBytes(hashTemp)
 	return &ret

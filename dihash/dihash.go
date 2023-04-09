@@ -41,7 +41,10 @@ func init() {
 func DIHash(input []byte) *big.Int {
 	h := sha256.New()
 	var temp, ret big.Int
-	h.Write(input)
+	_, err := h.Write(input)
+	if err != nil {
+		panic(err)
+	}
 	hashTemp := h.Sum(nil)
 	temp.SetBytes(hashTemp)
 	_ = ret.Add(Delta, &temp)
@@ -57,7 +60,10 @@ func get2048Rnd(rnd *rand.Rand) *big.Int {
 	for i := 0; i < 8; i++ {
 		ranNum.Rand(rnd, Max256)
 		tempBytes := append(ranNum.Bytes(), byte(i))
-		h.Write(tempBytes)
+		_, err := h.Write(tempBytes)
+		if err != nil {
+			panic(err)
+		}
 		hashTemp := h.Sum(nil)
 		hashJoint = append(hashJoint, hashTemp...)
 	}

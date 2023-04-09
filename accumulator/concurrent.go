@@ -319,7 +319,6 @@ func ProveMembershipParallelWithTableWithRandomizerWithChan(base, randomizer, N 
 	proofs1 = append(proofs1, proofs4...)
 	c <- proofs1
 	close(c)
-	return
 }
 
 // proveMembership uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))

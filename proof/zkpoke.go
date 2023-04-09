@@ -59,7 +59,10 @@ func (zc *zkPoKEChallenge) serialize() []byte {
 func (zc *zkPoKEChallenge) sha256() []byte {
 	hashF := crypto.SHA256.New()
 	defer hashF.Reset()
-	hashF.Write(zc.serialize())
+	_, err := hashF.Write(zc.serialize())
+	if err != nil {
+		panic(err)
+	}
 	sha256Result := hashF.Sum(nil)
 	return sha256Result
 }

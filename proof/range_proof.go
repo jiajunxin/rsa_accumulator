@@ -84,7 +84,10 @@ func (r *rpChallenge) serialize() []byte {
 // sha256 generates the SHA256 hash of the range proof challenge
 func (r *rpChallenge) sha256() []byte {
 	hashF := crypto.SHA256.New()
-	hashF.Write(r.serialize())
+	_, err := hashF.Write(r.serialize())
+	if err != nil {
+		panic(err)
+	}
 	hashResult := hashF.Sum(nil)
 	return hashResult
 }
@@ -454,11 +457,17 @@ func (r *RPVerifier) VerifyResponse(response *rpResponse) bool {
 	hashF := sha256.New()
 	var sha256List [int4Len][]byte
 	for i := 0; i < int4Len; i++ {
-		hashF.Write(firstFourParams[i].Bytes())
+		_, err := hashF.Write(firstFourParams[i].Bytes())
+		if err != nil {
+			panic(err)
+		}
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
-	hashF.Write(lastH.Bytes())
+	_, err := hashF.Write(lastH.Bytes())
+	if err != nil {
+		panic(err)
+	}
 	h := hashF.Sum(nil)
 	var commitment rpCommitment
 	for i := 0; i < int4Len; i++ {

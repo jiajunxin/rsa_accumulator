@@ -26,7 +26,10 @@ func TestDIHash(t *testing.T) {
 	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
 	var tempInt big.Int
 	h := sha256.New()
-	h.Write([]byte(testString))
+	_, err := h.Write([]byte(testString))
+	if err != nil {
+		panic(err)
+	}
 	hashTemp := h.Sum(nil)
 	tempInt.SetBytes(hashTemp)
 	C := AccumulateNew(testObject.G, &tempInt, testObject.N)

@@ -75,7 +75,10 @@ func (r *zkAoPChallenge) serialize() []byte {
 // sha256 generates the SHA256 hash of the challenge of the argument of positivity
 func (r *zkAoPChallenge) sha256() []byte {
 	hashF := crypto.SHA256.New()
-	hashF.Write(r.serialize())
+	_, err := hashF.Write(r.serialize())
+	if err != nil {
+		panic(err)
+	}
 	hashResult := hashF.Sum(nil)
 	return hashResult
 }
@@ -103,7 +106,10 @@ func newZKAoPCommitment(d3 Int3, d *big.Int) zkAoPCommitment {
 	hashF := crypto.SHA256.New()
 	var sha256List [int3Len][]byte
 	for i, dByte := range dByteList {
-		hashF.Write(dByte)
+		_, err := hashF.Write(dByte)
+		if err != nil {
+			panic(err)
+		}
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
@@ -112,7 +118,10 @@ func newZKAoPCommitment(d3 Int3, d *big.Int) zkAoPCommitment {
 		copy(commitment[idx*sha256Len:(idx+1)*sha256Len], s)
 	}
 	dBytes := d.Bytes()
-	hashF.Write(dBytes)
+	_, err := hashF.Write(dBytes)
+	if err != nil {
+		panic(err)
+	}
 	copy(commitment[zkAoPCommitLen-sha256Len:], hashF.Sum(nil))
 	return commitment
 }
@@ -394,11 +403,17 @@ func (r *ZKAoPVerifier) VerifyResponse(response *zkAoPResponse) bool {
 	hashF := sha256.New()
 	var sha256List [int3Len][]byte
 	for i := 0; i < int3Len; i++ {
-		hashF.Write(firstThreeParams[i].Bytes())
+		_, err := hashF.Write(firstThreeParams[i].Bytes())
+		if err != nil {
+			panic(err)
+		}
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
-	hashF.Write(lastH.Bytes())
+	_, err := hashF.Write(lastH.Bytes())
+	if err != nil {
+		panic(err)
+	}
 	h := hashF.Sum(nil)
 	var commitment zkAoPCommitment
 	for i := 0; i < int3Len; i++ {

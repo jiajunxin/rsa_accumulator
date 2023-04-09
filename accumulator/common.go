@@ -12,8 +12,7 @@ import (
 const (
 	securityPara = 128
 	// RSABitLength denotes the test bit length of RSA
-	RSABitLength      = 2048
-	randomizerSetSize = 256
+	RSABitLength = 2048
 	// Note that the securityParaHashToPrime is running securityParaHashToPrime rounds of Miller-Robin test
 	// together with one time Baillie-PSW test. Totally heuristic value for now.
 	securityParaHashToPrime = 10

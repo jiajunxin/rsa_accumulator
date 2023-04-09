@@ -35,7 +35,8 @@ func TestBasicZKrsa() {
 	// Set up
 	r, err := rand.Prime(rand.Reader, 10)
 	handleErr(err)
-	h, coprime, big1 := new(big.Int), new(big.Int), big.NewInt(1)
+	var h, coprime *big.Int
+	big1 := big.NewInt(1)
 	for {
 		h, err = rand.Int(rand.Reader, setup.N)
 		handleErr(err)
@@ -140,7 +141,7 @@ func TestPoKE() {
 	l := accumulator.HashToPrime(append([]byte(setup.G.String()), []byte(accNew.String())...))
 	remainder := big.NewInt(1)
 	quotient := big.NewInt(1)
-	quotient, remainder = quotient.DivMod(exp, l, remainder)
+	quotient.DivMod(exp, l, remainder)
 	Q := accumulator.AccumulateNew(setup.G, quotient, setup.N)
 
 	startingTime := time.Now().UTC()
@@ -386,7 +387,7 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 	//fmt.Println("primeChallenge = ", l.String())
 	remainder := big.NewInt(1)
 	quotient := big.NewInt(1)
-	quotient, remainder = quotient.DivMod(exp, l, remainder)
+	quotient.DivMod(exp, l, remainder)
 	_ = accumulator.AccumulateNew(base, quotient, N)
 	//fmt.Println("Q = ", Q.String())
 	//fmt.Println("r = ", remainder.String())
@@ -408,8 +409,7 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	fmt.Println("Test set size = ", setSize)
 	fmt.Println("Test updated set size = ", updatedSetSize)
 
-	var currentEpoch int64
-	currentEpoch = 500
+	currentEpoch := 500
 	// generate the RemovedSet and insertedSet
 	removed1 := make([]*big.Int, updatedSetSize)
 	removed2 := make([]*big.Int, updatedSetSize)
@@ -587,7 +587,6 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 
 	duration = time.Now().UTC().Sub(totalTime)
 	fmt.Printf("Running full process Takes [%.3f] Seconds \n", duration.Seconds())
-	startingTime = time.Now().UTC()
 	func() {
 		tempProof := proofs1[0]
 		_ = tempProof.BitLen()
