@@ -116,7 +116,10 @@ func newRPCommitment(d4 Int4, d *big.Int) rpCommitment {
 	hashF := crypto.SHA256.New()
 	var sha256List [int4Len][]byte
 	for i, dByte := range dByteList {
-		hashF.Write(dByte)
+		_, err := hashF.Write(dByte)
+		if err != nil {
+			panic(err)
+		}
 		sha256List[i] = hashF.Sum(nil)
 		hashF.Reset()
 	}
@@ -124,7 +127,10 @@ func newRPCommitment(d4 Int4, d *big.Int) rpCommitment {
 	for idx, s := range sha256List {
 		copy(commitment[idx*sha256Len:(idx+1)*sha256Len], s)
 	}
-	hashF.Write(dBytes)
+	_, err := hashF.Write(dBytes)
+	if err != nil {
+		panic(err)
+	}
 	copy(commitment[rpCommitLen-sha256Len:], hashF.Sum(nil))
 	return commitment
 }
