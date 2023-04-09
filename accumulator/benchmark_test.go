@@ -220,7 +220,7 @@ func BenchmarkFourfoldExp(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 4; i < b.N; i++ {
-		multiexp.FourfoldExp(setup.G, setup.N, *(*[4]*big.Int)(set[0:4]))
+		multiexp.FourfoldExp(setup.G, setup.N, [4]*big.Int{set[0], set[1], set[2], set[3]})
 	}
 }
 
