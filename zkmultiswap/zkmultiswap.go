@@ -2,6 +2,8 @@ package zkmultiswap
 
 import (
 	"fmt"
+	"runtime"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
@@ -21,9 +23,8 @@ type Circuit struct {
 }
 
 // Define declares the circuit constraints
-// x**3 + x + 5 == y
 func (circuit *Circuit) Define(api frontend.API) error {
-	hashOutput := poseidon.Poseidon(api, circuit.Secret, circuit.Secret)
+	hashOutput := poseidon.Poseidon(api, circuit.Secret, circuit.Secret, circuit.Secret, circuit.Secret)
 	api.AssertIsEqual(circuit.Hash, hashOutput)
 	return nil
 }
@@ -34,37 +35,46 @@ func TestMultiSwap() {
 	// compiles our circuit into a R1CS
 	var circuit Circuit
 	fmt.Println("Start Compiling")
-	ccs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit, frontend.IgnoreUnconstrainedInputs())
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 	fmt.Println("Finish Compiling")
-	fmt.Printf("ccs: %v\n", ccs)
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Second * 10):
+				runtime.GC()
+			}
+		}
+	}()
+	//fmt.Printf("ccs: %v\n", ccs)
+	fmt.Println("Number of constrains: ", r1cs.GetNbConstraints())
 
 	// groth16 zkSNARK: Setup
-	pk, vk, err := groth16.Setup(ccs)
+	pk, vk, err := groth16.Setup(r1cs)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	// witness definition
 	assignment := Circuit{Secret: 3, Hash: 35}
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 	publicWitness, err := witness.Public()
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	// groth16: Prove & Verify
-	proof, err := groth16.Prove(ccs, pk, witness)
+	proof, err := groth16.Prove(r1cs, pk, witness)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 	err = groth16.Verify(proof, vk, publicWitness)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 }
