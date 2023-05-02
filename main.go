@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
 )
 
 func main() {
-	fmt.Println("qqqqqq")
+	//zkmultiswap.TestMimc()
 	zkmultiswap.TestMultiSwap()
 }
 
