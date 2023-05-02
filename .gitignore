@@ -26,3 +26,6 @@ vendor/
 
 # log files
 *.log
+
+# SNAKR public/verification keys
+*.save
