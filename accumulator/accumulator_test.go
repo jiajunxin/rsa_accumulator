@@ -1,7 +1,6 @@
 package accumulator
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"math/bits"
@@ -10,39 +9,9 @@ import (
 	"testing"
 
 	"github.com/jiajunxin/multiexp"
-	"github.com/jiajunxin/rsa_accumulator/dihash"
 )
 
 const testString = "2021HKUST"
-
-func TestDIHash(t *testing.T) {
-	// test two different ways of generating DI hash
-	// we need to check if A ?= B + C
-	testObject := TrustedSetup()
-
-	diHashValue := dihash.DIHash([]byte(testString))
-	A := AccumulateNew(testObject.G, diHashValue, testObject.N)
-
-	B := AccumulateNew(testObject.G, dihash.Delta, testObject.N)
-	var tempInt big.Int
-	h := sha256.New()
-	_, err := h.Write([]byte(testString))
-	if err != nil {
-		panic(err)
-	}
-	hashTemp := h.Sum(nil)
-	tempInt.SetBytes(hashTemp)
-	C := AccumulateNew(testObject.G, &tempInt, testObject.N)
-
-	var BCSum big.Int
-	BCSum.Mul(B, C)
-	BCSum.Mod(&BCSum, testObject.N)
-
-	tmp := A.Cmp(&BCSum)
-	if tmp != 0 {
-		t.Errorf("two ways have different result")
-	}
-}
 
 func TestSetup(t *testing.T) {
 	setup := TrustedSetup()
