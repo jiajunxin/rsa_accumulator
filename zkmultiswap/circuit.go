@@ -12,6 +12,7 @@ const (
 	BitLength = 32
 )
 
+// ZKMultiSwapCircuit is the circuit for gnark.
 // gnark is a zk-SNARK library written in Go. Circuits are regular structs.
 // The inputs must be of type frontend.Variable and make up the witness.
 type ZKMultiSwapCircuit struct {

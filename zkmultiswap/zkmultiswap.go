@@ -2,12 +2,10 @@ package zkmultiswap
 
 import (
 	"fmt"
-	"math/big"
 	"os"
 	"runtime"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/backend/witness"
@@ -32,15 +30,15 @@ func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err e
 	return verifyingKey, nil
 }
 
-func elementFromString(v string) *fr.Element {
-	n, success := new(big.Int).SetString(v, 10)
-	if !success {
-		panic("Error parsing hex number")
-	}
-	var e fr.Element
-	e.SetBigInt(n)
-	return &e
-}
+// func elementFromString(v string) *fr.Element {
+// 	n, success := new(big.Int).SetString(v, 10)
+// 	if !success {
+// 		panic("Error parsing hex number")
+// 	}
+// 	var e fr.Element
+// 	e.SetBigInt(n)
+// 	return &e
+// }
 
 // SetupZkMultiswap generates the circuit and public/verification keys with Groth16
 // "keyPathPrefix".pk* are for public keys, "keyPathPrefix".ccs* are for r1cs, "keyPathPrefix".vk,save is for verification keys
@@ -64,7 +62,7 @@ func SetupZkMultiswap(size uint32) {
 }
 
 // AssignWitness to do
-func AssignWitness() *ZKMultiSwapCircuit {
+func AssignWitness() *Circuit {
 	//var ret ZKMultiSwapCircuit
 	return InitCircuitWithSize(1000)
 }
