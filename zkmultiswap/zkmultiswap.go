@@ -17,6 +17,7 @@ import (
 
 const keyPathPrefix = "zkmultiswap"
 
+// LoadVerifyingKey load the verification key from the filepath
 func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err error) {
 	verifyingKey = groth16.NewVerifyingKey(ecc.BN254)
 	f, _ := os.Open(filepath + ".vk.save")
@@ -24,7 +25,10 @@ func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err e
 	if err != nil {
 		return verifyingKey, fmt.Errorf("read file error")
 	}
-	f.Close()
+	err = f.Close()
+	if err != nil {
+		return verifyingKey, fmt.Errorf("close file error")
+	}
 	return verifyingKey, nil
 }
 
@@ -80,6 +84,7 @@ func SetupZkmultiswap() {
 	fmt.Println("Finish Setup")
 }
 
+// Prove is used to generate a Groth16 proof and public witness for the zkMultiSwap
 func Prove() (*groth16.Proof, *witness.Witness, error) {
 	fmt.Println("Start Proving")
 	pk, err := groth16.ReadSegmentProveKey(keyPathPrefix)
@@ -112,7 +117,19 @@ func Prove() (*groth16.Proof, *witness.Witness, error) {
 	return &proof, publicWitness, nil
 }
 
-// TestMultiSwap
+// Verify is used to check a Groth16 proof and public witness for the zkMultiSwap
+func Verify(proof *groth16.Proof, publicWitness *witness.Witness) bool {
+	vk, err := LoadVerifyingKey(keyPathPrefix)
+	if err != nil {
+		panic("r1cs init error")
+	}
+	runtime.GC()
+
+	err = groth16.Verify(*proof, vk, publicWitness)
+	return err != nil
+}
+
+// TestMultiSwap is temporarily used for test purpose
 func TestMultiSwap() {
 	fmt.Println("Start TestMultiSwap")
 	SetupZkmultiswap()
@@ -122,18 +139,9 @@ func TestMultiSwap() {
 		panic(err)
 	}
 
-	vk, err := LoadVerifyingKey(keyPathPrefix)
-	if err != nil {
-		panic("r1cs init error")
+	flag := Verify(proof, publicWitness)
+	if flag {
+		fmt.Println("Verification passed")
 	}
-	runtime.GC()
-	// witness definition
-
-	// groth16: Prove & Verify
-
-	err = groth16.Verify(*proof, vk, publicWitness)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Verification passed")
+	fmt.Println("Verification failed")
 }

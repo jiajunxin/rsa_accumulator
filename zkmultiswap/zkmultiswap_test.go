@@ -26,7 +26,10 @@ func TestPoseidonHash(t *testing.T) {
 	}
 
 	poseidonHasher := bnPoseidon.NewPoseidon()
-	poseidonHasher.Write([]byte(inputs))
+	_, err = poseidonHasher.Write([]byte(inputs))
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	result2 := poseidonHasher.Sum(nil)
 
 	if compare(result1, result2) != 0 {
