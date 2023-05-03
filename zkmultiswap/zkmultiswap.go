@@ -9,10 +9,13 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/backend/witness"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/std/hash/poseidon"
 )
+
+const keyPathPrefix = "zkmultiswap"
 
 func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err error) {
 	verifyingKey = groth16.NewVerifyingKey(ecc.BN254)
@@ -56,9 +59,9 @@ func (circuit *zmMultiSwapCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-// TestMultiSwap
-func TestMultiSwap() {
-	fmt.Println("Start TestMultiSwap")
+// SetupZkmultiswap generates the circuit and public/verification keys with Groth16
+// "keyPathPrefix".pk* are for public keys, "keyPathPrefix".ccs* are for r1cs, "keyPathPrefix".vk,save is for verification keys
+func SetupZkmultiswap() {
 	// compiles our circuit into a R1CS
 	var circuit zmMultiSwapCircuit
 	fmt.Println("Start Compiling")
@@ -69,42 +72,68 @@ func TestMultiSwap() {
 	fmt.Println("Finish Compiling")
 	runtime.GC()
 	fmt.Println("Number of constrains: ", r1cs.GetNbConstraints())
-	// groth16 zkSNARK: Setup
-	//pk, vk, err := groth16.Setup(r1cs)
-	sessionKey := "zkmultiswap"
-	groth16.SetupLazyWithDump(r1cs, sessionKey)
+
+	err = groth16.SetupLazyWithDump(r1cs, keyPathPrefix)
 	if err != nil {
 		panic(err)
 	}
-	pk, err := groth16.ReadSegmentProveKey(sessionKey)
+	fmt.Println("Finish Setup")
+}
+
+func Prove() (*groth16.Proof, *witness.Witness, error) {
+	fmt.Println("Start Proving")
+	pk, err := groth16.ReadSegmentProveKey(keyPathPrefix)
 	if err != nil {
-		panic("r1cs init error")
+		return nil, nil, err
 	}
-	vk, err := LoadVerifyingKey(sessionKey)
+	runtime.GC()
+	r1cs, err := groth16.LoadR1CSFromFile(keyPathPrefix)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Todo: witness to be input
+	outputs := elementFromString("17517277496620338529366114881698763424837036587329561912313499393581702161864")
+	assignment := zmMultiSwapCircuit{Hash: outputs, Secret1: elementFromString("3"), Secret2: elementFromString("3")}
+
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	publicWitness, err := witness.Public()
+	if err != nil {
+		return nil, nil, err
+	}
+	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, keyPathPrefix) //, backend.IgnoreSolverError()
+	if err != nil {
+		return nil, nil, err
+	}
+	return &proof, publicWitness, nil
+}
+
+// TestMultiSwap
+func TestMultiSwap() {
+	fmt.Println("Start TestMultiSwap")
+	SetupZkmultiswap()
+
+	proof, publicWitness, err := Prove()
+	if err != nil {
+		panic(err)
+	}
+
+	vk, err := LoadVerifyingKey(keyPathPrefix)
 	if err != nil {
 		panic("r1cs init error")
 	}
 	runtime.GC()
 	// witness definition
-	outputs := elementFromString("17517277496620338529366114881698763424837036587329561912313499393581702161864")
-	assignment := zmMultiSwapCircuit{Hash: outputs, Secret1: elementFromString("3"), Secret2: elementFromString("3")}
-	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
-	if err != nil {
-		panic(err)
-	}
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
 
 	// groth16: Prove & Verify
-	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, sessionKey) //, backend.IgnoreSolverError()
-	if err != nil {
-		panic(err)
-	}
 
-	err = groth16.Verify(proof, vk, publicWitness)
+	err = groth16.Verify(*proof, vk, publicWitness)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Verification passed")
 }
