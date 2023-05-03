@@ -1,12 +1,21 @@
 package main
 
 import (
+	"fmt"
+	"runtime"
+	"time"
+
 	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
 )
 
 func main() {
 	//zkmultiswap.TestMimc()
-	zkmultiswap.SetupZkMultiswap()
+	zkmultiswap.SetupZkMultiswap(1000)
+	runtime.GC()
+	startingTime := time.Now().UTC()
+	zkmultiswap.Prove()
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generating a SNARK proof for set size = %d, takes [%.3f] Seconds \n", 100, duration.Seconds())
 	//zkmultiswap.TestMultiSwap()
 }
 

@@ -47,8 +47,7 @@ func InitCircuitWithSize(size uint32) *ZKMultiSwapCircuit {
 	circuit.OriginalHashes = make([]frontend.Variable, size)
 	circuit.OriginalUpdEpoch = make([]frontend.Variable, size)
 	circuit.UpdatedBalances = make([]frontend.Variable, size)
-	var i uint32
-	for i = 0; i < size; i++ {
+	for i := uint32(0); i < size; i++ {
 		circuit.UserID[i] = 0
 		circuit.OriginalBalances[i] = 0
 		circuit.OriginalHashes[i] = 1

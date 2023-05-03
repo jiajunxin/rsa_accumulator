@@ -8,6 +8,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/backend/witness"
 	"github.com/consensys/gnark/frontend"
@@ -43,9 +44,9 @@ func elementFromString(v string) *fr.Element {
 
 // SetupZkMultiswap generates the circuit and public/verification keys with Groth16
 // "keyPathPrefix".pk* are for public keys, "keyPathPrefix".ccs* are for r1cs, "keyPathPrefix".vk,save is for verification keys
-func SetupZkMultiswap() {
+func SetupZkMultiswap(size uint32) {
 	// compiles our circuit into a R1CS
-	circuit := InitCircuitWithSize(100)
+	circuit := InitCircuitWithSize(size)
 	fmt.Println("Start Compiling")
 	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit)
 	if err != nil {
@@ -62,9 +63,10 @@ func SetupZkMultiswap() {
 	fmt.Println("Finish Setup")
 }
 
+// AssignWitness to do
 func AssignWitness() *ZKMultiSwapCircuit {
-	var ret ZKMultiSwapCircuit
-	return &ret
+	//var ret ZKMultiSwapCircuit
+	return InitCircuitWithSize(1000)
 }
 
 // Prove is used to generate a Groth16 proof and public witness for the zkMultiSwap
@@ -93,7 +95,7 @@ func Prove() (*groth16.Proof, *witness.Witness, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, keyPathPrefix)
+	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, keyPathPrefix, backend.IgnoreSolverError())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -115,7 +117,7 @@ func Verify(proof *groth16.Proof, publicWitness *witness.Witness) bool {
 // TestMultiSwap is temporarily used for test purpose
 func TestMultiSwap() {
 	fmt.Println("Start TestMultiSwap")
-	SetupZkMultiswap()
+	SetupZkMultiswap(100)
 
 	proof, publicWitness, err := Prove()
 	if err != nil {
