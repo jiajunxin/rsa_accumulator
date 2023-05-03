@@ -6,7 +6,8 @@ import (
 
 func main() {
 	//zkmultiswap.TestMimc()
-	zkmultiswap.TestMultiSwap()
+	zkmultiswap.SetupZkMultiswap()
+	//zkmultiswap.TestMultiSwap()
 }
 
 // experiments.TestBasicZKrsa()
