@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
@@ -12,8 +14,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
-
-const keyPathPrefix = "zkmultiswap"
 
 // LoadVerifyingKey load the verification key from the filepath
 func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err error) {
@@ -30,31 +30,29 @@ func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err e
 	return verifyingKey, nil
 }
 
-// func elementFromString(v string) *fr.Element {
-// 	n, success := new(big.Int).SetString(v, 10)
-// 	if !success {
-// 		panic("Error parsing hex number")
-// 	}
-// 	var e fr.Element
-// 	e.SetBigInt(n)
-// 	return &e
-// }
-
 // SetupZkMultiswap generates the circuit and public/verification keys with Groth16
 // "keyPathPrefix".pk* are for public keys, "keyPathPrefix".ccs* are for r1cs, "keyPathPrefix".vk,save is for verification keys
 func SetupZkMultiswap(size uint32) {
 	// compiles our circuit into a R1CS
 	circuit := InitCircuitWithSize(size)
 	fmt.Println("Start Compiling")
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Second * 10):
+				runtime.GC()
+			}
+		}
+	}()
 	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Finish Compiling")
-	runtime.GC()
 	fmt.Println("Number of constrains: ", r1cs.GetNbConstraints())
 
-	err = groth16.SetupLazyWithDump(r1cs, keyPathPrefix)
+	fileName := keyPathPrefix + "_" + strconv.FormatInt(int64(size), 10)
+	err = groth16.SetupLazyWithDump(r1cs, fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -70,6 +68,14 @@ func AssignWitness() *Circuit {
 // Prove is used to generate a Groth16 proof and public witness for the zkMultiSwap
 func Prove() (*groth16.Proof, *witness.Witness, error) {
 	fmt.Println("Start Proving")
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Second * 10):
+				runtime.GC()
+			}
+		}
+	}()
 	pk, err := groth16.ReadSegmentProveKey(keyPathPrefix)
 	if err != nil {
 		return nil, nil, err
@@ -100,31 +106,23 @@ func Prove() (*groth16.Proof, *witness.Witness, error) {
 	return &proof, publicWitness, nil
 }
 
+func VerifyPublicWitness(*witness.Witness) bool {
+	//Todo.
+	return true
+}
+
 // Verify is used to check a Groth16 proof and public witness for the zkMultiSwap
-func Verify(proof *groth16.Proof, publicWitness *witness.Witness) bool {
-	vk, err := LoadVerifyingKey(keyPathPrefix)
+func Verify(proof *groth16.Proof, setsize uint32, publicWitness *witness.Witness) bool {
+	fileName := keyPathPrefix + "_" + strconv.FormatInt(int64(setsize), 10)
+	vk, err := LoadVerifyingKey(fileName)
 	if err != nil {
 		panic("r1cs init error")
 	}
 	runtime.GC()
+	if !VerifyPublicWitness(publicWitness) {
+		return false
+	}
 
 	err = groth16.Verify(*proof, vk, publicWitness)
 	return err != nil
-}
-
-// TestMultiSwap is temporarily used for test purpose
-func TestMultiSwap() {
-	fmt.Println("Start TestMultiSwap")
-	SetupZkMultiswap(100)
-
-	proof, publicWitness, err := Prove()
-	if err != nil {
-		panic(err)
-	}
-
-	flag := Verify(proof, publicWitness)
-	if flag {
-		fmt.Println("Verification passed")
-	}
-	fmt.Println("Verification failed")
 }

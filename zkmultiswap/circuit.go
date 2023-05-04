@@ -5,26 +5,21 @@ import (
 	"github.com/consensys/gnark/std/hash/poseidon"
 )
 
-const (
-	// BatchUserSize is the upper bound of users can be checked with one proof
-	BatchUserSize = 10
-	// BitLength is the bit length of the user ID, balnace and epoch number. It can be 32, 64 or any valid number within the field
-	BitLength = 32
-)
-
-// ZKMultiSwapCircuit is the circuit for gnark.
+// Circuit is the Zk-MultiSwap circuit for gnark.
 // gnark is a zk-SNARK library written in Go. Circuits are regular structs.
 // The inputs must be of type frontend.Variable and make up the witness.
-type ZKMultiSwapCircuit struct {
+type Circuit struct {
 	// struct tag on a variable is optional
 	// default uses variable name and secret visibility.
-	ChallengeL1      frontend.Variable   `gnark:",public"` // a prime challenge number L1
-	ChallengeL2      frontend.Variable   `gnark:",public"` // a prime challenge number L2
-	RemainderR1      frontend.Variable   `gnark:",public"` // a remainder R1
-	RemainderR2      frontend.Variable   `gnark:",public"` // a remainder R2
-	CurrentEpochNum  frontend.Variable   `gnark:",public"` // current epoch number
-	OriginalSum      frontend.Variable   //original sum of balances for all users
-	UpdatedSum       frontend.Variable   //updated sum of balances for all users
+	ChallengeL1     frontend.Variable `gnark:",public"` // a prime challenge number L1
+	ChallengeL2     frontend.Variable `gnark:",public"` // a prime challenge number L2
+	RemainderR1     frontend.Variable `gnark:",public"` // a remainder R1
+	RemainderR2     frontend.Variable `gnark:",public"` // a remainder R2
+	CurrentEpochNum frontend.Variable `gnark:",public"` // current epoch number
+	//------------------------------private witness below--------------------------------------
+	Randomizer       frontend.Variable   // Used to randomize the witness for commit-and-prove, reserved for future
+	OriginalSum      frontend.Variable   // original sum of balances for all users
+	UpdatedSum       frontend.Variable   // updated sum of balances for all users
 	UserID           []frontend.Variable // list of user IDs to be updated
 	OriginalBalances []frontend.Variable // list of user balances before update
 	OriginalHashes   []frontend.Variable // list of user hasher before update
@@ -33,8 +28,8 @@ type ZKMultiSwapCircuit struct {
 }
 
 // InitCircuitWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
-func InitCircuitWithSize(size uint32) *ZKMultiSwapCircuit {
-	var circuit ZKMultiSwapCircuit
+func InitCircuitWithSize(size uint32) *Circuit {
+	var circuit Circuit
 	circuit.ChallengeL1 = 1
 	circuit.ChallengeL2 = 1
 	circuit.RemainderR1 = 0
@@ -42,6 +37,7 @@ func InitCircuitWithSize(size uint32) *ZKMultiSwapCircuit {
 	circuit.CurrentEpochNum = 1
 	circuit.OriginalSum = 1
 	circuit.UpdatedSum = 1
+	circuit.Randomizer = 1
 
 	circuit.UserID = make([]frontend.Variable, size)
 	circuit.OriginalBalances = make([]frontend.Variable, size)
@@ -59,7 +55,7 @@ func InitCircuitWithSize(size uint32) *ZKMultiSwapCircuit {
 }
 
 // Define declares the circuit constraints
-func (circuit ZKMultiSwapCircuit) Define(api frontend.API) error {
+func (circuit Circuit) Define(api frontend.API) error {
 
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalBalances))
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalHashes))
