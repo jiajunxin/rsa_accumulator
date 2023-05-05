@@ -3,6 +3,7 @@ package zkmultiswap
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
@@ -13,6 +14,10 @@ import (
 const (
 	// BitLength is the bit length of the user ID, balnace and epoch number. It can be 32, 64 or any valid number within the field
 	BitLength = 32
+	// CurrentEpochNum is used for *test purpose* only. It should be larger than the test set size and all OriginalUpdEpoch
+	CurrentEpochNum = 1000000
+	// OriginalBalances is used for *test purpose* only. It should be larger than 0 and the updated balance should also be positive
+	OriginalBalances = 10000
 
 	keyPathPrefix = "zkmultiswap"
 )
@@ -50,10 +55,26 @@ type UpdateSet32 struct {
 	UpdatedBalances  []uint32
 }
 
+func getRandomAcc(setup *accumulator.Setup) *big.Int {
+	var ret big.Int
+	rand := accumulator.GenRandomizer()
+	ret.Exp(setup.G, rand, setup.N)
+	return &ret
+}
+
+// SetupTranscript should takes in all public information regarding the MultiSwap
+func SetupTranscript(setup *accumulator.Setup, accOld, accMid, accNew *big.Int, CurrentEpochNum uint32) *fiatshamir.Transcript {
+	transcript := fiatshamir.InitTranscript([]string{setup.G.String(), setup.N.String()})
+	transcript.Append(strconv.Itoa(int(CurrentEpochNum)))
+	return transcript
+}
+
+// GenTestSet generates a set of values for test purpose.
+// Todo: change Poseidon Hash to DI hash!
 func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	var ret UpdateSet32
 
-	ret.CurrentEpochNum = 500
+	ret.CurrentEpochNum = CurrentEpochNum
 	for i := uint32(0); i < setsize; i++ {
 		j := i*2 + 1
 		ret.UserID[i] = j
@@ -63,24 +84,46 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 		ret.UpdatedBalances[i] = j
 	}
 
+	// get slice of elements removed and inserted
+	removeSet := make([]*big.Int, setsize)
+	insertSet := make([]*big.Int, setsize)
+	for i := uint32(0); i < setsize; i++ {
+		tempposeidonHash1 := poseidon.Poseidon(ElementFromUint32(ret.UserID[i]), ElementFromUint32(ret.OriginalBalances[i]),
+			ElementFromUint32(ret.OriginalUpdEpoch[i]), ElementFromString(ret.OriginalHashes[i].String()))
+		removeSet[i] = new(big.Int)
+		tempposeidonHash1.ToBigInt(removeSet[i])
+
+		tempposeidonHash2 := poseidon.Poseidon(ElementFromUint32(ret.UserID[i]), ElementFromUint32(ret.UpdatedBalances[i]),
+			ElementFromUint32(ret.CurrentEpochNum), tempposeidonHash1)
+		insertSet[i] = new(big.Int)
+		tempposeidonHash2.ToBigInt(insertSet[i])
+	}
+	prod1 := accumulator.SetProductRecursiveFast(removeSet)
+	prod2 := accumulator.SetProductRecursiveFast(insertSet)
+
+	// get accumulators
+	accMid := getRandomAcc(setup)
+	var accOld, accNew big.Int
+	accOld.Exp(accMid, prod1, setup.N)
+	accNew.Exp(accMid, prod2, setup.N)
+
 	// get challenge
-	transcript := fiatshamir.InitTranscript([]string{string(ret.CurrentEpochNum)})
+	transcript := SetupTranscript(setup, &accOld, accMid, &accNew, ret.CurrentEpochNum)
+
 	challengeL1 := transcript.GetChallengeAndAppendTranscript()
 	challengeL2 := transcript.GetChallengeAndAppendTranscript()
 
 	// get remainder
-	var temp big.Int
 	remainderR1 := big.NewInt(1)
 	remainderR2 := big.NewInt(1)
-	tempposeidonHash := poseidon.Poseidon(ElementFromUint32(ret.UserID[0]), ElementFromUint32(ret.OriginalBalances[0]),
-		ElementFromUint32(ret.OriginalUpdEpoch[0]), ElementFromString(ret.OriginalHashes[0].String()))
+	remainderR1.Mod(prod1, challengeL1)
+	remainderR2.Mod(prod2, challengeL2)
 
-	remainderR1.Mul(remainderR1, tempposeidonHash.ToBigInt(&temp))
-	remainderR1.Mod(remainderR1, challengeL1)
-
-	remainderR2.Mul(remainderR2, tempposeidonHash.ToBigInt(&temp))
-	remainderR2.Mod(remainderR2, challengeL2)
-
+	ret.ChallengeL1 = challengeL1
+	ret.ChallengeL2 = challengeL2
+	ret.RemainderR1 = remainderR1
+	ret.RemainderR2 = remainderR2
+	ret.Randomizer = accumulator.GenRandomizer()
 	return &ret
 }
 
