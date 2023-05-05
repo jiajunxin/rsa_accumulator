@@ -66,7 +66,7 @@ func AssignWitness() *Circuit {
 }
 
 // Prove is used to generate a Groth16 proof and public witness for the zkMultiSwap
-func Prove() (*groth16.Proof, *witness.Witness, error) {
+func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 	fmt.Println("Start Proving")
 	go func() {
 		for {

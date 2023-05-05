@@ -55,6 +55,27 @@ type UpdateSet32 struct {
 	UpdatedBalances  []uint32
 }
 
+func (input *UpdateSet32) IsValid() bool {
+	if len(input.UserID) != len(input.OriginalBalances) {
+		return false
+	}
+	if len(input.UserID) != len(input.OriginalHashes) {
+		return false
+	}
+	if len(input.UserID) != len(input.OriginalUpdEpoch) {
+		return false
+	}
+	if len(input.UserID) != len(input.UpdatedBalances) {
+		return false
+	}
+	for _, v := range input.OriginalHashes {
+		if v == nil {
+			return false
+		}
+	}
+	return true
+}
+
 func getRandomAcc(setup *accumulator.Setup) *big.Int {
 	var ret big.Int
 	rand := accumulator.GenRandomizer()
@@ -124,6 +145,10 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	ret.RemainderR1 = remainderR1
 	ret.RemainderR2 = remainderR2
 	ret.Randomizer = accumulator.GenRandomizer()
+
+	if !ret.IsValid() {
+		panic("error in GenTestSet, the generated test set is invalid")
+	}
 	return &ret
 }
 

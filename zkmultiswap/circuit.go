@@ -54,6 +54,36 @@ func InitCircuitWithSize(size uint32) *Circuit {
 	return &circuit
 }
 
+// InitCircuitWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
+func InitCircuit(input *UpdateSet32) *Circuit {
+	if !input.IsValid() {
+		panic("error in InitCircuit, the input set is invalid")
+	}
+	var circuit Circuit
+	circuit.ChallengeL1 = input.ChallengeL1
+	circuit.ChallengeL2 = 1
+	circuit.RemainderR1 = 0
+	circuit.RemainderR2 = 0
+	circuit.CurrentEpochNum = 1
+	circuit.OriginalSum = 1
+	circuit.UpdatedSum = 1
+	circuit.Randomizer = 1
+
+	circuit.UserID = make([]frontend.Variable, size)
+	circuit.OriginalBalances = make([]frontend.Variable, size)
+	circuit.OriginalHashes = make([]frontend.Variable, size)
+	circuit.OriginalUpdEpoch = make([]frontend.Variable, size)
+	circuit.UpdatedBalances = make([]frontend.Variable, size)
+	for i := uint32(0); i < size; i++ {
+		circuit.UserID[i] = 0
+		circuit.OriginalBalances[i] = 0
+		circuit.OriginalHashes[i] = 1
+		circuit.OriginalUpdEpoch[i] = 0
+		circuit.UpdatedBalances[i] = 0
+	}
+	return &circuit
+}
+
 // Define declares the circuit constraints
 func (circuit Circuit) Define(api frontend.API) error {
 
