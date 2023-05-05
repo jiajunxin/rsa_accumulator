@@ -40,17 +40,17 @@ func ElementFromUint32(v uint32) *fr.Element {
 
 // Set32 is one set for the prover with uint32 for CurrentEpochNum,
 type UpdateSet32 struct {
-	ChallengeL1      *big.Int
-	ChallengeL2      *big.Int
-	RemainderR1      *big.Int
-	RemainderR2      *big.Int
-	Randomizer       *big.Int
+	ChallengeL1      big.Int
+	ChallengeL2      big.Int
+	RemainderR1      big.Int
+	RemainderR2      big.Int
+	Randomizer       big.Int
 	CurrentEpochNum  uint32
 	OriginalSum      uint32
 	UpdatedSum       uint32
 	UserID           []uint32
 	OriginalBalances []uint32
-	OriginalHashes   []*big.Int
+	OriginalHashes   []big.Int
 	OriginalUpdEpoch []uint32
 	UpdatedBalances  []uint32
 }
@@ -67,11 +67,6 @@ func (input *UpdateSet32) IsValid() bool {
 	}
 	if len(input.UserID) != len(input.UpdatedBalances) {
 		return false
-	}
-	for _, v := range input.OriginalHashes {
-		if v == nil {
-			return false
-		}
 	}
 	return true
 }
@@ -94,16 +89,23 @@ func SetupTranscript(setup *accumulator.Setup, accOld, accMid, accNew *big.Int, 
 // Todo: change Poseidon Hash to DI hash!
 func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	var ret UpdateSet32
+	ret.UserID = make([]uint32, setsize)
+	ret.OriginalBalances = make([]uint32, setsize)
+	ret.OriginalUpdEpoch = make([]uint32, setsize)
+	ret.OriginalHashes = make([]big.Int, setsize)
+	ret.UpdatedBalances = make([]uint32, setsize)
 
 	ret.CurrentEpochNum = CurrentEpochNum
 	for i := uint32(0); i < setsize; i++ {
-		j := i*2 + 1
-		ret.UserID[i] = j
+		j := i*2 + 1      // no special meaning for j, just need some non-repeating positive integers
+		ret.UserID[i] = j // we need to arrange user IDs in accending order for checking them efficiently
 		ret.OriginalBalances[i] = j
 		ret.OriginalUpdEpoch[i] = 10
 		ret.OriginalHashes[i].SetInt64(int64(j))
 		ret.UpdatedBalances[i] = j
 	}
+	ret.OriginalSum = OriginalBalances
+	ret.UpdatedSum = OriginalBalances // UpdatedSum can be any valid positive numbers, but we are testing the case UpdatedSum = OriginalSum for simplicity
 
 	// get slice of elements removed and inserted
 	removeSet := make([]*big.Int, setsize)
@@ -140,11 +142,12 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	remainderR1.Mod(prod1, challengeL1)
 	remainderR2.Mod(prod2, challengeL2)
 
-	ret.ChallengeL1 = challengeL1
-	ret.ChallengeL2 = challengeL2
-	ret.RemainderR1 = remainderR1
-	ret.RemainderR2 = remainderR2
-	ret.Randomizer = accumulator.GenRandomizer()
+	ret.ChallengeL1 = *challengeL1
+	ret.ChallengeL2 = *challengeL2
+	ret.RemainderR1 = *remainderR1
+	ret.RemainderR2 = *remainderR2
+	// Randomizer to be fixed!
+	ret.Randomizer = *big.NewInt(200)
 
 	if !ret.IsValid() {
 		panic("error in GenTestSet, the generated test set is invalid")
@@ -157,8 +160,9 @@ func TestMultiSwap() {
 	fmt.Println("Start TestMultiSwap")
 	testSetSize := uint32(100)
 	SetupZkMultiswap(testSetSize)
+	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
 
-	proof, publicWitness, err := Prove()
+	proof, publicWitness, err := Prove(testSet)
 	if err != nil {
 		panic(err)
 	}

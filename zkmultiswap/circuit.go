@@ -60,32 +60,35 @@ func InitCircuit(input *UpdateSet32) *Circuit {
 		panic("error in InitCircuit, the input set is invalid")
 	}
 	var circuit Circuit
+	size := len(input.OriginalBalances)
 	circuit.ChallengeL1 = input.ChallengeL1
-	circuit.ChallengeL2 = 1
-	circuit.RemainderR1 = 0
-	circuit.RemainderR2 = 0
-	circuit.CurrentEpochNum = 1
-	circuit.OriginalSum = 1
-	circuit.UpdatedSum = 1
-	circuit.Randomizer = 1
+	circuit.ChallengeL2 = input.ChallengeL2
+	circuit.RemainderR1 = input.RemainderR1
+	circuit.RemainderR2 = input.RemainderR2
+	circuit.CurrentEpochNum = input.CurrentEpochNum
+	circuit.OriginalSum = input.OriginalSum
+	circuit.UpdatedSum = input.UpdatedSum
+	circuit.Randomizer = input.Randomizer
 
 	circuit.UserID = make([]frontend.Variable, size)
 	circuit.OriginalBalances = make([]frontend.Variable, size)
 	circuit.OriginalHashes = make([]frontend.Variable, size)
 	circuit.OriginalUpdEpoch = make([]frontend.Variable, size)
 	circuit.UpdatedBalances = make([]frontend.Variable, size)
-	for i := uint32(0); i < size; i++ {
-		circuit.UserID[i] = 0
-		circuit.OriginalBalances[i] = 0
-		circuit.OriginalHashes[i] = 1
-		circuit.OriginalUpdEpoch[i] = 0
-		circuit.UpdatedBalances[i] = 0
+	for i := 0; i < size; i++ {
+		circuit.UserID[i] = input.UserID[i]
+		circuit.OriginalBalances[i] = input.OriginalBalances[i]
+		circuit.OriginalHashes[i] = input.OriginalHashes[i]
+		circuit.OriginalUpdEpoch[i] = input.OriginalUpdEpoch[i]
+		circuit.UpdatedBalances[i] = input.UpdatedBalances[i]
 	}
 	return &circuit
 }
 
 // Define declares the circuit constraints
 func (circuit Circuit) Define(api frontend.API) error {
+	// To be fixed!
+	api.ToBinary(circuit.Randomizer, BitLength)
 
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalBalances))
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalHashes))
@@ -99,8 +102,14 @@ func (circuit Circuit) Define(api frontend.API) error {
 	api.ToBinary(circuit.CurrentEpochNum, BitLength)
 	api.ToBinary(circuit.OriginalSum, BitLength)
 	api.ToBinary(circuit.UpdatedSum, BitLength)
+
+	// check we do not have repeating IDs and IDs in correct range
+	for i := 1; i < len(circuit.UserID); i++ {
+		api.AssertIsLess(circuit.UserID[i-1], circuit.UserID[i])
+	}
+	api.ToBinary(circuit.UserID[len(circuit.UserID)-1], BitLength)
+
 	for i := 0; i < len(circuit.UserID); i++ {
-		api.ToBinary(circuit.UserID[i], BitLength)
 		api.ToBinary(circuit.OriginalBalances[i], BitLength)
 		//api.AssertIsLess(circuit.OriginalHashes[i], api.Curve().Info().Fp.Modulus)
 		api.AssertIsLess(circuit.OriginalUpdEpoch[i], circuit.CurrentEpochNum)

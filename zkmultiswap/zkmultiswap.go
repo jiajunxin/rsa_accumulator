@@ -44,7 +44,7 @@ func SetupZkMultiswap(size uint32) {
 			}
 		}
 	}()
-	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit)
+	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit) //frontend.IgnoreUnconstrainedInputs()
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +60,7 @@ func SetupZkMultiswap(size uint32) {
 }
 
 // AssignWitness to do
-func AssignWitness() *Circuit {
+func AssignWitness(input *UpdateSet32) *Circuit {
 	//var ret ZKMultiSwapCircuit
 	return InitCircuitWithSize(1000)
 }
@@ -78,31 +78,35 @@ func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 	}()
 	pk, err := groth16.ReadSegmentProveKey(keyPathPrefix)
 	if err != nil {
+		fmt.Println("test0")
 		return nil, nil, err
 	}
 	runtime.GC()
 	r1cs, err := groth16.LoadR1CSFromFile(keyPathPrefix)
 	if err != nil {
+		fmt.Println("test1")
 		return nil, nil, err
 	}
 
-	// Todo: witness to be input
-	//outputs := elementFromString("17517277496620338529366114881698763424837036587329561912313499393581702161864")
-	assignment := AssignWitness()
+	assignment := AssignWitness(input)
 
 	witness, err := frontend.NewWitness(assignment, ecc.BN254)
 	if err != nil {
+		fmt.Println("test2")
 		return nil, nil, err
 	}
 
 	publicWitness, err := witness.Public()
 	if err != nil {
+		fmt.Println("test3")
 		return nil, nil, err
 	}
-	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, keyPathPrefix, backend.IgnoreSolverError())
+	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, keyPathPrefix, backend.IgnoreSolverError()) // backend.IgnoreSolverError() can be used for testing
 	if err != nil {
+		fmt.Println("test4")
 		return nil, nil, err
 	}
+	fmt.Println("testfinish")
 	return &proof, publicWitness, nil
 }
 
