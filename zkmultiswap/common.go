@@ -5,6 +5,9 @@ import (
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
+	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
 )
 
 const (
@@ -47,24 +50,39 @@ type UpdateSet32 struct {
 	UpdatedBalances  []uint32
 }
 
-// func GenTestSet(setsize uint32) *UpdateSet32 {
-// 	var ret UpdateSet32
+func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
+	var ret UpdateSet32
 
-// 	ret.CurrentEpochNum = 500
-// 	for i := uint32(0); i < setsize; i++ {
-// 		j := i*2 + 1
-// 		ret.UserID[i] = j
-// 		ret.OriginalBalances[i] = j
-// 		ret.OriginalUpdEpoch[i] = 10
-// 		ret.OriginalHashes[i].SetInt64(int64(j))
-// 		ret.UpdatedBalances[i] = j
-// 	}
+	ret.CurrentEpochNum = 500
+	for i := uint32(0); i < setsize; i++ {
+		j := i*2 + 1
+		ret.UserID[i] = j
+		ret.OriginalBalances[i] = j
+		ret.OriginalUpdEpoch[i] = 10
+		ret.OriginalHashes[i].SetInt64(int64(j))
+		ret.UpdatedBalances[i] = j
+	}
 
-// 	// get challenge
+	// get challenge
+	transcript := fiatshamir.InitTranscript([]string{string(ret.CurrentEpochNum)})
+	challengeL1 := transcript.GetChallengeAndAppendTranscript()
+	challengeL2 := transcript.GetChallengeAndAppendTranscript()
 
-// 	poseidonHasher := poseidon.Poseidon(ElementFromUint32(ret.UserID[0]))
-// 	return &ret
-// }
+	// get remainder
+	var temp big.Int
+	remainderR1 := big.NewInt(1)
+	remainderR2 := big.NewInt(1)
+	tempposeidonHash := poseidon.Poseidon(ElementFromUint32(ret.UserID[0]), ElementFromUint32(ret.OriginalBalances[0]),
+		ElementFromUint32(ret.OriginalUpdEpoch[0]), ElementFromString(ret.OriginalHashes[0].String()))
+
+	remainderR1.Mul(remainderR1, tempposeidonHash.ToBigInt(&temp))
+	remainderR1.Mod(remainderR1, challengeL1)
+
+	remainderR2.Mul(remainderR2, tempposeidonHash.ToBigInt(&temp))
+	remainderR2.Mod(remainderR2, challengeL2)
+
+	return &ret
+}
 
 // TestMultiSwap is temporarily used for test purpose
 func TestMultiSwap() {

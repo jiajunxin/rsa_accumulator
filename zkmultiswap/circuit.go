@@ -62,8 +62,6 @@ func (circuit Circuit) Define(api frontend.API) error {
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalUpdEpoch))
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.UpdatedBalances))
 	//check input are in the correct range
-	//api.AssertIsLess(circuit.ChallengeL1, api.Curve().Info().Fp.Modulus)
-	//api.AssertIsLess(circuit.ChallengeL2, api.Curve().Info().Fp.Modulus)
 	api.AssertIsLess(circuit.RemainderR1, circuit.ChallengeL1)
 	api.AssertIsLess(circuit.RemainderR2, circuit.ChallengeL2)
 	// ToBinary not only returns the binary, but additionaly checks if the binary representation is same as the input,
