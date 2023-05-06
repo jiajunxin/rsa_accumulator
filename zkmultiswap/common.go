@@ -188,7 +188,7 @@ func isCircuitExist(testSetSize uint32) bool {
 
 func testMultiSwap(testSetSize uint32) {
 	if !isCircuitExist(testSetSize) {
-		fmt.Println("Circuit haven't been compiled. Start compiling.")
+		fmt.Println("Circuit haven't been compiled for testSetSize = ", testSetSize, ". Start compiling.")
 		startingTime := time.Now().UTC()
 		SetupZkMultiswap(testSetSize)
 		duration := time.Now().UTC().Sub(startingTime)
@@ -203,7 +203,7 @@ func testMultiSwap(testSetSize uint32) {
 		fmt.Println("Error during Prove")
 		panic(err)
 	}
-
+	runtime.GC()
 	flag := Verify(proof, testSetSize, publicWitness)
 	if flag {
 		fmt.Println("Verification passed")

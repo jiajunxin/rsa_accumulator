@@ -47,6 +47,6 @@ func TestZkMultiSwap(t *testing.T) {
 	circuit = *InitCircuitWithSize(testSetSize)
 
 	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
-	witness = *InitCircuit(testSet)
+	witness = *AssignCircuit(testSet)
 	assert.SolvingSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254))
 }

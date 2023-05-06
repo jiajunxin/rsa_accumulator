@@ -66,37 +66,40 @@ func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 	fmt.Println("Start Proving")
 	go regularGC()
 	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(len(input.UserID)), 10)
+	startingTime := time.Now().UTC()
 	pk, err := groth16.ReadSegmentProveKey(fileName)
 	if err != nil {
-		fmt.Println("test0")
+		fmt.Println("error while ReadSegmentProveKey")
 		return nil, nil, err
 	}
 	runtime.GC()
 	r1cs, err := groth16.LoadR1CSFromFile(fileName)
 	if err != nil {
-		fmt.Println("test1")
+		fmt.Println("error while LoadR1CSFromFile")
 		return nil, nil, err
 	}
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Loading a SNARK circuit and proving key for set size = %d, takes [%.3f] Seconds \n", len(input.UserID), duration.Seconds())
 
-	assignment := InitCircuit(input)
+	assignment := AssignCircuit(input)
 	witness, err := frontend.NewWitness(assignment, ecc.BN254)
 	if err != nil {
-		fmt.Println("test2")
+		fmt.Println("error while AssignCircuit")
 		return nil, nil, err
 	}
 
 	publicWitness, err := witness.Public()
 	if err != nil {
-		fmt.Println("test3")
+		fmt.Println("error while generating public witness")
 		return nil, nil, err
 	}
-	startingTime := time.Now().UTC()
+	startingTime = time.Now().UTC()
 	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, fileName, backend.IgnoreSolverError()) // backend.IgnoreSolverError() can be used for testing
 	if err != nil {
-		fmt.Println("test4")
+		fmt.Println("error while ProveRoll")
 		return nil, nil, err
 	}
-	duration := time.Now().UTC().Sub(startingTime)
+	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Generating a SNARK proof for set size = %d, takes [%.3f] Seconds \n", len(input.UserID), duration.Seconds())
 	return &proof, publicWitness, nil
 }

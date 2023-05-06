@@ -108,8 +108,8 @@ func InitCircuitWithSize(size uint32) *Circuit {
 	return &circuit
 }
 
-// InitCircuitWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
-func InitCircuit(input *UpdateSet32) *Circuit {
+// AssignCircuit assign a circuit with UpdateSet32 values.
+func AssignCircuit(input *UpdateSet32) *Circuit {
 	if !input.IsValid() {
 		panic("error in InitCircuit, the input set is invalid")
 	}
