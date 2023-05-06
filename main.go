@@ -31,7 +31,6 @@ func main() {
 	if flag {
 		fmt.Println("Verification passed")
 	}
-	fmt.Println("Verification failed")
 	//zkmultiswap.TestMultiSwap()
 }
 

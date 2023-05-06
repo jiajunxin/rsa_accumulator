@@ -6,8 +6,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	bnPoseidon "github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
+	"github.com/consensys/gnark/test"
 	iden3Poseidon "github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
 // compare return 0 if input1 == input2
@@ -36,14 +39,14 @@ func TestPoseidonHash(t *testing.T) {
 	}
 }
 
-// func TestPoseidon2(t *testing.T) {
-// 	assert := test.NewAssert(t)
-// 	var circuit, witness ZKMultiSwapCircuit
-// 	hash := elementFromString("17517277496620338529366114881698763424837036587329561912313499393581702161864")
+func TestZkMultiSwap(t *testing.T) {
+	assert := test.NewAssert(t)
+	var circuit, witness Circuit
+	testSetSize := uint32(30)
 
-// 	// Test completeness
-// 	witness.Secret1 = elementFromString("3")
-// 	witness.Secret2 = elementFromString("3")
-// 	witness.Hash = hash
-// 	assert.SolvingSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254)) //test.WithCompileOpts(frontend.IgnoreUnconstrainedInputs())
-// }
+	circuit = *InitCircuitWithSize(testSetSize)
+
+	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
+	witness = *InitCircuit(testSet)
+	assert.SolvingSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254))
+}

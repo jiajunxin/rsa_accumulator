@@ -16,10 +16,11 @@ const (
 	BitLength = 32
 	// CurrentEpochNum is used for *test purpose* only. It should be larger than the test set size and all OriginalUpdEpoch
 	CurrentEpochNum = 1000000
-	// OriginalBalances is used for *test purpose* only. It should be larger than 0 and the updated balance should also be positive
-	OriginalBalances = 10000
+	// OriginalSum is used for *test purpose* only. It should be larger than 0 and the updated balance should also be positive
+	OriginalSum = 10000
 
-	keyPathPrefix = "zkmultiswap"
+	// KeyPathPrefix denotes the path to store the circuit and keys. fileName = KeyPathPrefix + "_" + strconv.FormatInt(int64(size), 10) + different names
+	KeyPathPrefix = "zkmultiswap"
 )
 
 func ElementFromString(v string) *fr.Element {
@@ -56,6 +57,9 @@ type UpdateSet32 struct {
 }
 
 func (input *UpdateSet32) IsValid() bool {
+	if len(input.UserID) < 2 {
+		return false
+	}
 	if len(input.UserID) != len(input.OriginalBalances) {
 		return false
 	}
@@ -104,8 +108,8 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 		ret.OriginalHashes[i].SetInt64(int64(j))
 		ret.UpdatedBalances[i] = j
 	}
-	ret.OriginalSum = OriginalBalances
-	ret.UpdatedSum = OriginalBalances // UpdatedSum can be any valid positive numbers, but we are testing the case UpdatedSum = OriginalSum for simplicity
+	ret.OriginalSum = OriginalSum
+	ret.UpdatedSum = OriginalSum // UpdatedSum can be any valid positive numbers, but we are testing the case UpdatedSum = OriginalSum for simplicity
 
 	// get slice of elements removed and inserted
 	removeSet := make([]*big.Int, setsize)
@@ -114,12 +118,12 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 		tempposeidonHash1 := poseidon.Poseidon(ElementFromUint32(ret.UserID[i]), ElementFromUint32(ret.OriginalBalances[i]),
 			ElementFromUint32(ret.OriginalUpdEpoch[i]), ElementFromString(ret.OriginalHashes[i].String()))
 		removeSet[i] = new(big.Int)
-		tempposeidonHash1.ToBigInt(removeSet[i])
+		tempposeidonHash1.ToBigIntRegular(removeSet[i])
 
 		tempposeidonHash2 := poseidon.Poseidon(ElementFromUint32(ret.UserID[i]), ElementFromUint32(ret.UpdatedBalances[i]),
 			ElementFromUint32(ret.CurrentEpochNum), tempposeidonHash1)
 		insertSet[i] = new(big.Int)
-		tempposeidonHash2.ToBigInt(insertSet[i])
+		tempposeidonHash2.ToBigIntRegular(insertSet[i])
 	}
 	prod1 := accumulator.SetProductRecursiveFast(removeSet)
 	prod2 := accumulator.SetProductRecursiveFast(insertSet)

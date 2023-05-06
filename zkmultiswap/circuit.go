@@ -27,6 +27,60 @@ type Circuit struct {
 	UpdatedBalances  []frontend.Variable // list of user balances after update
 }
 
+// Define declares the circuit constraints
+func (circuit Circuit) Define(api frontend.API) error {
+	// To be fixed!
+	api.ToBinary(circuit.Randomizer, BitLength)
+
+	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalBalances))
+	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalHashes))
+	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalUpdEpoch))
+	api.AssertIsEqual(len(circuit.UserID), len(circuit.UpdatedBalances))
+	//check input are in the correct range
+	api.AssertIsLess(circuit.RemainderR1, circuit.ChallengeL1)
+	api.AssertIsLess(circuit.RemainderR2, circuit.ChallengeL2)
+	// ToBinary not only returns the binary, but additionaly checks if the binary representation is same as the input,
+	// which means the input can be represented with the bit-length
+	api.ToBinary(circuit.CurrentEpochNum, BitLength)
+	api.ToBinary(circuit.OriginalSum, BitLength)
+	api.ToBinary(circuit.UpdatedSum, BitLength)
+
+	// check we do not have repeating IDs and IDs in correct range
+	for i := 0; i < len(circuit.UserID)-1; i++ {
+		api.AssertIsLess(circuit.UserID[i], circuit.UserID[i+1])
+	}
+	//api.ToBinary(circuit.UserID[len(circuit.UserID)-1], BitLength)
+
+	for i := 0; i < len(circuit.UserID); i++ {
+		api.ToBinary(circuit.OriginalBalances[i], BitLength)
+		//api.AssertIsLess(circuit.OriginalHashes[i], api.Curve().Info().Fp.Modulus)
+		api.AssertIsLess(circuit.OriginalUpdEpoch[i], circuit.CurrentEpochNum)
+		api.ToBinary(circuit.UpdatedBalances[i], BitLength)
+	}
+
+	remainder1 := poseidon.Poseidon(api, circuit.UserID[0], circuit.OriginalBalances[0], circuit.OriginalUpdEpoch[0], circuit.OriginalHashes[0])
+	//	api.Println(remainder1)
+	remainder2 := poseidon.Poseidon(api, circuit.UserID[0], circuit.UpdatedBalances[0], circuit.CurrentEpochNum, remainder1)
+	tempSum := circuit.OriginalSum
+	api.Sub(tempSum, circuit.OriginalBalances[0])
+	api.Add(tempSum, circuit.UpdatedBalances[0])
+	for i := 1; i < len(circuit.UserID); i++ {
+		tempHash := poseidon.Poseidon(api, circuit.UserID[i], circuit.OriginalBalances[i], circuit.OriginalUpdEpoch[i], circuit.OriginalHashes[i])
+		remainder1 = api.MulModP(remainder1, tempHash, circuit.ChallengeL1)
+
+		tempHash2 := poseidon.Poseidon(api, circuit.UserID[i], circuit.UpdatedBalances[i], circuit.CurrentEpochNum, tempHash)
+		remainder2 = api.MulModP(remainder2, tempHash2, circuit.ChallengeL2)
+
+		api.Sub(tempSum, circuit.OriginalBalances[i])
+		api.Add(tempSum, circuit.UpdatedBalances[i])
+	}
+	api.AssertIsEqual(remainder1, circuit.RemainderR1)
+	api.AssertIsEqual(remainder2, circuit.RemainderR2)
+	api.AssertIsEqual(tempSum, circuit.UpdatedSum)
+
+	return nil
+}
+
 // InitCircuitWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
 func InitCircuitWithSize(size uint32) *Circuit {
 	var circuit Circuit
@@ -45,7 +99,7 @@ func InitCircuitWithSize(size uint32) *Circuit {
 	circuit.OriginalUpdEpoch = make([]frontend.Variable, size)
 	circuit.UpdatedBalances = make([]frontend.Variable, size)
 	for i := uint32(0); i < size; i++ {
-		circuit.UserID[i] = 0
+		circuit.UserID[i] = i
 		circuit.OriginalBalances[i] = 0
 		circuit.OriginalHashes[i] = 1
 		circuit.OriginalUpdEpoch[i] = 0
@@ -83,58 +137,4 @@ func InitCircuit(input *UpdateSet32) *Circuit {
 		circuit.UpdatedBalances[i] = input.UpdatedBalances[i]
 	}
 	return &circuit
-}
-
-// Define declares the circuit constraints
-func (circuit Circuit) Define(api frontend.API) error {
-	// To be fixed!
-	api.ToBinary(circuit.Randomizer, BitLength)
-
-	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalBalances))
-	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalHashes))
-	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalUpdEpoch))
-	api.AssertIsEqual(len(circuit.UserID), len(circuit.UpdatedBalances))
-	//check input are in the correct range
-	api.AssertIsLess(circuit.RemainderR1, circuit.ChallengeL1)
-	api.AssertIsLess(circuit.RemainderR2, circuit.ChallengeL2)
-	// ToBinary not only returns the binary, but additionaly checks if the binary representation is same as the input,
-	// which means the input can be represented with the bit-length
-	api.ToBinary(circuit.CurrentEpochNum, BitLength)
-	api.ToBinary(circuit.OriginalSum, BitLength)
-	api.ToBinary(circuit.UpdatedSum, BitLength)
-
-	// check we do not have repeating IDs and IDs in correct range
-	for i := 1; i < len(circuit.UserID); i++ {
-		api.AssertIsLess(circuit.UserID[i-1], circuit.UserID[i])
-	}
-	api.ToBinary(circuit.UserID[len(circuit.UserID)-1], BitLength)
-
-	for i := 0; i < len(circuit.UserID); i++ {
-		api.ToBinary(circuit.OriginalBalances[i], BitLength)
-		//api.AssertIsLess(circuit.OriginalHashes[i], api.Curve().Info().Fp.Modulus)
-		api.AssertIsLess(circuit.OriginalUpdEpoch[i], circuit.CurrentEpochNum)
-		api.ToBinary(circuit.UpdatedBalances[i], BitLength)
-	}
-
-	//api.Println(OriginalSum)
-	remainder1 := poseidon.Poseidon(api, circuit.UserID[0], circuit.OriginalBalances[0], circuit.OriginalUpdEpoch[0], circuit.OriginalHashes[0])
-	remainder2 := poseidon.Poseidon(api, circuit.UserID[0], circuit.UpdatedBalances[0], circuit.CurrentEpochNum, remainder1)
-	tempSum := circuit.OriginalSum
-	api.Sub(tempSum, circuit.OriginalBalances[0])
-	api.Add(tempSum, circuit.UpdatedBalances[0])
-	for i := 1; i < len(circuit.UserID); i++ {
-		tempHash := poseidon.Poseidon(api, circuit.UserID[i], circuit.OriginalBalances[i], circuit.OriginalUpdEpoch[i], circuit.OriginalHashes[i])
-		api.MulModP(remainder1, tempHash, circuit.ChallengeL1)
-
-		tempHash2 := poseidon.Poseidon(api, circuit.UserID[i], circuit.UpdatedBalances[i], circuit.CurrentEpochNum, tempHash)
-		api.MulModP(remainder2, tempHash2, circuit.ChallengeL2)
-
-		api.Sub(tempSum, circuit.OriginalBalances[i])
-		api.Add(tempSum, circuit.UpdatedBalances[i])
-	}
-	api.AssertIsEqual(remainder1, circuit.RemainderR1)
-	api.AssertIsEqual(remainder2, circuit.RemainderR2)
-	api.AssertIsEqual(tempSum, circuit.UpdatedSum)
-
-	return nil
 }
