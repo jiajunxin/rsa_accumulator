@@ -61,12 +61,6 @@ func SetupZkMultiswap(size uint32) {
 	fmt.Println("Finish Setup")
 }
 
-// AssignWitness to do
-func AssignWitness(input *UpdateSet32) *Circuit {
-	//var ret ZKMultiSwapCircuit
-	return InitCircuit(input)
-}
-
 // Prove is used to generate a Groth16 proof and public witness for the zkMultiSwap
 func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 	fmt.Println("Start Proving")
@@ -96,12 +90,14 @@ func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 		fmt.Println("test3")
 		return nil, nil, err
 	}
+	startingTime := time.Now().UTC()
 	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, fileName, backend.IgnoreSolverError()) // backend.IgnoreSolverError() can be used for testing
 	if err != nil {
 		fmt.Println("test4")
 		return nil, nil, err
 	}
-	fmt.Println("testfinish")
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generating a SNARK proof for set size = %d, takes [%.3f] Seconds \n", len(input.UserID), duration.Seconds())
 	return &proof, publicWitness, nil
 }
 
@@ -121,8 +117,10 @@ func Verify(proof *groth16.Proof, setsize uint32, publicWitness *witness.Witness
 	if !VerifyPublicWitness(publicWitness) {
 		return false
 	}
-
+	startingTime := time.Now().UTC()
 	err = groth16.Verify(*proof, vk, publicWitness)
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Verifying a SNARK proof for set size = %d, takes [%.3f] Seconds \n", setsize, duration.Seconds())
 	if err != nil {
 		fmt.Println("verify error = ", err)
 		return false

@@ -3,7 +3,10 @@ package zkmultiswap
 import (
 	"fmt"
 	"math/big"
+	"os"
+	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
@@ -162,18 +165,46 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 // TestMultiSwap is temporarily used for test purpose
 func TestMultiSwap() {
 	fmt.Println("Start TestMultiSwap")
-	testSetSize := uint32(100)
-	SetupZkMultiswap(testSetSize)
-	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
+	if len(os.Args) != 2 {
+		fmt.Println("Test Set Size not indicated. Testing with set-size 100.")
+		testMultiSwap(uint32(100))
+	}
+	testSetSize, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Println("Error during conversion from string to int")
+		return
+	}
+	testMultiSwap(uint32(testSetSize))
+}
 
+func isCircuitExist(testSetSize uint32) bool {
+	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(testSetSize), 10)
+	_, err := os.Stat(fileName)
+	return os.IsNotExist(err)
+}
+
+func testMultiSwap(testSetSize uint32) {
+	if !isCircuitExist(testSetSize) {
+		fmt.Println("Circuit haven't been compiled. Start compiling.")
+		startingTime := time.Now().UTC()
+		SetupZkMultiswap(testSetSize)
+		duration := time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Generating a SNARK circuit for set size = %d, takes [%.3f] Seconds \n", testSetSize, duration.Seconds())
+		runtime.GC()
+	} else {
+		fmt.Println("Circuit have already been compiled for test purpose.")
+	}
+	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
 	proof, publicWitness, err := Prove(testSet)
 	if err != nil {
+		fmt.Println("Error during Prove")
 		panic(err)
 	}
 
 	flag := Verify(proof, testSetSize, publicWitness)
 	if flag {
 		fmt.Println("Verification passed")
+		return
 	}
 	fmt.Println("Verification failed")
 }
