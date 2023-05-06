@@ -180,7 +180,7 @@ func TestMultiSwap() {
 func isCircuitExist(testSetSize uint32) bool {
 	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(testSetSize), 10)
 	_, err := os.Stat(fileName)
-	return os.IsNotExist(err)
+	return !os.IsNotExist(err)
 }
 
 func testMultiSwap(testSetSize uint32) {
