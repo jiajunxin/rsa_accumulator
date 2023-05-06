@@ -178,8 +178,11 @@ func TestMultiSwap() {
 }
 
 func isCircuitExist(testSetSize uint32) bool {
-	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(testSetSize), 10)
+	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(testSetSize), 10) + ".ccs.save"
 	_, err := os.Stat(fileName)
+	if err == nil {
+		return true
+	}
 	return !os.IsNotExist(err)
 }
 
