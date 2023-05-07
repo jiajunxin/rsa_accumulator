@@ -15,15 +15,6 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
 
-func regularGC() {
-	for {
-		select {
-		case <-time.After(time.Second * 10):
-			runtime.GC()
-		}
-	}
-}
-
 // LoadVerifyingKey load the verification key from the filepath
 func LoadVerifyingKey(filepath string) (verifyingKey groth16.VerifyingKey, err error) {
 	verifyingKey = groth16.NewVerifyingKey(ecc.BN254)
@@ -45,7 +36,6 @@ func SetupZkMultiswap(size uint32) {
 	// compiles our circuit into a R1CS
 	circuit := InitCircuitWithSize(size)
 	fmt.Println("Start Compiling")
-	go regularGC()
 	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit) //, frontend.IgnoreUnconstrainedInputs()
 	if err != nil {
 		panic(err)
@@ -64,7 +54,6 @@ func SetupZkMultiswap(size uint32) {
 // Prove is used to generate a Groth16 proof and public witness for the zkMultiSwap
 func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 	fmt.Println("Start Proving")
-	go regularGC()
 	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(len(input.UserID)), 10)
 	startingTime := time.Now().UTC()
 	pk, err := groth16.ReadSegmentProveKey(fileName)
@@ -104,6 +93,7 @@ func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 	return &proof, publicWitness, nil
 }
 
+// VerifyPublicWitness returns true is the public witness is valid for zkMultiSwap
 func VerifyPublicWitness(*witness.Witness) bool {
 	//Todo.
 	return true

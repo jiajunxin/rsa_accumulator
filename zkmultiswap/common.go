@@ -26,6 +26,7 @@ const (
 	KeyPathPrefix = "zkmultiswap"
 )
 
+// ElementFromString returns an element in BN256 generated from string of decimal integers
 func ElementFromString(v string) *fr.Element {
 	n, success := new(big.Int).SetString(v, 10)
 	if !success {
@@ -36,13 +37,14 @@ func ElementFromString(v string) *fr.Element {
 	return &e
 }
 
+// ElementFromUint32 returns an element in BN256 generated from uint32
 func ElementFromUint32(v uint32) *fr.Element {
 	var e fr.Element
 	e.SetInt64(int64(v))
 	return &e
 }
 
-// Set32 is one set for the prover with uint32 for CurrentEpochNum,
+// UpdateSet32 is one set for the prover with uint32 for CurrentEpochNum,
 type UpdateSet32 struct {
 	ChallengeL1      big.Int
 	ChallengeL2      big.Int
@@ -59,6 +61,7 @@ type UpdateSet32 struct {
 	UpdatedBalances  []uint32
 }
 
+// IsValid returns true only if the input is valid for multiSwap
 func (input *UpdateSet32) IsValid() bool {
 	if len(input.UserID) < 2 {
 		return false

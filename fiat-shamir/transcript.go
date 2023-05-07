@@ -50,20 +50,20 @@ func InitTranscript(input []string, length ChallengeLength) *Transcript {
 }
 
 // Append add new info into the transcript
-func (oldTranscript *Transcript) Append(newInfo string) {
-	oldTranscript.info = append(oldTranscript.info, newInfo)
+func (transcript *Transcript) Append(newInfo string) {
+	transcript.info = append(transcript.info, newInfo)
 }
 
 // AppendSlice add new slice info into the transcript
-func (oldTranscript *Transcript) AppendSlice(newInfo []string) {
-	oldTranscript.info = append(oldTranscript.info, newInfo...)
+func (transcript *Transcript) AppendSlice(newInfo []string) {
+	transcript.info = append(transcript.info, newInfo...)
 }
 
 // GetChallengeAndAppendTranscript returns a challenge and appends the challenge as part of the transcript
-func (oldTranscript *Transcript) GetChallengeAndAppendTranscript() *big.Int {
+func (transcript *Transcript) GetChallengeAndAppendTranscript() *big.Int {
 	var ret big.Int
-	ret.Set(HashToPrime(oldTranscript.info, oldTranscript.maxlength))
-	oldTranscript.Append(ret.String())
+	ret.Set(HashToPrime(transcript.info, transcript.maxlength))
+	transcript.Append(ret.String())
 	return &ret
 }
 
