@@ -87,7 +87,7 @@ func getRandomAcc(setup *accumulator.Setup) *big.Int {
 
 // SetupTranscript should takes in all public information regarding the MultiSwap
 func SetupTranscript(setup *accumulator.Setup, accOld, accMid, accNew *big.Int, CurrentEpochNum uint32) *fiatshamir.Transcript {
-	transcript := fiatshamir.InitTranscript([]string{setup.G.String(), setup.N.String()})
+	transcript := fiatshamir.InitTranscript([]string{setup.G.String(), setup.N.String()}, fiatshamir.Max252)
 	transcript.Append(strconv.Itoa(int(CurrentEpochNum)))
 	return transcript
 }

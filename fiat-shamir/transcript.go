@@ -9,15 +9,24 @@ import (
 // Based on the Miller-Robin test, the probability to have a non-prime probability is less than 1/(securityParaHash*4)
 const securityParameter = 30
 
-var Min253 big.Int
+var min253 big.Int
 
 func init() {
-	Min253.SetInt64(1)
-	_ = Min253.Lsh(&Min253, 252)
+	min253.SetInt64(1)
+	_ = min253.Lsh(&min253, 252)
 }
 
+type ChallengeLength uint32
+
+const (
+	Default ChallengeLength = iota
+	Max252
+)
+
+// Transcript strores the statement to generate challenge in the info as a slice of strings
 type Transcript struct {
-	info []string
+	info      []string
+	maxlength ChallengeLength
 }
 
 // Print outputs the info in the transcript
@@ -29,8 +38,9 @@ func (transcript *Transcript) Print() {
 }
 
 // InitTranscript inits a transcript with the input strings
-func InitTranscript(input []string) *Transcript {
+func InitTranscript(input []string, length ChallengeLength) *Transcript {
 	var ret Transcript
+	ret.maxlength = length
 	// we need a deep copy to make sure the transcript will not be changed
 	ret.info = append(ret.info, input...)
 	return &ret
@@ -41,28 +51,38 @@ func (oldTranscript *Transcript) Append(newInfo string) {
 	oldTranscript.info = append(oldTranscript.info, newInfo)
 }
 
+// AppendSlice add new slice info into the transcript
 func (oldTranscript *Transcript) AppendSlice(newInfo []string) {
 	oldTranscript.info = append(oldTranscript.info, newInfo...)
 }
 
+// GetChallengeAndAppendTranscript returns a challenge and appends the challenge as part of the transcript
 func (oldTranscript *Transcript) GetChallengeAndAppendTranscript() *big.Int {
 	var ret big.Int
-	ret.Set(HashToPrime(oldTranscript.info))
+	ret.Set(HashToPrime(oldTranscript.info, oldTranscript.maxlength))
 	oldTranscript.Append(ret.String())
 	return &ret
 }
 
-func SetFieldElement(input []byte) *big.Int {
+func wrapNumber(input []byte, length ChallengeLength) *big.Int {
 	var ret big.Int
 	ret.SetBytes(input)
-	if ret.Cmp(&Min253) != 0 {
-		ret.Mod(&ret, &Min253)
+	switch length {
+	case Default:
+		return &ret
+	case Max252:
+		if ret.Cmp(&min253) != 0 {
+			ret.Mod(&ret, &min253)
+		}
+		return &ret
+	default:
+		return &ret
 	}
-	return &ret
 }
 
 // HashToPrime takes the input into Poseidon and take the hash output to input repeatedly until we hit a prime number
-func HashToPrime(input []string) *big.Int {
+// length of challenge is based on the input length. Default is 256-bit.
+func HashToPrime(input []string, length ChallengeLength) *big.Int {
 	h := sha256.New()
 	for i := 0; i < len(input); i++ {
 		_, err := h.Write([]byte(input[i]))
@@ -71,7 +91,7 @@ func HashToPrime(input []string) *big.Int {
 		}
 	}
 	hashTemp := h.Sum(nil)
-	ret := SetFieldElement(hashTemp)
+	ret := wrapNumber(hashTemp, length)
 	flag := false
 	for !flag {
 		flag = ret.ProbablyPrime(securityParameter)
@@ -82,7 +102,7 @@ func HashToPrime(input []string) *big.Int {
 				panic(err)
 			}
 			hashTemp = h.Sum(nil)
-			ret = SetFieldElement(hashTemp)
+			ret = wrapNumber(hashTemp, length)
 		}
 	}
 	return ret

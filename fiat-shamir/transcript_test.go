@@ -8,18 +8,18 @@ import (
 )
 
 func TestConstants(t *testing.T) {
-	if Min253.BitLen() != 253 {
+	if min253.BitLen() != 253 {
 		t.Errorf("Min253.BitLen != 253")
 	}
 	big1 := big.NewInt(1)
-	if Min253.Sub(&Min253, big1).BitLen() != 252 {
+	if min253.Sub(&min253, big1).BitLen() != 252 {
 		t.Errorf("Min253 is not 2^253")
 	}
 }
 
 func TestTranscript(t *testing.T) {
 	testStrings := []string{"111", "aaa", "333"}
-	trans1 := InitTranscript(testStrings)
+	trans1 := InitTranscript(testStrings, Default)
 
 	var trans2 Transcript
 	trans2.AppendSlice(testStrings)
@@ -47,7 +47,7 @@ func TestTranscript(t *testing.T) {
 
 func TestChallenge(t *testing.T) {
 	testStrings := []string{"111", "aaa", "333"}
-	trans1 := InitTranscript(testStrings)
+	trans1 := InitTranscript(testStrings, Default)
 
 	challenge1 := trans1.GetChallengeAndAppendTranscript()
 	challenge2 := trans1.GetChallengeAndAppendTranscript()
@@ -56,7 +56,7 @@ func TestChallenge(t *testing.T) {
 		trans1.Print()
 	}
 
-	trans2 := InitTranscript(testStrings)
+	trans2 := InitTranscript(testStrings, Default)
 	trans2.Append(challenge1.String())
 	challenge3 := trans2.GetChallengeAndAppendTranscript()
 	if challenge3.Cmp(challenge2) != 0 {
@@ -66,9 +66,9 @@ func TestChallenge(t *testing.T) {
 	}
 }
 
-func TestPrimeChallenge(t *testing.T) {
+func TestPrimeChallengeLength(t *testing.T) {
 	testStrings := []string{"111", "aaa", "333"}
-	trans1 := InitTranscript(testStrings)
+	trans1 := InitTranscript(testStrings, Max252)
 
 	challenge1 := trans1.GetChallengeAndAppendTranscript()
 	challenge2 := trans1.GetChallengeAndAppendTranscript()
@@ -80,23 +80,40 @@ func TestPrimeChallenge(t *testing.T) {
 	}
 
 	if challenge1.Cmp(fr.Modulus()) != -1 {
-		t.Errorf("Challenge not prime")
+		t.Errorf("Challenge larger than fr.Modulus()")
 	}
 	if challenge2.Cmp(fr.Modulus()) != -1 {
-		t.Errorf("Challenge not prime")
+		t.Errorf("Challenge larger than fr.Modulus()")
+	}
+	if challenge1.Cmp(&min253) != -1 {
+		t.Errorf("Challenge larger than min253")
+	}
+	if challenge2.Cmp(&min253) != -1 {
+		t.Errorf("Challenge larger than min253")
 	}
 }
 
 func FuzzChallenge(f *testing.F) {
-	testcases := []string{"Hello, world", " ", "!12345"}
+	testcases := []string{"Hello, world", " ", "!12345", "123123123", "0.7"}
 	for _, tc := range testcases {
 		f.Add(tc) // Use f.Add to provide a seed corpus
 	}
 	f.Fuzz(func(t *testing.T, testInput string) {
-		trans1 := InitTranscript([]string{testInput})
+		trans1 := InitTranscript([]string{testInput}, Default)
 		challenge1 := trans1.GetChallengeAndAppendTranscript()
 		if !challenge1.ProbablyPrime(securityParameter) {
 			t.Errorf("Challenge not prime")
+		}
+		trans1 = InitTranscript([]string{testInput}, Max252)
+		challenge1 = trans1.GetChallengeAndAppendTranscript()
+		if !challenge1.ProbablyPrime(securityParameter) {
+			t.Errorf("Challenge not prime")
+		}
+		if challenge1.Cmp(fr.Modulus()) != -1 {
+			t.Errorf("Challenge larger than fr.Modulus()")
+		}
+		if challenge1.Cmp(&min253) != -1 {
+			t.Errorf("Challenge larger than min253")
 		}
 	})
 }
