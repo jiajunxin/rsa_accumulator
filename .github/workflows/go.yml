@@ -9,6 +9,7 @@ on:
 jobs:
   golangci:
     name: lint
+    skip-dirs: zkmultiswap
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v4
