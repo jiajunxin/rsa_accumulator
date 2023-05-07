@@ -1,15 +1,20 @@
 package fiatshamir
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/big"
-
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 )
 
 // Based on the Miller-Robin test, the probability to have a non-prime probability is less than 1/(securityParaHash*4)
 const securityParameter = 30
+
+var Min253 big.Int
+
+func init() {
+	Min253.SetInt64(1)
+	_ = Min253.Lsh(&Min253, 252)
+}
 
 type Transcript struct {
 	info []string
@@ -47,55 +52,38 @@ func (oldTranscript *Transcript) GetChallengeAndAppendTranscript() *big.Int {
 	return &ret
 }
 
-func ElementFromString(v string) *fr.Element {
-	n, success := new(big.Int).SetString(v, 10)
-	if !success {
-		panic("Error parsing hex number")
+func SetFieldElement(input []byte) *big.Int {
+	var ret big.Int
+	ret.SetBytes(input)
+	if ret.Cmp(&Min253) != 0 {
+		ret.Mod(&ret, &Min253)
 	}
-	var e fr.Element
-	e.SetBigInt(n)
-	return &e
+	return &ret
 }
 
 // HashToPrime takes the input into Poseidon and take the hash output to input repeatedly until we hit a prime number
 func HashToPrime(input []string) *big.Int {
-	var ret big.Int
-	elementSlice := make([]*fr.Element, len(input))
-	for i := range input {
-		elementSlice[i] = new(fr.Element)
-		elementSlice[i] = ElementFromString(input[i])
+	h := sha256.New()
+	for i := 0; i < len(input); i++ {
+		_, err := h.Write([]byte(input[i]))
+		if err != nil {
+			panic(err)
+		}
 	}
-	temp := poseidon.Poseidon(elementSlice...)
-	temp.ToBigInt(&ret)
+	hashTemp := h.Sum(nil)
+	ret := SetFieldElement(hashTemp)
 	flag := false
 	for !flag {
 		flag = ret.ProbablyPrime(securityParameter)
 		if !flag {
-			temp = poseidon.Poseidon(temp)
-			temp.ToBigInt(&ret)
+			h.Reset()
+			_, err := h.Write(ret.Bytes())
+			if err != nil {
+				panic(err)
+			}
+			hashTemp = h.Sum(nil)
+			ret = SetFieldElement(hashTemp)
 		}
 	}
-	return &ret
-	// h := sha256.New()
-	// for i := 0; i < len(input); i++ {
-	// 	_, err := h.Write([]byte(input[i]))
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
-	// hashTemp := h.Sum(nil)
-	// ret.SetBytes(hashTemp)
-	// flag := false
-	// for !flag {
-	// 	flag = ret.ProbablyPrime(securityParameter)
-	// 	if !flag {
-	// 		h.Reset()
-	// 		_, err := h.Write(hashTemp)
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-	// 		hashTemp = h.Sum(nil)
-	// 		ret.SetBytes(hashTemp)
-	// 	}
-	// }
+	return ret
 }
