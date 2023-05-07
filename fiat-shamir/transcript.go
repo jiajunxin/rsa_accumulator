@@ -16,10 +16,13 @@ func init() {
 	_ = min253.Lsh(&min253, 252)
 }
 
+// ChallengeLength denotes the maximum length of challenge
 type ChallengeLength uint32
 
 const (
+	// Default lenght is 256-bit
 	Default ChallengeLength = iota
+	// Max252 lenght is 252-bit
 	Max252
 )
 
