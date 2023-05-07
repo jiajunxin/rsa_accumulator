@@ -174,14 +174,14 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	return &ret
 }
 
-// PublicPart() returns a new UpdateSet32 with same public part and hidden part 0
-func (set *UpdateSet32) PublicPart() *PublicInfo {
+// PublicPart returns a new UpdateSet32 with same public part and hidden part 0
+func (input *UpdateSet32) PublicPart() *PublicInfo {
 	var ret PublicInfo
-	ret.ChallengeL1 = set.ChallengeL1
-	ret.ChallengeL2 = set.ChallengeL2
-	ret.RemainderR1 = set.RemainderR1
-	ret.RemainderR2 = set.RemainderR2
-	ret.CurrentEpochNum = set.CurrentEpochNum
+	ret.ChallengeL1 = input.ChallengeL1
+	ret.ChallengeL2 = input.ChallengeL2
+	ret.RemainderR1 = input.RemainderR1
+	ret.RemainderR2 = input.RemainderR2
+	ret.CurrentEpochNum = input.CurrentEpochNum
 	return &ret
 }
 
