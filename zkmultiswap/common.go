@@ -61,6 +61,15 @@ type UpdateSet32 struct {
 	UpdatedBalances  []uint32
 }
 
+// PublicInfo is the public information part of UpdateSet32
+type PublicInfo struct {
+	ChallengeL1     big.Int
+	ChallengeL2     big.Int
+	RemainderR1     big.Int
+	RemainderR2     big.Int
+	CurrentEpochNum uint32
+}
+
 // IsValid returns true only if the input is valid for multiSwap
 func (input *UpdateSet32) IsValid() bool {
 	if len(input.UserID) < 2 {
@@ -165,6 +174,17 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	return &ret
 }
 
+// PublicPart() returns a new UpdateSet32 with same public part and hidden part 0
+func (set *UpdateSet32) PublicPart() *PublicInfo {
+	var ret PublicInfo
+	ret.ChallengeL1 = set.ChallengeL1
+	ret.ChallengeL2 = set.ChallengeL2
+	ret.RemainderR1 = set.RemainderR1
+	ret.RemainderR2 = set.RemainderR2
+	ret.CurrentEpochNum = set.CurrentEpochNum
+	return &ret
+}
+
 // TestMultiSwap is temporarily used for test purpose
 func TestMultiSwap() {
 	fmt.Println("Start TestMultiSwap")
@@ -201,13 +221,15 @@ func testMultiSwap(testSetSize uint32) {
 		fmt.Println("Circuit have already been compiled for test purpose.")
 	}
 	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
+	publicInfo := testSet.PublicPart()
 	proof, publicWitness, err := Prove(testSet)
 	if err != nil {
 		fmt.Println("Error during Prove")
 		panic(err)
 	}
 	runtime.GC()
-	flag := Verify(proof, testSetSize, publicWitness)
+
+	flag := Verify(proof, testSetSize, publicWitness, publicInfo)
 	if flag {
 		fmt.Println("Verification passed")
 		return

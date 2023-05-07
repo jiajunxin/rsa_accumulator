@@ -3,6 +3,7 @@ package zkmultiswap
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"runtime"
 	"strconv"
 	"time"
@@ -94,20 +95,34 @@ func Prove(input *UpdateSet32) (*groth16.Proof, *witness.Witness, error) {
 }
 
 // VerifyPublicWitness returns true is the public witness is valid for zkMultiSwap
-func VerifyPublicWitness(*witness.Witness) bool {
-	//Todo.
+func VerifyPublicWitness(publicWitness *witness.Witness, publicInfo *PublicInfo) bool {
+	startingTime := time.Now().UTC()
+	assignment2 := AssignCircuitHelper(publicInfo)
+	publicWitness2, err := frontend.NewWitness(assignment2, ecc.BN254, frontend.PublicOnly())
+	if err != nil {
+		fmt.Println("Error generating NewWitness")
+		return false
+	}
+	if !reflect.DeepEqual(publicWitness.Vector, publicWitness2.Vector) {
+		fmt.Println("Verification failed for publicWitness")
+		duration := time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Checking publicWitness using reflect takes [%.3f] Seconds \n", duration.Seconds())
+		return false
+	}
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Checking publicWitness using reflect takes [%.3f] Seconds \n", duration.Seconds())
 	return true
 }
 
 // Verify is used to check a Groth16 proof and public witness for the zkMultiSwap
-func Verify(proof *groth16.Proof, setsize uint32, publicWitness *witness.Witness) bool {
+func Verify(proof *groth16.Proof, setsize uint32, publicWitness *witness.Witness, publicInfo *PublicInfo) bool {
 	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(setsize), 10)
 	vk, err := LoadVerifyingKey(fileName)
 	if err != nil {
 		panic("r1cs init error")
 	}
 	runtime.GC()
-	if !VerifyPublicWitness(publicWitness) {
+	if !VerifyPublicWitness(publicWitness, publicInfo) {
 		return false
 	}
 	startingTime := time.Now().UTC()
