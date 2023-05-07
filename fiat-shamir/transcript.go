@@ -1,6 +1,7 @@
 package fiatshamir
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
@@ -14,14 +15,23 @@ type Transcript struct {
 	info []string
 }
 
+// Print outputs the info in the transcript
+func (transcript *Transcript) Print() {
+	fmt.Println("The transcript has ", len(transcript.info), "strings as info.")
+	for i := range transcript.info {
+		fmt.Println("Info[", i, "] = ", transcript.info[i])
+	}
+}
+
 // InitTranscript inits a transcript with the input strings
 func InitTranscript(input []string) *Transcript {
 	var ret Transcript
 	// we need a deep copy to make sure the transcript will not be changed
-	copy(ret.info, input)
+	ret.info = append(ret.info, input...)
 	return &ret
 }
 
+// Append add new info into the transcript
 func (oldTranscript *Transcript) Append(newInfo string) {
 	oldTranscript.info = append(oldTranscript.info, newInfo)
 }
