@@ -222,14 +222,14 @@ func testMultiSwap(testSetSize uint32) {
 	}
 	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
 	publicInfo := testSet.PublicPart()
-	proof, publicWitness, err := Prove(testSet)
+	proof, err := Prove(testSet)
 	if err != nil {
 		fmt.Println("Error during Prove")
 		panic(err)
 	}
 	runtime.GC()
 
-	flag := Verify(proof, testSetSize, publicWitness, publicInfo)
+	flag := Verify(proof, testSetSize, publicInfo)
 	if flag {
 		fmt.Println("Verification passed")
 		return
