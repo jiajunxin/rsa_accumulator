@@ -10,6 +10,10 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
+    skip-dirs: 
+      - zkmultiswap
+    skip-files:
+      - main.go
     steps:
       - uses: actions/setup-go@v4
         with:
@@ -21,8 +25,6 @@ jobs:
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
           version: v1.52
-          skip-dirs: zkmultiswap
-          skip-files: main.go
           args: --print-issued-lines=true
           
   build:
