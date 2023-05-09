@@ -1,3 +1,3 @@
 # rsa_accumulator
 
-A RSA accumulator library for experiment. DO NOT use in production environment.
+An RSA accumulator library for experiment. DO NOT use in production environment.
