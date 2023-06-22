@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/bits"
-	"sync"
 	"time"
 
 	"github.com/jiajunxin/multiexp"
@@ -86,35 +85,28 @@ func handleErr(err error) {
 func TestRSAMembershipPreCompute(setSize int) {
 	//setSize := 65536 // 2 ^ 16 65536
 	fmt.Println("Test set size = ", setSize)
-	fmt.Println("GenRepresentatives with MultiDIHashFromPoseidon")
+	fmt.Println("GenRepresentatives with DIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 
-	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	// generate a zero-knowledge RSA accumulator
 	r1 := accumulator.GenRandomizer()
-	r2 := accumulator.GenRandomizer()
-	r3 := accumulator.GenRandomizer()
 
-	maxLen := setSize * 256 / bits.UintSize
+	bitLen := 1024
+	maxLen := setSize * bitLen / bits.UintSize
 	startingTime := time.Now().UTC()
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running PreComputeTable Takes [%.3f] Seconds \n", duration.Seconds())
 
 	startingTime = time.Now().UTC()
-	proofs1 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:setSize], 0, table)
-	proofs2 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r2, setup.N, rep[setSize:2*setSize], 0, table)
-	proofs3 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r3, setup.N, rep[2*setSize:], 0, table)
+	proofs1 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, r1, setup.N, rep[:], 0, table)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running ProveMembershipParallelWithTableWithRandomizer with single core for three RSA accumulators Takes [%.3f] Seconds \n", duration.Seconds())
 	startingTime = time.Now().UTC()
 	func() {
 		tempProof := proofs1[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs2[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs3[0]
 		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
 	}()
 	duration = time.Now().UTC().Sub(startingTime)
@@ -157,49 +149,6 @@ func TestPoKE() {
 	}
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running PoKE for 100 rounds Takes [%.3f] Seconds \n", duration.Seconds())
-}
-
-// TestRSAMembershipPreComputeMultiDIParallel tests the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
-func TestRSAMembershipPreComputeMultiDIParallel(setSize int, limit int) {
-	fmt.Println("Test set size = ", setSize)
-	set := accumulator.GenBenchSet(setSize)
-	setup := *accumulator.TrustedSetup()
-
-	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
-	// generate a zero-knowledge RSA accumulator
-	r1 := accumulator.GenRandomizer()
-	r2 := accumulator.GenRandomizer()
-	r3 := accumulator.GenRandomizer()
-
-	maxLen := setSize * 256 / bits.UintSize
-	startingTime := time.Now().UTC()
-	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	duration := time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running PreComputeTable Takes [%.3f] Seconds \n", duration.Seconds())
-
-	c1 := make(chan []*big.Int)
-	c2 := make(chan []*big.Int)
-	c3 := make(chan []*big.Int)
-	startingTime = time.Now().UTC()
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r1, setup.N, rep[:setSize], limit, table, c1)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r2, setup.N, rep[setSize:2*setSize], limit, table, c2)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r3, setup.N, rep[2*setSize:], limit, table, c3)
-	proofs1 := <-c1
-	proofs2 := <-c2
-	proofs3 := <-c3
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running ProveMembershipParallelWithTableWithRandomizer with 12 cores for three RSA accumulators Takes [%.3f] Seconds \n", duration.Seconds())
-	startingTime = time.Now().UTC()
-	func() {
-		tempProof := proofs1[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs2[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs3[0]
-		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
-	}()
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Online phase to get one membership proof, Takes [%d] Nanoseconds \n", duration.Nanoseconds())
 }
 
 // TestRSAMembershipPreComputeDIParallel tests the time to pre-compute all the membership proofs of one RSA accumulator, for different set size, with single core
@@ -255,99 +204,36 @@ func TestDifferentMembershipForDI() {
 	TestRSAMembershipPreComputeDIParallel(16384, 2) //2^14, 4 cores
 	TestRSAMembershipPreComputeDIParallel(16384, 4) //2^14, 16 cores
 
-	TestRSAMembershipPreCompute(16384)                   //2^14, 1 core
-	TestRSAMembershipPreComputeMultiDIParallel(16384, 0) //2^14, 3 cores
-	TestRSAMembershipPreComputeMultiDIParallel(16384, 2) //2^14, 12 cores
+	TestRSAMembershipPreCompute(16384) //2^14, 1 core
 
 	TestRSAMembershipPreComputeDIParallel(65536, 0) //2^16, 1 core
 	TestRSAMembershipPreComputeDIParallel(65536, 2) //2^16, 4 cores
 	TestRSAMembershipPreComputeDIParallel(65536, 4) //2^16, 16 cores
 
-	TestRSAMembershipPreCompute(65536)                   //2^16, 1 core
-	TestRSAMembershipPreComputeMultiDIParallel(65536, 0) //2^16, 3 cores
-	TestRSAMembershipPreComputeMultiDIParallel(65536, 2) //2^16, 12 cores
+	TestRSAMembershipPreCompute(65536) //2^16, 1 core
 
 	TestRSAMembershipPreComputeDIParallel(262144, 0) //2^18, 1 core
 	TestRSAMembershipPreComputeDIParallel(262144, 2) //2^18, 4 cores
 	TestRSAMembershipPreComputeDIParallel(262144, 4) //2^18, 16 cores
 
-	TestRSAMembershipPreCompute(262144)                   //2^18, 1 core
-	TestRSAMembershipPreComputeMultiDIParallel(262144, 0) //2^18, 3 cores
-	TestRSAMembershipPreComputeMultiDIParallel(262144, 2) //2^18, 12 cores
+	TestRSAMembershipPreCompute(262144) //2^18, 1 core
 }
 
-func preComputeMultiDIParallel(setSize int, limit int, table *multiexp.PreTable) {
+func preComputeDISingleThread(setSize int, table *multiexp.PreTable) {
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 
-	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
 	// generate a zero-knowledge RSA accumulator
 	r1 := accumulator.GenRandomizer()
-	r2 := accumulator.GenRandomizer()
-	r3 := accumulator.GenRandomizer()
-
-	c1 := make(chan []*big.Int)
-	c2 := make(chan []*big.Int)
-	c3 := make(chan []*big.Int)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r1, setup.N, rep[:setSize], limit, table, c1)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r2, setup.N, rep[setSize:2*setSize], limit, table, c2)
-	go accumulator.ProveMembershipParallelWithTableWithRandomizerWithChan(setup.G, r3, setup.N, rep[2*setSize:], limit, table, c3)
-	proofs1 := <-c1
-	proofs2 := <-c2
-	proofs3 := <-c3
-	func() {
-		tempProof := proofs1[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs2[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs3[0]
-		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
-	}()
+	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r1, setup.N, rep[:], table)
 }
 
-func preComputeMultiDISingleThread(setSize int, table *multiexp.PreTable) {
-	set := accumulator.GenBenchSet(setSize)
-	setup := *accumulator.TrustedSetup()
-
-	rep := accumulator.GenRepresentatives(set, accumulator.MultiDIHashFromPoseidon)
-	// generate a zero-knowledge RSA accumulator
-	r1 := accumulator.GenRandomizer()
-	r2 := accumulator.GenRandomizer()
-	r3 := accumulator.GenRandomizer()
-	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r1, setup.N, rep[:setSize], table)
-	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r2, setup.N, rep[setSize:2*setSize], table)
-	accumulator.ProveMembershipSingleThreadWithRandomizer(setup.G, r3, setup.N, rep[2*setSize:], table)
-}
-
-// TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK tests the case together with SNARK. We need to setup SNARK manually.
-func TestPreComputeMultiDIParallelRepeatedTogetherWithSNARK(setSize int) {
-	setup := *accumulator.TrustedSetup()
-	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
-	//tables := make([]*multiexp.PreTable, 8)
-	fmt.Println("TestPreComputeMultiDIParallelRepeated, Test set size = ", setSize)
-	fmt.Println("Generating precomputation tables")
-	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	var wg sync.WaitGroup
-	fmt.Println("32 trial: run PreComputeMultiDIParallel with 3 cores for 32 sets of", setSize, " elements")
-	startingTime := time.Now().UTC()
-	repeatNum := 32
-	wg.Add(repeatNum)
-	for i := 0; i < repeatNum; i++ {
-		go func(i int) {
-			defer wg.Done()
-			preComputeMultiDIParallel(setSize, 0, table)
-		}(i)
-	}
-	wg.Wait()
-	duration := time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Running the 32 th trial Takes [%.3f] Seconds \n", duration.Seconds())
-}
-
-// TestDifferentGroupingSize tests the running time with different group size.
+// TestDifferentGroupingSize tests the pre-computation time with different group size.
 func TestDifferentGroupingSize(setSize int) {
 	max := 262144 //2^18
 	setup := *accumulator.TrustedSetup()
-	maxLen := setSize * 256 / bits.UintSize //256 comes from the length of each multiDI hash
+	maxLen := setSize * 1024 / bits.UintSize //256 comes from the length of each multiDI hash
 	//tables := make([]*multiexp.PreTable, 8)
 	fmt.Println("TestDifferentGroupingSize, Test set size = ", setSize)
 	repeatNum := max / setSize
@@ -356,7 +242,7 @@ func TestDifferentGroupingSize(setSize int) {
 	fmt.Println("Start timer for precomputation of membership proofs")
 	startingTime := time.Now().UTC()
 	for i := 0; i < repeatNum; i++ {
-		preComputeMultiDISingleThread(setSize, table)
+		preComputeDISingleThread(setSize, table)
 	}
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running the trial Takes [%.3f] Seconds \n", duration.Seconds())
@@ -411,12 +297,8 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 
 	currentEpoch := 500
 	// generate the RemovedSet and insertedSet
-	removed1 := make([]*big.Int, updatedSetSize)
-	removed2 := make([]*big.Int, updatedSetSize)
-	removed3 := make([]*big.Int, updatedSetSize)
-	insert1 := make([]*big.Int, updatedSetSize)
-	insert2 := make([]*big.Int, updatedSetSize)
-	insert3 := make([]*big.Int, updatedSetSize)
+	removed := make([]*big.Int, updatedSetSize)
+	insert := make([]*big.Int, updatedSetSize)
 	if updatedSetSize < 1 {
 		panic("invalid updatedSetSize")
 	}
@@ -437,27 +319,22 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 		tempValLeftShifted.Lsh(big.NewInt(int64(listValueOriginal[i])), 32)
 		tempHashInput.Add(&tempHashInput, &tempValLeftShifted)
 		tempHashInput.Add(&tempHashInput, big.NewInt(int64(listLastUpdatedEpoch[i])))
-		removed1[i] = accumulator.PoseidonWith2Inputs([]*big.Int{&tempHashInput, &listPrevHash[i]})
-		removed2[i] = accumulator.UniversalHashToInt(removed1[i])
-		removed3[i] = accumulator.UniversalHashToInt(removed2[i])
+		removed[i] = accumulator.PoseidonWith2Inputs([]*big.Int{&tempHashInput, &listPrevHash[i]})
 
 		listValueUpdated[i] = uint32(j) // the updated value is same as the original value, which is allowed, for the simplicity of testing
 		tempHashInput.Lsh(big.NewInt(int64(listID[i])), 64)
 		tempValLeftShifted.Lsh(big.NewInt(int64(listValueUpdated[i])), 32)
 		tempHashInput.Add(&tempHashInput, &tempValLeftShifted)
 		tempHashInput.Add(&tempHashInput, big.NewInt(int64(currentEpoch)))
-		insert1[i] = accumulator.PoseidonWith2Inputs([]*big.Int{&tempHashInput, removed1[i]})
-		insert2[i] = accumulator.UniversalHashToInt(insert1[i])
-		insert3[i] = accumulator.UniversalHashToInt(insert2[i])
+		insert[i] = accumulator.PoseidonWith2Inputs([]*big.Int{&tempHashInput, removed[i]})
+
 	}
 
 	unchangedSet := accumulator.GenBenchSet(setSize - updatedSetSize)
-	rep := accumulator.GenRepresentatives(unchangedSet, accumulator.MultiDIHashFromPoseidon)
+	rep := accumulator.GenRepresentatives(unchangedSet, accumulator.DIHashFromPoseidon)
 
-	var unchanged1, unchanged2, unchanged3 []*big.Int
-	unchanged1 = rep[:setSize-updatedSetSize]
-	unchanged2 = rep[setSize-updatedSetSize : 2*(setSize-updatedSetSize)]
-	unchanged3 = rep[2*(setSize-updatedSetSize):]
+	var unchanged []*big.Int
+	unchanged = rep[:]
 
 	// This is for test purpose only.
 	// We use Hash of tau as the random source, generate 6 different 2048 bits random numbers
@@ -506,9 +383,7 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	}
 
 	var original1, original2, original3 []*big.Int
-	original1 = append(unchanged1, removed1...)
-	original2 = append(unchanged2, removed2...)
-	original3 = append(unchanged3, removed3...)
+	original1 = append(unchanged, removed...)
 	originalProd1 := accumulator.SetProductRecursiveFast(original1)
 	originalProd2 := accumulator.SetProductRecursiveFast(original2)
 	originalProd3 := accumulator.SetProductRecursiveFast(original3)
@@ -522,65 +397,41 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 
 	// generate original zero-knowledge RSA accumulators
 	accOri1 := multiexp.ExpParallel(setup.G, originalProd1, setup.N, table, 1, 0)
-	accOri2 := multiexp.ExpParallel(setup.G, originalProd2, setup.N, table, 1, 0)
-	accOri3 := multiexp.ExpParallel(setup.G, originalProd3, setup.N, table, 1, 0)
 
 	fmt.Println("Precomputation and original RSA accumulators setup. Start to zero-knowledge MultiSwap")
 	totalTime := time.Now().UTC()
 	startingTime := time.Now().UTC()
 	fmt.Println("Generate Acc_mid1,2,3")
-	remProd1 := accumulator.SetProductRecursiveFast(removed1)
+	remProd1 := accumulator.SetProductRecursiveFast(removed)
 	remProd1 = bigfft.Mul(remProd1, &ranRem1)
-	remProd2 := accumulator.SetProductRecursiveFast(removed2)
-	remProd2 = bigfft.Mul(remProd2, &ranRem2)
-	remProd3 := accumulator.SetProductRecursiveFast(removed3)
-	remProd3 = bigfft.Mul(remProd3, &ranRem3)
-	var accmidProd1, accmidProd2, accmidProd3 big.Int
+	var accmidProd1 big.Int
 	accmidProd1.Div(originalProd1, remProd1)
-	accmidProd2.Div(originalProd2, remProd2)
-	accmidProd3.Div(originalProd3, remProd3)
 
 	accMid1 := multiexp.ExpParallel(setup.G, originalProd1, setup.N, table, 1, 0)
-	accMid2 := multiexp.ExpParallel(setup.G, originalProd2, setup.N, table, 1, 0)
-	accMid3 := multiexp.ExpParallel(setup.G, originalProd3, setup.N, table, 1, 0)
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate Acc_mid1,2,3 Takes [%.3f] Seconds \n", duration.Seconds())
 	startingTime = time.Now().UTC()
 	fmt.Println("Generate three zkPoKE")
 	PoKE(accMid1, remProd1, accOri1, setup.N)
-	PoKE(accMid2, remProd2, accOri2, setup.N)
-	PoKE(accMid3, remProd3, accOri3, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate Updated accumulators")
 	startingTime = time.Now().UTC()
-	insProd1 := accumulator.SetProductRecursiveFast(insert1)
+	insProd1 := accumulator.SetProductRecursiveFast(insert)
 	insProd1 = bigfft.Mul(insProd1, &ranIns1)
-	insProd2 := accumulator.SetProductRecursiveFast(insert2)
-	insProd2 = bigfft.Mul(insProd2, &ranIns2)
-	insProd3 := accumulator.SetProductRecursiveFast(insert3)
-	insProd3 = bigfft.Mul(insProd3, &ranIns3)
 	accUpd1 := accumulator.AccumulateNew(accMid1, insProd1, setup.N)
-	accUpd2 := accumulator.AccumulateNew(accMid2, insProd2, setup.N)
-	accUpd3 := accumulator.AccumulateNew(accMid3, insProd3, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate Updated accumulators Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate three zkPoKE")
 	startingTime = time.Now().UTC()
 	PoKE(accMid1, insProd1, accUpd1, setup.N)
-	PoKE(accMid2, insProd2, accUpd2, setup.N)
-	PoKE(accMid3, insProd3, accUpd3, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate membership proofs for the three accumulators")
 	startingTime = time.Now().UTC()
 
-	newSet1 := append(unchanged1[:], insert1...)
-	newSet2 := append(unchanged2[:], insert2...)
-	newSet3 := append(unchanged3[:], insert3...)
+	newSet1 := append(unchanged[:], insert...)
 	proofs1 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, &ranIns1, setup.N, newSet1[:], 0, table)
-	proofs2 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, &ranIns2, setup.N, newSet2[:], 0, table)
-	proofs3 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, &ranIns3, setup.N, newSet3[:], 0, table)
 
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate membership proofs Takes [%.3f] Seconds \n", duration.Seconds())
@@ -590,9 +441,6 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	func() {
 		tempProof := proofs1[0]
 		_ = tempProof.BitLen()
-		tempProof = proofs2[0]
-		_ = tempProof.BitLen()
-		tempProof = proofs3[0]
 		_ = tempProof.BitLen() // this line is simply used to allow accessing tempProof
 	}()
 }

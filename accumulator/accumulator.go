@@ -35,8 +35,6 @@ func GenRepresentatives(set []string, encodeType EncodeType) []*big.Int {
 		return genRepWithHashToPrimeFromSHA256(set)
 	case DIHashFromPoseidon:
 		return genRepWithDIHashFromPoseidon(set)
-	case MultiDIHashFromPoseidon:
-		return genRepWithMultiDIHashFromPoseidon(set)
 	default:
 		return genRepWithHashToPrimeFromSHA256(set)
 	}

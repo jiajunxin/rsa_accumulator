@@ -95,25 +95,6 @@ func ProveMembershipParallel(base, N *big.Int, set []*big.Int, limit int) []*big
 	proofs1 = append(proofs1, proofs3...)
 	proofs1 = append(proofs1, proofs4...)
 	return proofs1
-
-	// // the left part of proof need to accumulate the right part of the set, vice versa.
-	// startingTime := time.Now().UTC()
-	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
-	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	// bases := big.DoubleExp(base, leftProd, rightProd, N)
-	// endingTime := time.Now().UTC()
-	// var duration = endingTime.Sub(startingTime)
-	// fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
-	// 	duration.Seconds())
-	// c1 := make(chan []*big.Int)
-	// c2 := make(chan []*big.Int)
-	// go proveMembershipWithChan(bases[0], N, set[0:len(set)/2], limit, c1)
-	// go proveMembershipWithChan(bases[1], N, set[len(set)/2:], limit, c2)
-	// proofs1 := <-c1
-	// proofs2 := <-c2
-
-	// proofs1 = append(proofs1, proofs2...)
-	// return proofs1
 }
 
 // ProveMembershipParallelWithTable uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
@@ -242,25 +223,6 @@ func ProveMembershipParallelWithTableWithRandomizer(base, randomizer, N *big.Int
 	proofs1 = append(proofs1, proofs3...)
 	proofs1 = append(proofs1, proofs4...)
 	return proofs1
-
-	// // the left part of proof need to accumulate the right part of the set, vice versa.
-	// startingTime := time.Now().UTC()
-	// leftProd := SetProductRecursiveFast(set[len(set)/2:])
-	// rightProd := SetProductRecursiveFast(set[0 : len(set)/2])
-	// bases := big.DoubleExp(base, leftProd, rightProd, N)
-	// endingTime := time.Now().UTC()
-	// var duration = endingTime.Sub(startingTime)
-	// fmt.Printf("Running ProveMembershipParallel for the first layer with 2 cores Takes [%.3f] Seconds \n",
-	// 	duration.Seconds())
-	// c1 := make(chan []*big.Int)
-	// c2 := make(chan []*big.Int)
-	// go proveMembershipWithChan(bases[0], N, set[0:len(set)/2], limit, c1)
-	// go proveMembershipWithChan(bases[1], N, set[len(set)/2:], limit, c2)
-	// proofs1 := <-c1
-	// proofs2 := <-c2
-
-	// proofs1 = append(proofs1, proofs2...)
-	// return proofs1
 }
 
 // ProveMembershipParallelWithTableWithRandomizerWithChan uses divide-and-conquer method to pre-compute the all membership proofs in time O(nlog(n))
