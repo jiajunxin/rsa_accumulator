@@ -36,7 +36,6 @@ func genRepWithMultiDIHashFromPoseidon(set []string) []*big.Int {
 		ret[i] = new(big.Int)
 		temp := poseidon.Poseidon(ElementFromString(set[i]))
 		temp.ToBigIntRegular(ret[i])
-		ret[i].Add(ret[i], Min1024)
 	}
 	for i := 0; i < setSize; i++ {
 		ret[i+setSize] = new(big.Int)
