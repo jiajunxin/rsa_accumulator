@@ -382,49 +382,46 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 		ranIns3.Add(&ranIns3, &temp)
 	}
 
-	var original1, original2, original3 []*big.Int
-	original1 = append(unchanged, removed...)
-	originalProd1 := accumulator.SetProductRecursiveFast(original1)
-	originalProd2 := accumulator.SetProductRecursiveFast(original2)
-	originalProd3 := accumulator.SetProductRecursiveFast(original3)
-	originalProd1 = bigfft.Mul(originalProd1, &ranRem1)
-	originalProd2 = bigfft.Mul(originalProd2, &ranRem2)
-	originalProd3 = bigfft.Mul(originalProd3, &ranRem3)
+	var original []*big.Int
+	original = append(unchanged, removed...)
+	originalProd := accumulator.SetProductRecursiveFast(original)
+
+	originalProd = bigfft.Mul(originalProd, &ranRem1)
 
 	setup := *accumulator.TrustedSetup()
 	maxLen := setSize * 256 / bits.UintSize
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
 
 	// generate original zero-knowledge RSA accumulators
-	accOri1 := multiexp.ExpParallel(setup.G, originalProd1, setup.N, table, 1, 0)
+	accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 1, 0)
 
 	fmt.Println("Precomputation and original RSA accumulators setup. Start to zero-knowledge MultiSwap")
 	totalTime := time.Now().UTC()
 	startingTime := time.Now().UTC()
 	fmt.Println("Generate Acc_mid1,2,3")
-	remProd1 := accumulator.SetProductRecursiveFast(removed)
-	remProd1 = bigfft.Mul(remProd1, &ranRem1)
+	remProd := accumulator.SetProductRecursiveFast(removed)
+	remProd = bigfft.Mul(remProd, &ranRem1)
 	var accmidProd1 big.Int
-	accmidProd1.Div(originalProd1, remProd1)
+	accmidProd1.Div(originalProd, remProd)
 
-	accMid1 := multiexp.ExpParallel(setup.G, originalProd1, setup.N, table, 1, 0)
+	accMid := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 1, 0)
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate Acc_mid1,2,3 Takes [%.3f] Seconds \n", duration.Seconds())
 	startingTime = time.Now().UTC()
 	fmt.Println("Generate three zkPoKE")
-	PoKE(accMid1, remProd1, accOri1, setup.N)
+	PoKE(accMid, remProd, accOri, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate Updated accumulators")
 	startingTime = time.Now().UTC()
 	insProd1 := accumulator.SetProductRecursiveFast(insert)
 	insProd1 = bigfft.Mul(insProd1, &ranIns1)
-	accUpd1 := accumulator.AccumulateNew(accMid1, insProd1, setup.N)
+	accUpd1 := accumulator.AccumulateNew(accMid, insProd1, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate Updated accumulators Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate three zkPoKE")
 	startingTime = time.Now().UTC()
-	PoKE(accMid1, insProd1, accUpd1, setup.N)
+	PoKE(accMid, insProd1, accUpd1, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate membership proofs for the three accumulators")
