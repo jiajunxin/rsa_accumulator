@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
@@ -25,22 +24,6 @@ const (
 	// KeyPathPrefix denotes the path to store the circuit and keys. fileName = KeyPathPrefix + "_" + strconv.FormatInt(int64(size), 10) + different names
 	KeyPathPrefix = "zkmultiswap"
 )
-
-func ElementFromString(v string) *fr.Element {
-	n, success := new(big.Int).SetString(v, 10)
-	if !success {
-		panic("Error parsing hex number")
-	}
-	var e fr.Element
-	e.SetBigInt(n)
-	return &e
-}
-
-func ElementFromUint32(v uint32) *fr.Element {
-	var e fr.Element
-	e.SetInt64(int64(v))
-	return &e
-}
 
 // Set32 is one set for the prover with uint32 for CurrentEpochNum,
 type UpdateSet32 struct {
@@ -118,13 +101,13 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	removeSet := make([]*big.Int, setsize)
 	insertSet := make([]*big.Int, setsize)
 	for i := uint32(0); i < setsize; i++ {
-		tempposeidonHash1 := poseidon.Poseidon(ElementFromUint32(ret.UserID[i]), ElementFromUint32(ret.OriginalBalances[i]),
-			ElementFromUint32(ret.OriginalUpdEpoch[i]), ElementFromString(ret.OriginalHashes[i].String()))
+		tempposeidonHash1 := poseidon.Poseidon(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.OriginalBalances[i]),
+			accumulator.ElementFromUint32(ret.OriginalUpdEpoch[i]), accumulator.ElementFromString(ret.OriginalHashes[i].String()))
 		removeSet[i] = new(big.Int)
 		tempposeidonHash1.ToBigIntRegular(removeSet[i])
 
-		tempposeidonHash2 := poseidon.Poseidon(ElementFromUint32(ret.UserID[i]), ElementFromUint32(ret.UpdatedBalances[i]),
-			ElementFromUint32(ret.CurrentEpochNum), tempposeidonHash1)
+		tempposeidonHash2 := poseidon.Poseidon(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.UpdatedBalances[i]),
+			accumulator.ElementFromUint32(ret.CurrentEpochNum), tempposeidonHash1)
 		insertSet[i] = new(big.Int)
 		tempposeidonHash2.ToBigIntRegular(insertSet[i])
 	}

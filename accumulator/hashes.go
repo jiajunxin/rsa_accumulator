@@ -4,8 +4,31 @@ import (
 	"crypto/sha256"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 )
+
+func ElementFromBigInt(v *big.Int) *fr.Element {
+	var e fr.Element
+	e.SetBigInt(v)
+	return &e
+}
+
+func ElementFromString(v string) *fr.Element {
+	n, success := new(big.Int).SetString(v, 10)
+	if !success {
+		panic("Error parsing hex number")
+	}
+	var e fr.Element
+	e.SetBigInt(n)
+	return &e
+}
+
+func ElementFromUint32(v uint32) *fr.Element {
+	var e fr.Element
+	e.SetInt64(int64(v))
+	return &e
+}
 
 // HashToPrime takes the input into Sha256 and take the hash output to input repeatedly until we hit a prime number
 func HashToPrime(input []byte) *big.Int {
@@ -51,11 +74,10 @@ func PoseidonWith2Inputs(inputs []*big.Int) *big.Int {
 	if len(inputs) != 2 {
 		panic("PoseidonWith2Inputs requires 2 inputs")
 	}
-	ret, err := poseidon.Hash(inputs)
-	if err != nil {
-		panic(err)
-	}
-	return ret
+	fieldElement := poseidon.Poseidon(ElementFromBigInt(inputs[0]), (ElementFromBigInt(inputs[1])))
+	var ret big.Int
+	fieldElement.ToBigIntRegular(&ret)
+	return &ret
 }
 
 // UniversalHashToInt calculates output = input * A + B mod P

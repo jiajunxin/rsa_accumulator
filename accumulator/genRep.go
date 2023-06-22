@@ -3,7 +3,7 @@ package accumulator
 import (
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 )
 
 func genRepWithHashToPrimeFromSHA256(set []string) []*big.Int {
@@ -16,12 +16,9 @@ func genRepWithHashToPrimeFromSHA256(set []string) []*big.Int {
 
 func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 	ret := make([]*big.Int, len(set))
-	var err error
 	for i := range set {
-		ret[i], err = poseidon.HashBytes([]byte(set[i]))
-		if err != nil {
-			panic(err)
-		}
+		temp := poseidon.Poseidon(ElementFromString(set[i]))
+		temp.ToBigIntRegular(ret[i])
 		ret[i].Add(ret[i], Min1024)
 	}
 	return ret
@@ -35,12 +32,9 @@ func genRepWithMultiDIHashFromPoseidon(set []string) []*big.Int {
 	ret := make([]*big.Int, 3*len(set))
 	setSize := len(set)
 	for i := range set {
-		ret[i] = new(big.Int)
-		temp, err := poseidon.HashBytes([]byte(set[i]))
-		if err != nil {
-			panic(err)
-		}
-		ret[i].Add(ret[i], temp)
+		temp := poseidon.Poseidon(ElementFromString(set[i]))
+		temp.ToBigIntRegular(ret[i])
+		ret[i].Add(ret[i], Min1024)
 	}
 	for i := 0; i < setSize; i++ {
 		ret[i+setSize] = new(big.Int)
