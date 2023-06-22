@@ -8,12 +8,14 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 )
 
+// ElementFromBigInt returns an element in BN256 generated from BigInt
 func ElementFromBigInt(v *big.Int) *fr.Element {
 	var e fr.Element
 	e.SetBigInt(v)
 	return &e
 }
 
+// ElementFromString returns an element in BN256 generated from string of decimal integers
 func ElementFromString(v string) *fr.Element {
 	n, success := new(big.Int).SetString(v, 10)
 	if !success {
@@ -24,6 +26,7 @@ func ElementFromString(v string) *fr.Element {
 	return &e
 }
 
+// ElementFromUint32 returns an element in BN256 generated from uint32
 func ElementFromUint32(v uint32) *fr.Element {
 	var e fr.Element
 	e.SetInt64(int64(v))

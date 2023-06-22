@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
@@ -25,25 +24,6 @@ const (
 	// KeyPathPrefix denotes the path to store the circuit and keys. fileName = KeyPathPrefix + "_" + strconv.FormatInt(int64(size), 10) + different names
 	KeyPathPrefix = "zkmultiswap"
 )
-
-// Set32 is one set for the prover with uint32 for CurrentEpochNum,
-// ElementFromString returns an element in BN256 generated from string of decimal integers
-func ElementFromString(v string) *fr.Element {
-	n, success := new(big.Int).SetString(v, 10)
-	if !success {
-		panic("Error parsing hex number")
-	}
-	var e fr.Element
-	e.SetBigInt(n)
-	return &e
-}
-
-// ElementFromUint32 returns an element in BN256 generated from uint32
-func ElementFromUint32(v uint32) *fr.Element {
-	var e fr.Element
-	e.SetInt64(int64(v))
-	return &e
-}
 
 // UpdateSet32 is one set for the prover with uint32 for CurrentEpochNum,
 type UpdateSet32 struct {
