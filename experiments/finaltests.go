@@ -325,10 +325,7 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	}
 
 	unchangedSet := accumulator.GenBenchSet(setSize - updatedSetSize)
-	rep := accumulator.GenRepresentatives(unchangedSet, accumulator.DIHashFromPoseidon)
-
-	var unchanged []*big.Int
-	unchanged = rep[:]
+	unchanged := accumulator.GenRepresentatives(unchangedSet, accumulator.DIHashFromPoseidon)
 
 	// This is for test purpose only.
 	// We use Hash of tau as the random source, generate 6 different 2048 bits random numbers
@@ -376,10 +373,8 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 		ranIns3.Add(&ranIns3, &temp)
 	}
 
-	var original []*big.Int
-	original = append(unchanged, removed...)
+	original := append(unchanged, removed...)
 	originalProd := accumulator.SetProductRecursiveFast(original)
-
 	originalProd = bigfft.Mul(originalProd, &ranRem1)
 
 	setup := *accumulator.TrustedSetup()
@@ -408,14 +403,14 @@ func TestNotusSingleThread(setSize, updatedSetSize int) {
 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate Updated accumulators")
 	startingTime = time.Now().UTC()
-	insProd1 := accumulator.SetProductRecursiveFast(insert)
-	insProd1 = bigfft.Mul(insProd1, &ranIns1)
-	accUpd1 := accumulator.AccumulateNew(accMid, insProd1, setup.N)
+	insProd := accumulator.SetProductRecursiveFast(insert)
+	insProd = bigfft.Mul(insProd, &ranIns1)
+	accUpd1 := accumulator.AccumulateNew(accMid, insProd, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate Updated accumulators Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate three zkPoKE")
 	startingTime = time.Now().UTC()
-	PoKE(accMid, insProd1, accUpd1, setup.N)
+	PoKE(accMid, insProd, accUpd1, setup.N)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("Generate membership proofs for the three accumulators")
