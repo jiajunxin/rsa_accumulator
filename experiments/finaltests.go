@@ -17,7 +17,7 @@ import (
 func TestBasicZKrsa() {
 	setSize := 65536 // 2 ^ 16 65536
 	fmt.Println("Test set size = ", setSize)
-	fmt.Println("GenRepresentatives with MultiDIHashFromPoseidon")
+	fmt.Println("GenRepresentatives with DIHashFromPoseidon")
 	set := accumulator.GenBenchSet(setSize)
 	setup := *accumulator.TrustedSetup()
 	startingTime := time.Now().UTC()
@@ -35,10 +35,13 @@ func TestBasicZKrsa() {
 	r, err := rand.Prime(rand.Reader, 10)
 	handleErr(err)
 	var h, coprime *big.Int
+	coprime = new(big.Int)
 	big1 := big.NewInt(1)
 	for {
 		h, err = rand.Int(rand.Reader, setup.N)
 		handleErr(err)
+		// fmt.Println("N = ", setup.N.String())
+		// fmt.Println("h = ", h.String())
 		if coprime.GCD(nil, nil, h, setup.N).Cmp(big1) == 0 {
 			break
 		}
@@ -65,15 +68,6 @@ func TestBasicZKrsa() {
 		panic("verification failed")
 	}
 
-	// startingTime = time.Now().UTC()
-	// maxLen := setSize * 256 / bits.UintSize
-	// table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running PreCompute Takes [%.3f] Seconds \n", duration.Seconds())
-	// startingTime = time.Now().UTC()
-	// accumulator.ProveMembershipParallelWithTable(setup.G, setup.N, rep, 2, table)
-	// duration = time.Now().UTC().Sub(startingTime)
-	// fmt.Printf("Running ProveMembershipParallelWithTable Takes [%.3f] Seconds \n", duration.Seconds())
 }
 func handleErr(err error) {
 	if err != nil {
@@ -233,7 +227,7 @@ func preComputeDISingleThread(setSize int, table *multiexp.PreTable) {
 func TestDifferentGroupingSize(setSize int) {
 	max := 262144 //2^18
 	setup := *accumulator.TrustedSetup()
-	maxLen := setSize * 1024 / bits.UintSize //256 comes from the length of each multiDI hash
+	maxLen := setSize * 1024 / bits.UintSize //256 comes from the length of each DI hash
 	//tables := make([]*multiexp.PreTable, 8)
 	fmt.Println("TestDifferentGroupingSize, Test set size = ", setSize)
 	repeatNum := max / setSize
