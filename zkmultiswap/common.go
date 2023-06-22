@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
@@ -26,6 +27,25 @@ const (
 )
 
 // Set32 is one set for the prover with uint32 for CurrentEpochNum,
+// ElementFromString returns an element in BN256 generated from string of decimal integers
+func ElementFromString(v string) *fr.Element {
+	n, success := new(big.Int).SetString(v, 10)
+	if !success {
+		panic("Error parsing hex number")
+	}
+	var e fr.Element
+	e.SetBigInt(n)
+	return &e
+}
+
+// ElementFromUint32 returns an element in BN256 generated from uint32
+func ElementFromUint32(v uint32) *fr.Element {
+	var e fr.Element
+	e.SetInt64(int64(v))
+	return &e
+}
+
+// UpdateSet32 is one set for the prover with uint32 for CurrentEpochNum,
 type UpdateSet32 struct {
 	ChallengeL1      big.Int
 	ChallengeL2      big.Int
@@ -42,6 +62,16 @@ type UpdateSet32 struct {
 	UpdatedBalances  []uint32
 }
 
+// PublicInfo is the public information part of UpdateSet32
+type PublicInfo struct {
+	ChallengeL1     big.Int
+	ChallengeL2     big.Int
+	RemainderR1     big.Int
+	RemainderR2     big.Int
+	CurrentEpochNum uint32
+}
+
+// IsValid returns true only if the input is valid for multiSwap
 func (input *UpdateSet32) IsValid() bool {
 	if len(input.UserID) < 2 {
 		return false
@@ -70,7 +100,7 @@ func getRandomAcc(setup *accumulator.Setup) *big.Int {
 
 // SetupTranscript should takes in all public information regarding the MultiSwap
 func SetupTranscript(setup *accumulator.Setup, accOld, accMid, accNew *big.Int, CurrentEpochNum uint32) *fiatshamir.Transcript {
-	transcript := fiatshamir.InitTranscript([]string{setup.G.String(), setup.N.String()})
+	transcript := fiatshamir.InitTranscript([]string{setup.G.String(), setup.N.String()}, fiatshamir.Max252)
 	transcript.Append(strconv.Itoa(int(CurrentEpochNum)))
 	return transcript
 }
@@ -145,6 +175,17 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	return &ret
 }
 
+// PublicPart returns a new UpdateSet32 with same public part and hidden part 0
+func (input *UpdateSet32) PublicPart() *PublicInfo {
+	var ret PublicInfo
+	ret.ChallengeL1 = input.ChallengeL1
+	ret.ChallengeL2 = input.ChallengeL2
+	ret.RemainderR1 = input.RemainderR1
+	ret.RemainderR2 = input.RemainderR2
+	ret.CurrentEpochNum = input.CurrentEpochNum
+	return &ret
+}
+
 // TestMultiSwap is temporarily used for test purpose
 func TestMultiSwap() {
 	fmt.Println("Start TestMultiSwap")
@@ -181,13 +222,15 @@ func testMultiSwap(testSetSize uint32) {
 		fmt.Println("Circuit have already been compiled for test purpose.")
 	}
 	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
-	proof, publicWitness, err := Prove(testSet)
+	publicInfo := testSet.PublicPart()
+	proof, err := Prove(testSet)
 	if err != nil {
 		fmt.Println("Error during Prove")
 		panic(err)
 	}
 	runtime.GC()
-	flag := Verify(proof, testSetSize, publicWitness)
+
+	flag := Verify(proof, testSetSize, publicInfo)
 	if flag {
 		fmt.Println("Verification passed")
 		return

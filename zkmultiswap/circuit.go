@@ -138,3 +138,15 @@ func AssignCircuit(input *UpdateSet32) *Circuit {
 	}
 	return &circuit
 }
+
+// AssignCircuitHelper assign a circuit with PublicInfo values.
+func AssignCircuitHelper(input *PublicInfo) *Circuit {
+	circuit := InitCircuitWithSize(1)
+	circuit.ChallengeL1 = input.ChallengeL1
+	circuit.ChallengeL2 = input.ChallengeL2
+	circuit.RemainderR1 = input.RemainderR1
+	circuit.RemainderR2 = input.RemainderR2
+	circuit.CurrentEpochNum = input.CurrentEpochNum
+
+	return circuit
+}
