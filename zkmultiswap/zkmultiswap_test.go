@@ -2,6 +2,7 @@ package zkmultiswap
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -31,44 +32,6 @@ func compare(input1 *big.Int, input2 []byte) int {
 // 		t.Errorf(err.Error())
 // 	}
 // 	result2 := poseidonHasher.Sum(nil)
-
-// 	if compare(result1, result2) != 0 {
-// 		fmt.Println("result1 = ", result1.String())
-// 		fmt.Println("result2 = ", result2)
-// 	}
-// }
-
-func TestPublicWitness(t *testing.T) {
-	testSetSize := uint32(10)
-	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
-
-	assignment := AssignCircuit(testSet)
-	witness, err := frontend.NewWitness(assignment, ecc.BN254)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	publicWitness, err := witness.Public()
-	if err != nil {
-		fmt.Println("error while generating public witness")
-		t.Errorf(err.Error())
-	}
-
-	publicPart := testSet.PublicPart()
-	assignment2 := AssignCircuitHelper(publicPart)
-	publicWitness2, err := frontend.NewWitness(assignment2, ecc.BN254, frontend.PublicOnly())
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	if !reflect.DeepEqual(publicWitness.Vector, publicWitness2.Vector) {
-		t.Errorf("public witness and public witness build from public info are not equal")
-	}
-	// test cases that should not be equal
-	assignment.CurrentEpochNum = 666
-	witness, err = frontend.NewWitness(assignment, ecc.BN254)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	result2 := poseidonHasher.Sum(nil)
 
 // 	if compare(result1, result2) != 0 {
 // 		fmt.Println("result1 = ", result1.String())
