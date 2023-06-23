@@ -8,23 +8,26 @@ import (
 
 func main() {
 
+	fmt.Println("TestNotusMultiSwap")
+	experiments.TestNotusMultiSwap(20, 5)
+
 	//zkmultiswap.TestMultiSwap()
-	fmt.Println("TestBasicZKrsa")
-	experiments.TestBasicZKrsa()
+	// fmt.Println("TestBasicZKrsa")
+	// experiments.TestBasicZKrsa()
 	// fmt.Println("TestDifferentGroupSize")
 	// experiments.TestDifferentGroupSize()
-	fmt.Println("TestDifferentMembership")
-	experiments.TestDifferentMembership()
-	fmt.Println("TestDifferentMembershipForDI")
-	experiments.TestDifferentMembershipForDI()
+	// fmt.Println("TestDifferentMembership")
+	// experiments.TestDifferentMembership()
+	// fmt.Println("TestDifferentMembershipForDI")
+	// experiments.TestDifferentMembershipForDI()
 	// fmt.Println("TestDifferentPrecomputationTableSize")
 	// experiments.TestDifferentPrecomputationTableSize()
-	fmt.Println("TestMembership")
-	experiments.TestMembership()
-	fmt.Println("TestPoKE")
-	experiments.TestPoKE()
-	fmt.Println("TestNotusSingleThread")
-	experiments.TestNotusSingleThread(1024, 100)
+	// fmt.Println("TestMembership")
+	// experiments.TestMembership()
+	// fmt.Println("TestPoKE")
+	// experiments.TestPoKE()
+	// fmt.Println("TestNotusSingleThread")
+	// experiments.TestNotusSingleThread(1024, 100)
 }
 
 // experiments.TestBasicZKrsa()
