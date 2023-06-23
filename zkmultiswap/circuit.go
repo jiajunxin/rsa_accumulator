@@ -65,9 +65,7 @@ func (circuit Circuit) Define(api frontend.API) error {
 		api.ToBinary(circuit.UpdatedBalances[i], BitLength)
 	}
 
-	var remainder1, remainder2 frontend.Variable
-	remainder1 = 1
-	remainder2 = 1
+	var remainder1, remainder2 frontend.Variable = 1, 1
 	tempSum := circuit.OriginalSum
 	tempSum = api.Sub(tempSum, circuit.OriginalBalances[0])
 	tempSum = api.Add(tempSum, circuit.UpdatedBalances[0])
@@ -75,13 +73,11 @@ func (circuit Circuit) Define(api frontend.API) error {
 		tempHash0 := poseidon.Poseidon(api, circuit.UserID[i], circuit.OriginalBalances[i], circuit.OriginalUpdEpoch[i], circuit.OriginalHashes[i])
 		api.Println(tempHash0)
 		tempHash1 := api.Add(tempHash0, circuit.DeltaModL1)
-		//tempHash1 = api.MulModP(tempHash1, 1, circuit.ChallengeL1)
 		remainder1 = api.MulModP(remainder1, tempHash1, circuit.ChallengeL1)
 
 		// Check HashChain
 		tempHash2 := poseidon.Poseidon(api, circuit.UserID[i], circuit.UpdatedBalances[i], circuit.CurrentEpochNum, tempHash0)
 		tempHash2 = api.Add(tempHash2, circuit.DeltaModL2)
-		//tempHash2 = api.MulModP(tempHash2, 1, circuit.ChallengeL2)
 		remainder2 = api.MulModP(remainder2, tempHash2, circuit.ChallengeL2)
 
 		tempSum = api.Sub(tempSum, circuit.OriginalBalances[i])
