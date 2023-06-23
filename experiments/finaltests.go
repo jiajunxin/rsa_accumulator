@@ -242,7 +242,7 @@ func TestDifferentGroupingSize(setSize int) {
 	fmt.Printf("Running the trial Takes [%.3f] Seconds \n", duration.Seconds())
 }
 
-// TestDifferentGroupSize tests the running time with different group size.
+// TestDifferentGroupSize tests the pre-computation time with different group size.
 func TestDifferentGroupSize() {
 	TestDifferentGroupingSize(1024)   //2^10
 	TestDifferentGroupingSize(4096)   //2^12

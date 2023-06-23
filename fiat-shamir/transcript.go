@@ -6,20 +6,21 @@ import (
 	"math/big"
 )
 
-// Based on the Miller-Robin test, the probability to have a non-prime probability is less than 1/(securityParaHash*4)
-const securityParameter = 30
-
 var min253 big.Int
 
 func init() {
 	min253.SetInt64(1)
-	_ = min253.Lsh(&min253, 252)
+	_ = min253.Lsh(&min253, bitLimit-1)
 }
 
 // ChallengeLength denotes the maximum length of challenge
 type ChallengeLength uint32
 
 const (
+	// bit limit, used because of limit in gnark
+	bitLimit = 250
+	// Based on the Miller-Robin test, the probability to have a non-prime probability is less than 1/(securityParaHash*4)
+	securityParameter = 30
 	// Default lenght is 256-bit
 	Default ChallengeLength = iota
 	// Max252 lenght is 252-bit

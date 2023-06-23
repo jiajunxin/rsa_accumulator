@@ -16,8 +16,14 @@ type Circuit struct {
 	RemainderR1     frontend.Variable `gnark:",public"` // a remainder R1
 	RemainderR2     frontend.Variable `gnark:",public"` // a remainder R2
 	CurrentEpochNum frontend.Variable `gnark:",public"` // current epoch number
+	// Delta (2^1024) should be able to fixed as public parameters, however, gnark still cannot support big Int for now
+	// we the the following two public input to replace the Delta
+	// This because Delta + Hash(x) mod L = (Delta mod L + Hash(x) mod L) mod L
+	DeltaModL1 frontend.Variable `gnark:",public"` // 2^1024 mod L1
+	DeltaModL2 frontend.Variable `gnark:",public"` // 2^1024 mod L2
 	//------------------------------private witness below--------------------------------------
-	Randomizer       frontend.Variable   // Used to randomize the witness for commit-and-prove, reserved for future
+	Randomizer1      frontend.Variable   // Used to randomize the removed set
+	Randomizer2      frontend.Variable   // Used to randomize the inserted set
 	OriginalSum      frontend.Variable   // original sum of balances for all users
 	UpdatedSum       frontend.Variable   // updated sum of balances for all users
 	UserID           []frontend.Variable // list of user IDs to be updated
@@ -29,8 +35,10 @@ type Circuit struct {
 
 // Define declares the circuit constraints
 func (circuit Circuit) Define(api frontend.API) error {
-	// To be fixed!
-	api.ToBinary(circuit.Randomizer, BitLength)
+	api.ToBinary(circuit.Randomizer1, BitLength)
+	api.ToBinary(circuit.Randomizer2, BitLength)
+	api.AssertIsLess(circuit.DeltaModL1, circuit.ChallengeL1)
+	api.AssertIsLess(circuit.DeltaModL2, circuit.ChallengeL2)
 
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalBalances))
 	api.AssertIsEqual(len(circuit.UserID), len(circuit.OriginalHashes))
@@ -53,26 +61,39 @@ func (circuit Circuit) Define(api frontend.API) error {
 
 	for i := 0; i < len(circuit.UserID); i++ {
 		api.ToBinary(circuit.OriginalBalances[i], BitLength)
-		//api.AssertIsLess(circuit.OriginalHashes[i], api.Curve().Info().Fp.Modulus)
 		api.AssertIsLess(circuit.OriginalUpdEpoch[i], circuit.CurrentEpochNum)
 		api.ToBinary(circuit.UpdatedBalances[i], BitLength)
 	}
 
-	remainder1 := poseidon.Poseidon(api, circuit.UserID[0], circuit.OriginalBalances[0], circuit.OriginalUpdEpoch[0], circuit.OriginalHashes[0])
-	//	api.Println(remainder1)
-	remainder2 := poseidon.Poseidon(api, circuit.UserID[0], circuit.UpdatedBalances[0], circuit.CurrentEpochNum, remainder1)
+	var remainder1, remainder2 frontend.Variable
+	remainder1 = 1
+	remainder2 = 1
 	tempSum := circuit.OriginalSum
-	api.Sub(tempSum, circuit.OriginalBalances[0])
-	api.Add(tempSum, circuit.UpdatedBalances[0])
-	for i := 1; i < len(circuit.UserID); i++ {
-		tempHash := poseidon.Poseidon(api, circuit.UserID[i], circuit.OriginalBalances[i], circuit.OriginalUpdEpoch[i], circuit.OriginalHashes[i])
-		remainder1 = api.MulModP(remainder1, tempHash, circuit.ChallengeL1)
+	tempSum = api.Sub(tempSum, circuit.OriginalBalances[0])
+	tempSum = api.Add(tempSum, circuit.UpdatedBalances[0])
+	for i := 0; i < len(circuit.UserID); i++ {
+		tempHash0 := poseidon.Poseidon(api, circuit.UserID[i], circuit.OriginalBalances[i], circuit.OriginalUpdEpoch[i], circuit.OriginalHashes[i])
+		api.Println(tempHash0)
+		tempHash1 := api.Add(tempHash0, circuit.DeltaModL1)
+		//tempHash1 = api.MulModP(tempHash1, 1, circuit.ChallengeL1)
+		remainder1 = api.MulModP(remainder1, tempHash1, circuit.ChallengeL1)
 
-		tempHash2 := poseidon.Poseidon(api, circuit.UserID[i], circuit.UpdatedBalances[i], circuit.CurrentEpochNum, tempHash)
+		// Check HashChain
+		tempHash2 := poseidon.Poseidon(api, circuit.UserID[i], circuit.UpdatedBalances[i], circuit.CurrentEpochNum, tempHash0)
+		tempHash2 = api.Add(tempHash2, circuit.DeltaModL2)
+		//tempHash2 = api.MulModP(tempHash2, 1, circuit.ChallengeL2)
 		remainder2 = api.MulModP(remainder2, tempHash2, circuit.ChallengeL2)
 
-		api.Sub(tempSum, circuit.OriginalBalances[i])
-		api.Add(tempSum, circuit.UpdatedBalances[i])
+		tempSum = api.Sub(tempSum, circuit.OriginalBalances[i])
+		tempSum = api.Add(tempSum, circuit.UpdatedBalances[i])
+	}
+	// because gnark cannot support 2048-bits large integers, we are using the product of 8 255-bits random numbers to replace one large RSA-domain randomizer.
+	for i := 0; i < 8; i++ {
+		tempHash := poseidon.Poseidon(api, circuit.Randomizer1, i)
+		remainder1 = api.MulModP(remainder1, tempHash, circuit.ChallengeL1)
+		api.Println(tempHash)
+		tempHash = poseidon.Poseidon(api, circuit.Randomizer2, i)
+		remainder2 = api.MulModP(remainder2, tempHash, circuit.ChallengeL2)
 	}
 	api.AssertIsEqual(remainder1, circuit.RemainderR1)
 	api.AssertIsEqual(remainder2, circuit.RemainderR2)
@@ -89,9 +110,12 @@ func InitCircuitWithSize(size uint32) *Circuit {
 	circuit.RemainderR1 = 0
 	circuit.RemainderR2 = 0
 	circuit.CurrentEpochNum = 1
+	circuit.DeltaModL1 = 0
+	circuit.DeltaModL2 = 0
 	circuit.OriginalSum = 1
 	circuit.UpdatedSum = 1
-	circuit.Randomizer = 1
+	circuit.Randomizer1 = 1
+	circuit.Randomizer2 = 1
 
 	circuit.UserID = make([]frontend.Variable, size)
 	circuit.OriginalBalances = make([]frontend.Variable, size)
@@ -120,9 +144,12 @@ func AssignCircuit(input *UpdateSet32) *Circuit {
 	circuit.RemainderR1 = input.RemainderR1
 	circuit.RemainderR2 = input.RemainderR2
 	circuit.CurrentEpochNum = input.CurrentEpochNum
+	circuit.DeltaModL1 = input.DeltaModL1
+	circuit.DeltaModL2 = input.DeltaModL2
 	circuit.OriginalSum = input.OriginalSum
 	circuit.UpdatedSum = input.UpdatedSum
-	circuit.Randomizer = input.Randomizer
+	circuit.Randomizer1 = input.Randomizer1
+	circuit.Randomizer2 = input.Randomizer2
 
 	circuit.UserID = make([]frontend.Variable, size)
 	circuit.OriginalBalances = make([]frontend.Variable, size)
@@ -147,6 +174,8 @@ func AssignCircuitHelper(input *PublicInfo) *Circuit {
 	circuit.RemainderR1 = input.RemainderR1
 	circuit.RemainderR2 = input.RemainderR2
 	circuit.CurrentEpochNum = input.CurrentEpochNum
+	circuit.DeltaModL1 = input.DeltaModL1
+	circuit.DeltaModL2 = input.DeltaModL2
 
 	return circuit
 }

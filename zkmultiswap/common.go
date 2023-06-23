@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
@@ -31,8 +32,11 @@ type UpdateSet32 struct {
 	ChallengeL2      big.Int
 	RemainderR1      big.Int
 	RemainderR2      big.Int
-	Randomizer       big.Int
 	CurrentEpochNum  uint32
+	DeltaModL1       big.Int
+	DeltaModL2       big.Int
+	Randomizer1      big.Int
+	Randomizer2      big.Int
 	OriginalSum      uint32
 	UpdatedSum       uint32
 	UserID           []uint32
@@ -49,6 +53,8 @@ type PublicInfo struct {
 	RemainderR1     big.Int
 	RemainderR2     big.Int
 	CurrentEpochNum uint32
+	DeltaModL1      big.Int
+	DeltaModL2      big.Int
 }
 
 // IsValid returns true only if the input is valid for multiSwap
@@ -86,7 +92,6 @@ func SetupTranscript(setup *accumulator.Setup, accOld, accMid, accNew *big.Int, 
 }
 
 // GenTestSet generates a set of values for test purpose.
-// Todo: change Poseidon Hash to DI hash!
 func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	var ret UpdateSet32
 	ret.UserID = make([]uint32, setsize)
@@ -110,19 +115,33 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	// get slice of elements removed and inserted
 	removeSet := make([]*big.Int, setsize)
 	insertSet := make([]*big.Int, setsize)
-	for i := uint32(0); i < setsize; i++ {
-		tempposeidonHash1 := poseidon.Poseidon(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.OriginalBalances[i]),
-			accumulator.ElementFromUint32(ret.OriginalUpdEpoch[i]), accumulator.ElementFromString(ret.OriginalHashes[i].String()))
-		removeSet[i] = new(big.Int)
-		tempposeidonHash1.ToBigIntRegular(removeSet[i])
 
-		tempposeidonHash2 := poseidon.Poseidon(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.UpdatedBalances[i]),
-			accumulator.ElementFromUint32(ret.CurrentEpochNum), tempposeidonHash1)
-		insertSet[i] = new(big.Int)
-		tempposeidonHash2.ToBigIntRegular(insertSet[i])
+	for i := uint32(0); i < setsize; i++ {
+		var poseidonhash *fr.Element // this is the Poseidon part of the DI hash. We use this to build the hash chain. The original DI hash is to long to directly input into Poseidon hash
+		poseidonhash, removeSet[i] = accumulator.PoseidonAndDIHash(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.OriginalBalances[i]),
+			accumulator.ElementFromUint32(ret.OriginalUpdEpoch[i]), accumulator.ElementFromString(ret.OriginalHashes[i].String()))
+		//fmt.Println("poseidonhash i = ", poseidonhash.String())
+
+		insertSet[i] = accumulator.DIHashPoseidon(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.UpdatedBalances[i]),
+			accumulator.ElementFromUint32(ret.CurrentEpochNum), poseidonhash)
 	}
 	prod1 := accumulator.SetProductRecursiveFast(removeSet)
 	prod2 := accumulator.SetProductRecursiveFast(insertSet)
+
+	// Randomizers are FIXED!!! for test purpose
+	ret.Randomizer1 = *big.NewInt(200)
+	ret.Randomizer2 = *big.NewInt(300)
+	// because gnark cannot support 2048-bits large integers, we are using the product of 8 255-bits random numbers to replace one large RSA-domain randomizer.
+	for i := 0; i < 8; i++ {
+		tempHash := poseidon.Poseidon(accumulator.ElementFromBigInt(&ret.Randomizer1), accumulator.ElementFromUint32(uint32(i)))
+		var tempInt big.Int
+		tempHash.ToBigIntRegular(&tempInt)
+		prod1.Mul(prod1, &tempInt)
+
+		tempHash = poseidon.Poseidon(accumulator.ElementFromBigInt(&ret.Randomizer2), accumulator.ElementFromUint32(uint32(i)))
+		tempHash.ToBigIntRegular(&tempInt)
+		prod2.Mul(prod2, &tempInt)
+	}
 
 	// get accumulators
 	accMid := getRandomAcc(setup)
@@ -132,7 +151,6 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 
 	// get challenge
 	transcript := SetupTranscript(setup, &accOld, accMid, &accNew, ret.CurrentEpochNum)
-
 	challengeL1 := transcript.GetChallengeAndAppendTranscript()
 	challengeL2 := transcript.GetChallengeAndAppendTranscript()
 
@@ -146,8 +164,11 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	ret.ChallengeL2 = *challengeL2
 	ret.RemainderR1 = *remainderR1
 	ret.RemainderR2 = *remainderR2
-	// Randomizer to be fixed!
-	ret.Randomizer = *big.NewInt(200)
+	var deltaModL1, deltaModL2 big.Int
+	deltaModL1.Mod(accumulator.Min1024, challengeL1)
+	deltaModL2.Mod(accumulator.Min1024, challengeL2)
+	ret.DeltaModL1 = deltaModL1
+	ret.DeltaModL2 = deltaModL2
 
 	if !ret.IsValid() {
 		panic("error in GenTestSet, the generated test set is invalid")
@@ -163,6 +184,8 @@ func (input *UpdateSet32) PublicPart() *PublicInfo {
 	ret.RemainderR1 = input.RemainderR1
 	ret.RemainderR2 = input.RemainderR2
 	ret.CurrentEpochNum = input.CurrentEpochNum
+	ret.DeltaModL1 = input.DeltaModL1
+	ret.DeltaModL2 = input.DeltaModL2
 	return &ret
 }
 

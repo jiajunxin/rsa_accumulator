@@ -1,19 +1,14 @@
 package fiatshamir
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
 func TestConstants(t *testing.T) {
-	if min253.BitLen() != 253 {
-		t.Errorf("Min253.BitLen != 253")
-	}
-	big1 := big.NewInt(1)
-	if min253.Sub(&min253, big1).BitLen() != 252 {
-		t.Errorf("Min253 is not 2^253")
+	if min253.BitLen() != bitLimit {
+		t.Errorf("Min253.BitLen != bitLimit")
 	}
 }
 

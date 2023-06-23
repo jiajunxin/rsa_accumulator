@@ -95,3 +95,23 @@ func UniversalHashToInt(input *big.Int) *big.Int {
 	}
 	return &ret
 }
+
+// DIHashPoseidon generates DI hash with Poseidon hash
+func DIHashPoseidon(input ...*fr.Element) *big.Int {
+	var ret *big.Int
+	ret = new(big.Int)
+	temp := poseidon.Poseidon(input...)
+	temp.ToBigIntRegular(ret)
+	ret.Add(ret, Min1024)
+	return ret
+}
+
+// PoseidonAndDIHash returns the Poseidon Hash result together with DI hash result
+func PoseidonAndDIHash(input ...*fr.Element) (*fr.Element, *big.Int) {
+	var ret *big.Int
+	ret = new(big.Int)
+	temp := poseidon.Poseidon(input...)
+	temp.ToBigIntRegular(ret)
+	ret.Add(ret, Min1024)
+	return temp, ret
+}
