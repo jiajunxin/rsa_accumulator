@@ -19,6 +19,8 @@ func main() {
 	twoTo19 := 524288
 	twoTo20 := 1048576
 
+	experiments.TestMembershipVerify()
+
 	// the following code is to test the time percentage for each part of the system in a single core.
 	fmt.Println("TestNotusMultiSwap for ", twoTo14, " users and ", uint32(twoTo14/updateRates), " updates.")
 	experiments.TestNotusMultiSwap(uint32(twoTo14), uint32(twoTo14/updateRates))

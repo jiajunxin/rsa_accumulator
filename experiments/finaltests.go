@@ -19,6 +19,25 @@ import (
 	"github.com/remyoudompheng/bigfft"
 )
 
+// TestMembershipVerify test the time to verify a membership proof
+func TestMembershipVerify() {
+	setup := *accumulator.TrustedSetup()
+	setSize := 10
+	set := accumulator.GenBenchSet(setSize)
+	rep := accumulator.GenRepresentatives(set, accumulator.DIHashFromPoseidon)
+	_, proofs := accumulator.AccAndProve(set, accumulator.DIHashFromPoseidon, &setup)
+	startingTime := time.Now().UTC()
+	repeatNum := 100
+	for i := 0; i < repeatNum; i++ {
+		// each proof raise to the power of the representative is the process to verify the membership
+		_ = accumulator.AccumulateNew(proofs[0], rep[0], setup.N)
+	}
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Verifying membership proof for 100 rounds Takes [%.3f] Seconds \n", duration.Seconds())
+	fmt.Printf("Verifying membership proof for each one Takes [%.3f] Seconds \n", duration.Seconds()/float64(repeatNum))
+	fmt.Println("Proof size = ", proofs[0].BitLen(), "bits")
+}
+
 // TestBasicZKrsa test a naive case of zero-knowledge RSA accumulator
 func TestBasicZKrsa() {
 	setSize := 65536 // 2 ^ 16 65536
