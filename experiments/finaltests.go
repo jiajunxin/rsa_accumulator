@@ -218,6 +218,7 @@ func TestDifferentMembershipForDI() {
 	//TestRSAMembershipPreCompute(262144) //2^18, 1 core
 }
 
+// TestDifferentMembershipForDISingleThread tests the membership pre-computation time under different number of users with single core
 func TestDifferentMembershipForDISingleThread() {
 	TestRSAMembershipPreCompute(1024)   //2^10, 1 core
 	TestRSAMembershipPreCompute(4096)   //2^12, 1 core
@@ -301,7 +302,6 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 // 	fmt.Println("Test code with Single thread.")
 // 	fmt.Println("Test set size = ", setSize)
 // 	fmt.Println("Test updated set size = ", updatedSetSize)
-
 // 	currentEpoch := 500
 // 	// generate the RemovedSet and insertedSet
 // 	removed := make([]*big.Int, updatedSetSize)
@@ -327,19 +327,15 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 // 		tempHashInput.Add(&tempHashInput, &tempValLeftShifted)
 // 		tempHashInput.Add(&tempHashInput, big.NewInt(int64(listLastUpdatedEpoch[i])))
 // 		removed[i] = accumulator.PoseidonWith2Inputs([]*big.Int{&tempHashInput, &listPrevHash[i]})
-
 // 		listValueUpdated[i] = uint32(j) // the updated value is same as the original value, which is allowed, for the simplicity of testing
 // 		tempHashInput.Lsh(big.NewInt(int64(listID[i])), 64)
 // 		tempValLeftShifted.Lsh(big.NewInt(int64(listValueUpdated[i])), 32)
 // 		tempHashInput.Add(&tempHashInput, &tempValLeftShifted)
 // 		tempHashInput.Add(&tempHashInput, big.NewInt(int64(currentEpoch)))
 // 		insert[i] = accumulator.PoseidonWith2Inputs([]*big.Int{&tempHashInput, removed[i]})
-
 // 	}
-
 // 	unchangedSet := accumulator.GenBenchSet(setSize - updatedSetSize)
 // 	unchanged := accumulator.GenRepresentatives(unchangedSet, accumulator.DIHashFromPoseidon)
-
 // 	// This is for test purpose only.
 // 	// We use Hash of tau as the random source, generate 6 different 2048 bits random numbers
 // 	// Each 2048 bits random number is composed by 8 256 bits random number, therefore, we
@@ -385,18 +381,14 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 // 		temp.Lsh(tempRandomList[i], leftShiftBits)
 // 		ranIns3.Add(&ranIns3, &temp)
 // 	}
-
 // 	original := append(unchanged, removed...)
 // 	originalProd := accumulator.SetProductRecursiveFast(original)
 // 	originalProd = bigfft.Mul(originalProd, &ranRem1)
-
 // 	setup := *accumulator.TrustedSetup()
 // 	maxLen := setSize * 1024 / bits.UintSize
 // 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, maxLen)
-
 // 	// generate original zero-knowledge RSA accumulators
 // 	accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 1, 0)
-
 // 	fmt.Println("Precomputation and original RSA accumulators setup. Start to zero-knowledge MultiSwap")
 // 	totalTime := time.Now().UTC()
 // 	startingTime := time.Now().UTC()
@@ -405,7 +397,6 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 // 	remProd = bigfft.Mul(remProd, &ranRem1)
 // 	var accmidProd1 big.Int
 // 	accmidProd1.Div(originalProd, remProd)
-
 // 	accMid := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 1, 0)
 // 	duration := time.Now().UTC().Sub(startingTime)
 // 	fmt.Printf("Running Generate Acc_mid Takes [%.3f] Seconds \n", duration.Seconds())
@@ -428,13 +419,10 @@ func PoKE(base, exp, newAcc, N *big.Int) {
 // 	fmt.Printf("Running Generate three zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
 // 	fmt.Println("Generate membership proofs for the three accumulators")
 // 	startingTime = time.Now().UTC()
-
 // 	newSet1 := append(unchanged[:], insert...)
 // 	proofs1 := accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, &ranIns1, setup.N, newSet1[:], 0, table)
-
 // 	duration = time.Now().UTC().Sub(startingTime)
 // 	fmt.Printf("Running Generate membership proofs Takes [%.3f] Seconds \n", duration.Seconds())
-
 // 	duration = time.Now().UTC().Sub(totalTime)
 // 	fmt.Printf("Running full process Takes [%.3f] Seconds \n", duration.Seconds())
 // 	func() {
@@ -454,6 +442,7 @@ func isCircuitExist(testSetSize uint32) bool {
 	return !os.IsNotExist(err)
 }
 
+// TestNotusMultiSwap tests the Notus system and zk-MultiSwap "almost" in single thread
 func TestNotusMultiSwap(setsize, updatedSetSize uint32) {
 	if !isCircuitExist(updatedSetSize) {
 		fmt.Println("Circuit haven't been compiled for testSetSize = ", updatedSetSize, ". Start compiling.")
@@ -542,6 +531,151 @@ func TestNotusMultiSwap(setsize, updatedSetSize uint32) {
 	originalProd = bigfft.Mul(originalProd, &removedRanProd)
 	accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 1, 0)
 	accMid := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 1, 0)
+	startingTime = time.Now().UTC()
+	fmt.Println("Generate zkPoKE")
+	PoKE(accMid, &removedRanProd, accOri, setup.N)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generate zkPoKE Takes [%.3f] Seconds \n", duration.Seconds())
+
+	var accOld, accNew big.Int
+	accOld.Exp(accMid, prod1, setup.N) //the accOld should already exist before the update, therefore not counted
+	fmt.Println("Generate zkPoKE")
+	startingTime = time.Now().UTC()
+	accNew.Exp(accMid, prod2, setup.N)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generate new accumulator Takes [%.3f] Seconds \n", duration.Seconds())
+
+	// get challenge
+	transcript := zkmultiswap.SetupTranscript(&setup, &accOld, accMid, &accNew, ret.CurrentEpochNum)
+	challengeL1 := transcript.GetChallengeAndAppendTranscript()
+	challengeL2 := transcript.GetChallengeAndAppendTranscript()
+
+	// get remainder
+	remainderR1 := big.NewInt(1)
+	remainderR2 := big.NewInt(1)
+	remainderR1.Mod(prod1, challengeL1)
+	remainderR2.Mod(prod2, challengeL2)
+
+	ret.ChallengeL1 = *challengeL1
+	ret.ChallengeL2 = *challengeL2
+	ret.RemainderR1 = *remainderR1
+	ret.RemainderR2 = *remainderR2
+	var deltaModL1, deltaModL2 big.Int
+	deltaModL1.Mod(accumulator.Min1024, challengeL1)
+	deltaModL2.Mod(accumulator.Min1024, challengeL2)
+	ret.DeltaModL1 = deltaModL1
+	ret.DeltaModL2 = deltaModL2
+
+	if !ret.IsValid() {
+		panic("error in TestMultiSwap, the generated test set is invalid")
+	}
+	//--------------------------------------------finish generating accumulator--------------------------------
+	testSet := zkmultiswap.GenTestSet(updatedSetSize, accumulator.TrustedSetup())
+	publicInfo := testSet.PublicPart()
+	proof, err := zkmultiswap.Prove(testSet)
+	if err != nil {
+		fmt.Println("Error during Prove")
+		panic(err)
+	}
+	runtime.GC()
+
+	flag := zkmultiswap.Verify(proof, updatedSetSize, publicInfo)
+	if flag {
+		fmt.Println("Verification passed")
+		return
+	}
+	fmt.Println("Verification failed")
+}
+
+// TestNotusParallel test Notus with at most 32 cores
+func TestNotusParallel(setsize, updatedSetSize uint32) {
+	if !isCircuitExist(updatedSetSize) {
+		fmt.Println("Circuit haven't been compiled for testSetSize = ", updatedSetSize, ". Start compiling.")
+		startingTime := time.Now().UTC()
+		zkmultiswap.SetupZkMultiswap(updatedSetSize)
+		duration := time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Generating a SNARK circuit for set size = %d, takes [%.3f] Seconds \n", updatedSetSize, duration.Seconds())
+		runtime.GC()
+	} else {
+		fmt.Println("Circuit have already been compiled for test purpose.")
+	}
+	//--------------------------------------------generating accumulator--------------------------------
+	var ret zkmultiswap.UpdateSet32
+	ret.UserID = make([]uint32, updatedSetSize)
+	ret.OriginalBalances = make([]uint32, updatedSetSize)
+	ret.OriginalUpdEpoch = make([]uint32, updatedSetSize)
+	ret.OriginalHashes = make([]big.Int, updatedSetSize)
+	ret.UpdatedBalances = make([]uint32, updatedSetSize)
+
+	ret.CurrentEpochNum = zkmultiswap.CurrentEpochNum
+	for i := uint32(0); i < updatedSetSize; i++ {
+		j := i*2 + 1      // no special meaning for j, just need some non-repeating positive integers
+		ret.UserID[i] = j // we need to arrange user IDs in accending order for checking them efficiently
+		ret.OriginalBalances[i] = j
+		ret.OriginalUpdEpoch[i] = 10
+		ret.OriginalHashes[i].SetInt64(int64(j))
+		ret.UpdatedBalances[i] = j
+	}
+	ret.OriginalSum = zkmultiswap.OriginalSum
+	ret.UpdatedSum = zkmultiswap.OriginalSum // UpdatedSum can be any valid positive numbers, but we are testing the case UpdatedSum = OriginalSum for simplicity
+
+	// get slice of elements removed and inserted
+	removeSet := make([]*big.Int, updatedSetSize)
+	insertSet := make([]*big.Int, updatedSetSize)
+	startingTime := time.Now().UTC()
+	for i := uint32(0); i < updatedSetSize; i++ {
+		var poseidonhash *fr.Element // this is the Poseidon part of the DI hash. We use this to build the hash chain. The original DI hash is to long to directly input into Poseidon hash
+		poseidonhash, removeSet[i] = accumulator.PoseidonAndDIHash(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.OriginalBalances[i]),
+			accumulator.ElementFromUint32(ret.OriginalUpdEpoch[i]), accumulator.ElementFromString(ret.OriginalHashes[i].String()))
+		//fmt.Println("poseidonhash i = ", poseidonhash.String())
+
+		insertSet[i] = accumulator.DIHashPoseidon(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.UpdatedBalances[i]),
+			accumulator.ElementFromUint32(ret.CurrentEpochNum), poseidonhash)
+	}
+	prod1 := accumulator.SetProductParallel(removeSet, 4)
+	prod2 := accumulator.SetProductParallel(removeSet, 4)
+
+	// Randomizers are FIXED!!! for test purpose
+	ret.Randomizer1 = *big.NewInt(200)
+	ret.Randomizer2 = *big.NewInt(300)
+	var removedRanProd, insertedRanProd big.Int
+	removedRanProd.SetInt64(1)
+	insertedRanProd.SetInt64(1)
+	// because gnark cannot support 2048-bits large integers, we are using the product of 8 255-bits random numbers to replace one large RSA-domain randomizer.
+	for i := 0; i < 8; i++ {
+		tempHash := poseidon.Poseidon(accumulator.ElementFromBigInt(&ret.Randomizer1), accumulator.ElementFromUint32(uint32(i)))
+		var tempInt big.Int
+		tempHash.ToBigIntRegular(&tempInt)
+		removedRanProd.Mul(&removedRanProd, &tempInt)
+		prod1.Mul(prod1, &tempInt)
+
+		tempHash = poseidon.Poseidon(accumulator.ElementFromBigInt(&ret.Randomizer2), accumulator.ElementFromUint32(uint32(i)))
+		tempHash.ToBigIntRegular(&tempInt)
+		insertedRanProd.Mul(&insertedRanProd, &tempInt)
+		prod2.Mul(prod2, &tempInt)
+	}
+	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generate DI representatives Takes [%.3f] Seconds \n", duration.Seconds())
+
+	// get accumulators
+	setup := *accumulator.TrustedSetup()
+	maxLen := setsize * 2048 / bits.UintSize
+	table := multiexp.NewPrecomputeTable(setup.G, setup.N, int(maxLen))
+
+	unchangedSet := accumulator.GenBenchSet(int(setsize - updatedSetSize))
+	unchanged := accumulator.GenRepresentatives(unchangedSet, accumulator.DIHashFromPoseidon)
+	startingTime = time.Now().UTC()
+	newSet1 := append(unchanged[:], insertSet...)
+	// limit = 0 indicates the ProveMembershipParallelWithTableWithRandomizer is running with single thread
+	_ = accumulator.ProveMembershipParallelWithTableWithRandomizer(setup.G, &insertedRanProd, setup.N, newSet1[:], 5, table)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Running Generate membership proofs Takes [%.3f] Seconds \n", duration.Seconds())
+
+	original := append(unchanged, removeSet...)
+	originalProd := accumulator.SetProductRecursiveFast(original)
+	originalProd = bigfft.Mul(originalProd, &removedRanProd)
+	accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 5, 0)
+	accMid := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, 5, 0)
 	startingTime = time.Now().UTC()
 	fmt.Println("Generate zkPoKE")
 	PoKE(accMid, &removedRanProd, accOri, setup.N)
