@@ -65,8 +65,7 @@ func GCB(a, b *big.Int) *big.Int {
 
 // CommonBits calculates the greatest common binaries of a and b when they are uint.
 func CommonBits(a, b big.Word) big.Word {
-	var ret uint
-	ret = 0
+	ret := uint(0)
 	var mask uint
 	for i := 0; i < 32; i++ {
 		mask = uint(1 << i)
