@@ -226,3 +226,27 @@ func TestMultiSwap(testSetSize uint32) {
 	}
 	fmt.Println("Verification failed")
 }
+
+// TestMultiSwapAndOutputSmartContract outputs a Solidity smart contract to verify the SNARK
+func TestMultiSwapAndOutputSmartContract(testSetSize uint32) {
+	if !isCircuitExist(testSetSize) {
+		fmt.Println("Circuit haven't been compiled for testSetSize = ", testSetSize, ". Start compiling.")
+		startingTime := time.Now().UTC()
+		SetupZkMultiswap(testSetSize)
+		duration := time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Generating a SNARK circuit for set size = %d, takes [%.3f] Seconds \n", testSetSize, duration.Seconds())
+		runtime.GC()
+	} else {
+		fmt.Println("Circuit have already been compiled for test purpose.")
+	}
+	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(testSetSize), 10)
+	vk, err := LoadVerifyingKey(fileName)
+	if err != nil {
+		panic(err)
+	}
+	f, err := os.Create("contract_g16.sol")
+	if err != nil {
+		panic(err)
+	}
+	vk.ExportSolidity(f)
+}

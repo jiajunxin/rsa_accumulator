@@ -19,6 +19,10 @@ func main() {
 	twoTo19 := 524288
 	twoTo20 := 1048576
 
+	// outputs a Solidity smart
+	//zkmultiswap.TestMultiSwapAndOutputSmartContract(1024)
+
+	// test Membership proof Verification and proof size
 	experiments.TestMembershipVerify()
 
 	// the following code is to test the time percentage for each part of the system in a single core.
