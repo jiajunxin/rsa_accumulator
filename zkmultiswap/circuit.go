@@ -71,7 +71,7 @@ func (circuit Circuit) Define(api frontend.API) error {
 	tempSum = api.Add(tempSum, circuit.UpdatedBalances[0])
 	for i := 0; i < len(circuit.UserID); i++ {
 		tempHash0 := poseidon.Poseidon(api, circuit.UserID[i], circuit.OriginalBalances[i], circuit.OriginalUpdEpoch[i], circuit.OriginalHashes[i])
-		api.Println(tempHash0)
+		//api.Println(tempHash0)
 		tempHash1 := api.Add(tempHash0, circuit.DeltaModL1)
 		remainder1 = api.MulModP(remainder1, tempHash1, circuit.ChallengeL1)
 

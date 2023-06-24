@@ -189,21 +189,6 @@ func (input *UpdateSet32) PublicPart() *PublicInfo {
 	return &ret
 }
 
-// TestMultiSwap is temporarily used for test purpose
-func TestMultiSwap() {
-	fmt.Println("Start TestMultiSwap")
-	if len(os.Args) != 2 {
-		fmt.Println("Test Set Size not indicated. Testing with set-size 100.")
-		testMultiSwap(uint32(100))
-	}
-	testSetSize, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		fmt.Println("Error during conversion from string to int")
-		return
-	}
-	testMultiSwap(uint32(testSetSize))
-}
-
 func isCircuitExist(testSetSize uint32) bool {
 	fileName := KeyPathPrefix + "_" + strconv.FormatInt(int64(testSetSize), 10) + ".ccs.save"
 	_, err := os.Stat(fileName)
@@ -213,7 +198,8 @@ func isCircuitExist(testSetSize uint32) bool {
 	return !os.IsNotExist(err)
 }
 
-func testMultiSwap(testSetSize uint32) {
+// TestMultiSwap is temporarily used for test purpose
+func TestMultiSwap(testSetSize uint32) {
 	if !isCircuitExist(testSetSize) {
 		fmt.Println("Circuit haven't been compiled for testSetSize = ", testSetSize, ". Start compiling.")
 		startingTime := time.Now().UTC()

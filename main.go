@@ -26,6 +26,9 @@ func main() {
 	fmt.Println("Test Membership precomputation under different group size")
 	experiments.TestDifferentMembershipForDISingleThread()
 
+	fmt.Println("Test MultiSwap With Different Size")
+	experiments.TestMultiSwapWithDifferentSize()
+
 	//zkmultiswap.TestMultiSwap()
 	// fmt.Println("TestBasicZKrsa")
 	// experiments.TestBasicZKrsa()
@@ -42,16 +45,3 @@ func main() {
 	// fmt.Println("TestNotusSingleThread")
 	// experiments.TestNotusSingleThread(1024, 100)
 }
-
-// experiments.TestBasicZKrsa()
-// experiments.TestDifferentGroupSize()
-// experiments.TestDifferentMembership()
-// experiments.TestDifferentMembershipForDI()
-// experiments.TestDifferentPrecomputationTableSize()
-// experiments.TestFirstLayerPercentage()
-// experiments.TestMembership()
-// experiments.TestProduct()
-// experiments.TestProduct2()
-// experiments.TestProduct3()
-// experiments.TestRange()
-// experiments.TestPoKE()
