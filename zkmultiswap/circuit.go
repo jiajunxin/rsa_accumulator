@@ -87,7 +87,7 @@ func (circuit Circuit) Define(api frontend.API) error {
 	for i := 0; i < 8; i++ {
 		tempHash := poseidon.Poseidon(api, circuit.Randomizer1, i)
 		remainder1 = api.MulModP(remainder1, tempHash, circuit.ChallengeL1)
-		api.Println(tempHash)
+		//api.Println(tempHash)
 		tempHash = poseidon.Poseidon(api, circuit.Randomizer2, i)
 		remainder2 = api.MulModP(remainder2, tempHash, circuit.ChallengeL2)
 	}

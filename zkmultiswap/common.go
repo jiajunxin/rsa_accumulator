@@ -116,8 +116,8 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	removeSet := make([]*big.Int, setsize)
 	insertSet := make([]*big.Int, setsize)
 
+	var poseidonhash *fr.Element // this is the Poseidon part of the DI hash. We use this to build the hash chain. The original DI hash is to long to directly input into Poseidon hash
 	for i := uint32(0); i < setsize; i++ {
-		var poseidonhash *fr.Element // this is the Poseidon part of the DI hash. We use this to build the hash chain. The original DI hash is to long to directly input into Poseidon hash
 		poseidonhash, removeSet[i] = accumulator.PoseidonAndDIHash(accumulator.ElementFromUint32(ret.UserID[i]), accumulator.ElementFromUint32(ret.OriginalBalances[i]),
 			accumulator.ElementFromUint32(ret.OriginalUpdEpoch[i]), accumulator.ElementFromString(ret.OriginalHashes[i].String()))
 		//fmt.Println("poseidonhash i = ", poseidonhash.String())
@@ -131,10 +131,10 @@ func GenTestSet(setsize uint32, setup *accumulator.Setup) *UpdateSet32 {
 	// Randomizers are FIXED!!! for test purpose
 	ret.Randomizer1 = *big.NewInt(200)
 	ret.Randomizer2 = *big.NewInt(300)
+	var tempInt big.Int
 	// because gnark cannot support 2048-bits large integers, we are using the product of 8 255-bits random numbers to replace one large RSA-domain randomizer.
 	for i := 0; i < 8; i++ {
 		tempHash := poseidon.Poseidon(accumulator.ElementFromBigInt(&ret.Randomizer1), accumulator.ElementFromUint32(uint32(i)))
-		var tempInt big.Int
 		tempHash.ToBigIntRegular(&tempInt)
 		prod1.Mul(prod1, &tempInt)
 
