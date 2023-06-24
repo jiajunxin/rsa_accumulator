@@ -248,5 +248,8 @@ func TestMultiSwapAndOutputSmartContract(testSetSize uint32) {
 	if err != nil {
 		panic(err)
 	}
-	vk.ExportSolidity(f)
+	err = vk.ExportSolidity(f)
+	if err != nil {
+		panic(err)
+	}
 }
