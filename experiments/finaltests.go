@@ -734,6 +734,8 @@ func TestNotusParallel(setsize, updatedSetSize uint32) {
 		panic("error in TestMultiSwap, the generated test set is invalid")
 	}
 	//--------------------------------------------finish generating accumulator--------------------------------
+	table = nil
+	runtime.GC()
 	testSet := zkmultiswap.GenTestSet(updatedSetSize, accumulator.TrustedSetup())
 	publicInfo := testSet.PublicPart()
 	proof, err := zkmultiswap.Prove(testSet)

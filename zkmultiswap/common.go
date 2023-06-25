@@ -15,6 +15,7 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/holiman/uint256"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
 )
@@ -333,6 +334,8 @@ func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
 		input[i] = new(big.Int)
 	}
 
+	var tempUint256 uint256.Int
+
 	// proof.Ar, proof.Bs, proof.Krs
 	a[0] = new(big.Int).SetBytes(proofBytes[fpSize*0 : fpSize*1])
 	a[1] = new(big.Int).SetBytes(proofBytes[fpSize*1 : fpSize*2])
@@ -350,16 +353,34 @@ func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
 	input[5] = &publicInfo.RemainderR1
 	input[6] = &publicInfo.RemainderR2
 
-	fmt.Println("a[0] = ", fmt.Sprintf("%x ", a[0]))
-	fmt.Println("a[1] = ", fmt.Sprintf("%x ", a[0]))
-	fmt.Println("b[0][0] = ", fmt.Sprintf("%x ", b[0][0]))
-	fmt.Println("b[0][1] = ", fmt.Sprintf("%x ", b[0][1]))
-	fmt.Println("b[1][0] = ", fmt.Sprintf("%x ", b[1][0]))
-	fmt.Println("b[1][1] = ", fmt.Sprintf("%x ", b[1][1]))
-	fmt.Println("c[0] = ", fmt.Sprintf("%x", c[0]))
-	fmt.Println("c[1] = ", fmt.Sprintf("%x ", c[1]))
+	tempUint256.SetFromBig(a[0])
+	fmt.Println("a[0] = ", tempUint256.String())
+	tempUint256.SetFromBig(a[1])
+	fmt.Println("a[1] = ", tempUint256.String())
+	tempUint256.SetFromBig(b[0][0])
+	fmt.Println("b[0][0] = ", tempUint256.String())
+	tempUint256.SetFromBig(b[0][1])
+	fmt.Println("b[0][1] = ", tempUint256.String())
+	tempUint256.SetFromBig(b[1][0])
+	fmt.Println("b[1][0] = ", tempUint256.String())
+	tempUint256.SetFromBig(b[1][1])
+	fmt.Println("b[1][1] = ", tempUint256.String())
+	tempUint256.SetFromBig(c[0])
+	fmt.Println("c[0] = ", tempUint256.String())
+	tempUint256.SetFromBig(c[1])
+	fmt.Println("c[1] = ", tempUint256.String())
+
+	// fmt.Println("a[0] = ", fmt.Sprintf("%x ", a[0]))
+	// fmt.Println("a[1] = ", fmt.Sprintf("%x ", a[0]))
+	// fmt.Println("b[0][0] = ", fmt.Sprintf("%x ", b[0][0]))
+	// fmt.Println("b[0][1] = ", fmt.Sprintf("%x ", b[0][1]))
+	// fmt.Println("b[1][0] = ", fmt.Sprintf("%x ", b[1][0]))
+	// fmt.Println("b[1][1] = ", fmt.Sprintf("%x ", b[1][1]))
+	// fmt.Println("c[0] = ", fmt.Sprintf("%x", c[0]))
+	// fmt.Println("c[1] = ", fmt.Sprintf("%x ", c[1]))
 	for i := 0; i < 7; i++ {
-		fmt.Println("input[", i, "] = ", fmt.Sprintf("%x", input[i]))
+		tempUint256.SetFromBig(input[i])
+		fmt.Println("input[", i, "] = ", tempUint256.String())
 	}
 	return nil
 }

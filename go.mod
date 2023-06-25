@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/consensys/gnark v0.7.0
 	github.com/consensys/gnark-crypto v0.7.0
-	github.com/iden3/go-iden3-crypto v0.0.13
+	github.com/holiman/uint256 v1.2.2
 	github.com/jiajunxin/multiexp v0.1.2
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa
 	github.com/txaty/go-bigcomplex v0.1.6
