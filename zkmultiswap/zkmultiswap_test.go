@@ -54,7 +54,7 @@ func TestPublicWitness(t *testing.T) {
 func TestZkMultiSwap(t *testing.T) {
 	assert := test.NewAssert(t)
 	var circuit, witness Circuit
-	testSetSize := uint32(50)
+	testSetSize := uint32(512)
 
 	circuit = *InitCircuitWithSize(testSetSize)
 

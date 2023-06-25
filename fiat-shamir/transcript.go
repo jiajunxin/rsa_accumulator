@@ -18,7 +18,7 @@ type ChallengeLength uint32
 
 const (
 	// bit limit, used because of limit in gnark
-	bitLimit = 250
+	bitLimit = 240
 	// Based on the Miller-Robin test, the probability to have a non-prime probability is less than 1/(securityParaHash*4)
 	securityParameter = 30
 	// Default lenght is 256-bit

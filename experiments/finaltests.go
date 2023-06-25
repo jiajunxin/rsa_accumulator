@@ -239,10 +239,10 @@ func TestDifferentMembershipForDI() {
 
 // TestDifferentMembershipForDISingleThread tests the membership pre-computation time under different number of users with single core
 func TestDifferentMembershipForDISingleThread() {
-	TestRSAMembershipPreCompute(1024)   //2^10, 1 core
-	TestRSAMembershipPreCompute(4096)   //2^12, 1 core
-	TestRSAMembershipPreCompute(16384)  //2^14, 1 core
-	TestRSAMembershipPreCompute(65536)  //2^16, 1 core
+	// TestRSAMembershipPreCompute(1024)   //2^10, 1 core
+	// TestRSAMembershipPreCompute(4096)   //2^12, 1 core
+	// TestRSAMembershipPreCompute(16384)  //2^14, 1 core
+	// TestRSAMembershipPreCompute(65536)  //2^16, 1 core
 	TestRSAMembershipPreCompute(262144) //2^18, 1 core
 }
 

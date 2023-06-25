@@ -35,8 +35,8 @@ func main() {
 	// fmt.Println("TestNotusMultiSwap for ", twoTo16, " users and ", uint32(twoTo16/updateRates), " updates.")
 	// experiments.TestNotusMultiSwap(uint32(twoTo16), uint32(twoTo16/updateRates))
 
-	fmt.Println("Test Membership precomputation under different group size")
-	experiments.TestDifferentMembershipForDISingleThread()
+	// fmt.Println("Test Membership precomputation under different group size")
+	// experiments.TestDifferentMembershipForDISingleThread()
 
 	fmt.Println("Test MultiSwap With Different Size")
 	experiments.TestMultiSwapWithDifferentSize()

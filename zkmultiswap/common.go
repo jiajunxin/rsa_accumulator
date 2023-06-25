@@ -350,16 +350,16 @@ func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
 	input[5] = &publicInfo.RemainderR1
 	input[6] = &publicInfo.RemainderR2
 
-	fmt.Println("a[0] = ", a[0].String())
-	fmt.Println("a[1] = ", a[1].String())
-	fmt.Println("b[0][0] = ", b[0][0].String())
-	fmt.Println("b[0][1] = ", b[0][1].String())
-	fmt.Println("b[1][0] = ", b[1][0].String())
-	fmt.Println("b[1][1] = ", b[1][1].String())
-	fmt.Println("c[0] = ", c[0].String())
-	fmt.Println("c[1] = ", c[1].String())
+	fmt.Println("a[0] = ", fmt.Sprintf("%x ", a[0]))
+	fmt.Println("a[1] = ", fmt.Sprintf("%x ", a[0]))
+	fmt.Println("b[0][0] = ", fmt.Sprintf("%x ", b[0][0]))
+	fmt.Println("b[0][1] = ", fmt.Sprintf("%x ", b[0][1]))
+	fmt.Println("b[1][0] = ", fmt.Sprintf("%x ", b[1][0]))
+	fmt.Println("b[1][1] = ", fmt.Sprintf("%x ", b[1][1]))
+	fmt.Println("c[0] = ", fmt.Sprintf("%x", c[0]))
+	fmt.Println("c[1] = ", fmt.Sprintf("%x ", c[1]))
 	for i := 0; i < 7; i++ {
-		fmt.Println("input[", i, "] = ", input[i].String())
+		fmt.Println("input[", i, "] = ", fmt.Sprintf("%x", input[i]))
 	}
 	return nil
 }
