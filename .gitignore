@@ -29,3 +29,5 @@ vendor/
 
 # SNAKR public/verification keys
 *.save
+*.pk
+*.vk
