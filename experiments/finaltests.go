@@ -678,7 +678,7 @@ func TestNotusParallel(setsize, updatedSetSize uint32) {
 
 	// get accumulators
 	setup := *accumulator.TrustedSetup()
-	maxLen := setsize * 2048 / bits.UintSize
+	maxLen := setsize * 1024 / bits.UintSize
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, int(maxLen))
 
 	unchangedSet := accumulator.GenBenchSet(int(setsize - updatedSetSize))
