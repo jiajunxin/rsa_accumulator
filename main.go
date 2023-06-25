@@ -14,10 +14,10 @@ func main() {
 	updateRates := 1024
 
 	//twoTo14 := 16384
-	twoTo15 := 32768
-	twoTo16 := 65536
-	twoTo17 := 131072
-	twoTo18 := 262144
+	// twoTo15 := 32768
+	// twoTo16 := 65536
+	// twoTo17 := 131072
+	// twoTo18 := 262144
 	twoTo19 := 524288
 	twoTo20 := 1048576
 
@@ -39,25 +39,25 @@ func main() {
 	// fmt.Println("Test Membership precomputation under different group size")
 	// experiments.TestDifferentMembershipForDISingleThread()
 
-	fmt.Println("Test MultiSwap With Different Size")
-	experiments.TestMultiSwapWithDifferentSize()
-	runtime.GC()
-	fmt.Println("TestNotusMultiSwap for ", twoTo15, " users and ", uint32(twoTo15/updateRates), " updates in parallel")
-	fmt.Println("Assuming 32 group partations for 2^20 user, each group of 2^15 users uses 32 cores, total 1024 cores")
-	experiments.TestNotusParallel(uint32(twoTo15), uint32(twoTo15/updateRates))
-	runtime.GC()
-	fmt.Println("TestNotusMultiSwap for ", twoTo16, " users and ", uint32(twoTo16/updateRates), " updates in parallel")
-	fmt.Println("Assuming 16 group partations for 2^20 user, each group of 2^16 users uses 32 cores, total 512 cores")
-	experiments.TestNotusParallel(uint32(twoTo16), uint32(twoTo16/updateRates))
-	runtime.GC()
-	fmt.Println("TestNotusMultiSwap for ", twoTo17, " users and ", uint32(twoTo17/updateRates), " updates in parallel")
-	fmt.Println("Assuming 8 group partations for 2^20 user, each group of 2^17 users uses 32 cores, total 256 cores")
-	experiments.TestNotusParallel(uint32(twoTo17), uint32(twoTo17/updateRates))
-	runtime.GC()
-	fmt.Println("TestNotusMultiSwap for ", twoTo18, " users and ", uint32(twoTo18/updateRates), " updates in parallel")
-	fmt.Println("Assuming 4 group partations for 2^20 user, each group of 2^18 users uses 32 cores, total 128 cores")
-	experiments.TestNotusParallel(uint32(twoTo18), uint32(twoTo18/updateRates))
-	runtime.GC()
+	// fmt.Println("Test MultiSwap With Different Size")
+	// experiments.TestMultiSwapWithDifferentSize()
+	// runtime.GC()
+	// fmt.Println("TestNotusMultiSwap for ", twoTo15, " users and ", uint32(twoTo15/updateRates), " updates in parallel")
+	// fmt.Println("Assuming 32 group partations for 2^20 user, each group of 2^15 users uses 32 cores, total 1024 cores")
+	// experiments.TestNotusParallel(uint32(twoTo15), uint32(twoTo15/updateRates))
+	// runtime.GC()
+	// fmt.Println("TestNotusMultiSwap for ", twoTo16, " users and ", uint32(twoTo16/updateRates), " updates in parallel")
+	// fmt.Println("Assuming 16 group partations for 2^20 user, each group of 2^16 users uses 32 cores, total 512 cores")
+	// experiments.TestNotusParallel(uint32(twoTo16), uint32(twoTo16/updateRates))
+	// runtime.GC()
+	// fmt.Println("TestNotusMultiSwap for ", twoTo17, " users and ", uint32(twoTo17/updateRates), " updates in parallel")
+	// fmt.Println("Assuming 8 group partations for 2^20 user, each group of 2^17 users uses 32 cores, total 256 cores")
+	// experiments.TestNotusParallel(uint32(twoTo17), uint32(twoTo17/updateRates))
+	// runtime.GC()
+	// fmt.Println("TestNotusMultiSwap for ", twoTo18, " users and ", uint32(twoTo18/updateRates), " updates in parallel")
+	// fmt.Println("Assuming 4 group partations for 2^20 user, each group of 2^18 users uses 32 cores, total 128 cores")
+	// experiments.TestNotusParallel(uint32(twoTo18), uint32(twoTo18/updateRates))
+	// runtime.GC()
 	fmt.Println("TestNotusMultiSwap for ", twoTo19, " users and ", uint32(twoTo19/updateRates), " updates in parallel")
 	fmt.Println("Assuming 2 group partations for 2^20 user, each group of 2^19 users uses 32 cores, total 64 cores")
 	experiments.TestNotusParallel(uint32(twoTo19), uint32(twoTo19/updateRates))
