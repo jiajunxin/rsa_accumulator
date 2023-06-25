@@ -11,7 +11,7 @@ func main() {
 	// updateRates denotes the percentage of updates in the total users, i.e. number of updates = users/updateRates
 	updateRates := 1024
 
-	twoTo14 := 16384
+	//twoTo14 := 16384
 	twoTo15 := 32768
 	twoTo16 := 65536
 	twoTo17 := 131072
@@ -23,15 +23,15 @@ func main() {
 	//zkmultiswap.TestMultiSwapAndOutputSmartContract(1024)
 
 	// test Membership proof Verification and proof size
-	experiments.TestMembershipVerify()
+	// experiments.TestMembershipVerify()
 
-	// the following code is to test the time percentage for each part of the system in a single core.
-	fmt.Println("TestNotusMultiSwap for ", twoTo14, " users and ", uint32(twoTo14/updateRates), " updates.")
-	experiments.TestNotusMultiSwap(uint32(twoTo14), uint32(twoTo14/updateRates))
-	fmt.Println("TestNotusMultiSwap for ", twoTo15, " users and ", uint32(twoTo15/updateRates), " updates.")
-	experiments.TestNotusMultiSwap(uint32(twoTo15), uint32(twoTo15/updateRates))
-	fmt.Println("TestNotusMultiSwap for ", twoTo16, " users and ", uint32(twoTo16/updateRates), " updates.")
-	experiments.TestNotusMultiSwap(uint32(twoTo16), uint32(twoTo16/updateRates))
+	// // the following code is to test the time percentage for each part of the system in a single core.
+	// fmt.Println("TestNotusMultiSwap for ", twoTo14, " users and ", uint32(twoTo14/updateRates), " updates.")
+	// experiments.TestNotusMultiSwap(uint32(twoTo14), uint32(twoTo14/updateRates))
+	// fmt.Println("TestNotusMultiSwap for ", twoTo15, " users and ", uint32(twoTo15/updateRates), " updates.")
+	// experiments.TestNotusMultiSwap(uint32(twoTo15), uint32(twoTo15/updateRates))
+	// fmt.Println("TestNotusMultiSwap for ", twoTo16, " users and ", uint32(twoTo16/updateRates), " updates.")
+	// experiments.TestNotusMultiSwap(uint32(twoTo16), uint32(twoTo16/updateRates))
 
 	fmt.Println("Test Membership precomputation under different group size")
 	experiments.TestDifferentMembershipForDISingleThread()

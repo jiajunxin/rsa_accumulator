@@ -253,3 +253,46 @@ func TestMultiSwapAndOutputSmartContract(testSetSize uint32) {
 		panic(err)
 	}
 }
+
+// func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
+// 	var circuit Circuit
+// 	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	pk, vk, err := groth16.Setup(r1cs)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	{
+// 		f, err := os.Create("cubic.g16.vk")
+// 		if err != nil {
+// 			return err
+// 		}
+// 		_, err = vk.WriteRawTo(f)
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+// 	{
+// 		f, err := os.Create("cubic.g16.pk")
+// 		if err != nil {
+// 			return err
+// 		}
+// 		_, err = pk.WriteRawTo(f)
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+// 	{
+// 		f, err := os.Create("contract_g16.sol")
+// 		if err != nil {
+// 			return err
+// 		}
+// 		err = vk.ExportSolidity(f)
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
