@@ -21,6 +21,8 @@ func main() {
 
 	// outputs a Solidity smart
 	//zkmultiswap.TestMultiSwapAndOutputSmartContract(1024)
+	// zkmultiswap.TestMultiSwapAndOutputSmartContract2(10)
+	// return
 
 	// test Membership proof Verification and proof size
 	// experiments.TestMembershipVerify()

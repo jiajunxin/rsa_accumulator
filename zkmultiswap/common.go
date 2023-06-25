@@ -1,6 +1,7 @@
 package zkmultiswap
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 	"os"
@@ -8,8 +9,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
+	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	fiatshamir "github.com/jiajunxin/rsa_accumulator/fiat-shamir"
 )
@@ -254,45 +259,107 @@ func TestMultiSwapAndOutputSmartContract(testSetSize uint32) {
 	}
 }
 
-// func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
-// 	var circuit Circuit
-// 	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	pk, vk, err := groth16.Setup(r1cs)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	{
-// 		f, err := os.Create("cubic.g16.vk")
-// 		if err != nil {
-// 			return err
-// 		}
-// 		_, err = vk.WriteRawTo(f)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	{
-// 		f, err := os.Create("cubic.g16.pk")
-// 		if err != nil {
-// 			return err
-// 		}
-// 		_, err = pk.WriteRawTo(f)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	{
-// 		f, err := os.Create("contract_g16.sol")
-// 		if err != nil {
-// 			return err
-// 		}
-// 		err = vk.ExportSolidity(f)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
+	var circuit Circuit
+	circuit = *InitCircuitWithSize(testSetSize)
+	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
+	if err != nil {
+		return err
+	}
+	SetupZkMultiswap(testSetSize)
+	pk, vk, err := groth16.Setup(r1cs)
+	if err != nil {
+		return err
+	}
+	{
+		f, err := os.Create("Notus.g16.vk")
+		if err != nil {
+			return err
+		}
+		_, err = vk.WriteRawTo(f)
+		if err != nil {
+			return err
+		}
+	}
+	{
+		f, err := os.Create("Notus.g16.pk")
+		if err != nil {
+			return err
+		}
+		_, err = pk.WriteRawTo(f)
+		if err != nil {
+			return err
+		}
+	}
+	{
+		f, err := os.Create("Notuscontract_g16.sol")
+		if err != nil {
+			return err
+		}
+		err = vk.ExportSolidity(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	testSet := GenTestSet(testSetSize, accumulator.TrustedSetup())
+	publicInfo := testSet.PublicPart()
+	proof, err := Prove(testSet)
+	if err != nil {
+		fmt.Println("Error during Prove, error = ", err.Error())
+		panic(err)
+	}
+
+	flag := Verify(proof, testSetSize, publicInfo)
+	if !flag {
+		fmt.Println("Verification failed")
+		return nil
+	}
+	fmt.Println("Verification passed")
+
+	// get proof bytes
+	const fpSize = 4 * 8
+	var buf bytes.Buffer
+	(*proof).WriteRawTo(&buf)
+	proofBytes := buf.Bytes()
+	// solidity contract inputs
+	var (
+		a     [2]*big.Int
+		b     [2][2]*big.Int
+		c     [2]*big.Int
+		input [7]*big.Int
+	)
+	for i := 0; i < 7; i++ {
+		input[i] = new(big.Int)
+	}
+
+	// proof.Ar, proof.Bs, proof.Krs
+	a[0] = new(big.Int).SetBytes(proofBytes[fpSize*0 : fpSize*1])
+	a[1] = new(big.Int).SetBytes(proofBytes[fpSize*1 : fpSize*2])
+	b[0][0] = new(big.Int).SetBytes(proofBytes[fpSize*2 : fpSize*3])
+	b[0][1] = new(big.Int).SetBytes(proofBytes[fpSize*3 : fpSize*4])
+	b[1][0] = new(big.Int).SetBytes(proofBytes[fpSize*4 : fpSize*5])
+	b[1][1] = new(big.Int).SetBytes(proofBytes[fpSize*5 : fpSize*6])
+	c[0] = new(big.Int).SetBytes(proofBytes[fpSize*6 : fpSize*7])
+	c[1] = new(big.Int).SetBytes(proofBytes[fpSize*7 : fpSize*8])
+	input[0] = &publicInfo.ChallengeL1
+	input[1] = &publicInfo.ChallengeL2
+	input[2].SetInt64(int64(publicInfo.CurrentEpochNum))
+	input[3] = &publicInfo.DeltaModL1
+	input[4] = &publicInfo.DeltaModL2
+	input[5] = &publicInfo.RemainderR1
+	input[6] = &publicInfo.RemainderR2
+
+	fmt.Println("a[0] = ", a[0].String())
+	fmt.Println("a[1] = ", a[1].String())
+	fmt.Println("b[0][0] = ", b[0][0].String())
+	fmt.Println("b[0][1] = ", b[0][1].String())
+	fmt.Println("b[1][0] = ", b[1][0].String())
+	fmt.Println("b[1][1] = ", b[1][1].String())
+	fmt.Println("c[0] = ", c[0].String())
+	fmt.Println("c[1] = ", c[1].String())
+	for i := 0; i < 7; i++ {
+		fmt.Println("input[", i, "] = ", input[i].String())
+	}
+	return nil
+}
