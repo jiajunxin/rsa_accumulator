@@ -25,8 +25,8 @@ func InitCircuitWithSize(size uint32) *Circuit {
 	circuit.TestInputs = make([]frontend.Variable, size)
 	circuit.TestOutputs = make([]frontend.Variable, size)
 	for i := uint32(0); i < size; i++ {
-		circuit.TestInputs[i] = 0
-		circuit.TestOutputs[i] = 0
+		circuit.TestInputs[i] = 1
+		circuit.TestOutputs[i] = 1
 	}
 	return &circuit
 }
