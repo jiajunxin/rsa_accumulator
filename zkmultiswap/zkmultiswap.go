@@ -62,7 +62,6 @@ func Prove(input *UpdateSet32) (*groth16.Proof, error) {
 		fmt.Println("error while ReadSegmentProveKey")
 		return nil, err
 	}
-	runtime.GC()
 	r1cs, err := groth16.LoadR1CSFromFile(fileName)
 	if err != nil {
 		fmt.Println("error while LoadR1CSFromFile")
@@ -77,7 +76,7 @@ func Prove(input *UpdateSet32) (*groth16.Proof, error) {
 		fmt.Println("error while AssignCircuit")
 		return nil, err
 	}
-
+	runtime.GC()
 	startingTime = time.Now().UTC()
 	proof, err := groth16.ProveRoll(r1cs, pk[0], pk[1], witness, fileName, backend.IgnoreSolverError()) // backend.IgnoreSolverError() can be used for testing
 	if err != nil {
