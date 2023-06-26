@@ -23,7 +23,10 @@ func main() {
 
 	// outputs a Solidity smart
 	zkmultiswap.TestMultiSwapAndOutputSmartContract(1024)
-	zkmultiswap.TestMultiSwapAndOutputSmartContract2(10)
+	err := zkmultiswap.TestMultiSwapAndOutputSmartContract2(10)
+	if err != nil {
+		panic(err)
+	}
 
 	// // test Membership proof Verification and proof size
 	experiments.TestMembershipVerify()
@@ -65,5 +68,4 @@ func main() {
 
 	// simulate the cost of a Merkle Swap with depth 28 for the following number of users
 	merkleswap.TestMerkleMultiSwap(1024)
-	return
 }

@@ -260,9 +260,9 @@ func TestMultiSwapAndOutputSmartContract(testSetSize uint32) {
 	}
 }
 
+// TestMultiSwapAndOutputSmartContract2 outputs a Solidity smart contract and test proofs
 func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
-	var circuit Circuit
-	circuit = *InitCircuitWithSize(testSetSize)
+	circuit := *InitCircuitWithSize(testSetSize)
 	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
 	if err != nil {
 		return err
@@ -321,7 +321,11 @@ func TestMultiSwapAndOutputSmartContract2(testSetSize uint32) error {
 	// get proof bytes
 	const fpSize = 4 * 8
 	var buf bytes.Buffer
-	(*proof).WriteRawTo(&buf)
+	_, err = (*proof).WriteRawTo(&buf)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
 	proofBytes := buf.Bytes()
 	// solidity contract inputs
 	var (

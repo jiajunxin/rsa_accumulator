@@ -16,6 +16,7 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 
+// KeyPathPrefix denotes the file name for Merkle MultiSwap circuits
 const KeyPathPrefix = "merkleswap"
 
 // InitCircuitWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
