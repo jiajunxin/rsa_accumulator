@@ -11,6 +11,7 @@ import (
 
 func main() {
 
+	//zkmultiswap.TestMultiSwap(10)
 	// updateRates denotes the percentage of updates in the total users, i.e. number of updates = users/updateRates
 	updateRates := 64
 
@@ -22,7 +23,7 @@ func main() {
 	twoTo19 := 524288
 
 	// outputs a Solidity smart
-	zkmultiswap.TestMultiSwapAndOutputSmartContract(1024)
+	zkmultiswap.TestMultiSwapAndOutputSmartContract(10)
 	err := zkmultiswap.TestMultiSwapAndOutputSmartContract2(10)
 	if err != nil {
 		panic(err)
