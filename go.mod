@@ -10,6 +10,10 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa
 	github.com/txaty/go-bigcomplex v0.1.6
 	lukechampine.com/frand v1.4.2
+	github.com/ethereum/go-ethereum v1.12.0
+	github.com/kilic/bls12-381 v0.1.0
+	github.com/leanovate/gopter v0.2.9
+	github.com/stretchr/testify v1.8.2
 )
 
 require (
