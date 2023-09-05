@@ -8,7 +8,8 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
-	"github.com/jiajunxin/rsa_accumulator/accumulator/zkmultiswap"
+
+	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
 )
 
 func main() {

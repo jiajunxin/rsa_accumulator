@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
+
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 )
 

@@ -13,10 +13,11 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon"
 	"github.com/jiajunxin/multiexp"
+	"github.com/remyoudompheng/bigfft"
+
 	"github.com/jiajunxin/rsa_accumulator/accumulator"
 	"github.com/jiajunxin/rsa_accumulator/proof"
 	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
-	"github.com/remyoudompheng/bigfft"
 )
 
 // TestMembershipVerify test the time to verify a membership proof
