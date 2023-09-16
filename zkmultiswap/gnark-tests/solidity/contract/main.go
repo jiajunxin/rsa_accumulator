@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -12,6 +13,9 @@ import (
 	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
 )
 
+const KeyPathPrefix = "zkmultiswap"
+const testSetSize = 5
+
 func main() {
 	err := generateGroth16()
 	if err != nil {
@@ -20,46 +24,39 @@ func main() {
 }
 
 func generateGroth16() error {
-	var circuit zkmultiswap.Circuit
+	//var circuit zkmultiswap.Circuit
+	circuit := zkmultiswap.InitCircuitWithSize(testSetSize)
 
-	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit)
 	if err != nil {
 		return err
 	}
 
-	pk, vk, err := groth16.Setup(r1cs)
+	err = groth16.SetupLazyWithDump(r1cs, KeyPathPrefix)
 	if err != nil {
 		return err
 	}
-	{
-		f, err := os.Create("Notus.g16.vk")
-		if err != nil {
-			return err
-		}
-		_, err = vk.WriteRawTo(f)
-		if err != nil {
-			return err
-		}
+	verifyingKey := groth16.NewVerifyingKey(ecc.BN254)
+	f, _ := os.Open(KeyPathPrefix + ".vk.save")
+	_, err = verifyingKey.ReadFrom(f)
+	if err != nil {
+		fmt.Println("read file error")
 	}
-	{
-		f, err := os.Create("Notus.g16.pk")
-		if err != nil {
-			return err
-		}
-		_, err = pk.WriteRawTo(f)
-		if err != nil {
-			return err
-		}
+	err = f.Close()
+	if err != nil {
+		fmt.Println("close file error")
 	}
+	// _, vk, err := groth16.Setup(r1cs)
 	{
 		f, err := os.Create("Notuscontract_g16.sol")
 		if err != nil {
 			return err
 		}
-		err = vk.ExportSolidity(f)
+		err = verifyingKey.ExportSolidity(f)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

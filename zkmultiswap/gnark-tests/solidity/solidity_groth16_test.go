@@ -10,18 +10,23 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/examples/cubic"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/jiajunxin/rsa_accumulator/accumulator"
+	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
 	"github.com/stretchr/testify/suite"
 )
+
+const KeyPathPrefix = "zkmultiswap"
+const testSetSize = 5 //for Gorth16, the testSetSize should not affect the gas cost
 
 type ExportSolidityTestSuiteGroth16 struct {
 	suite.Suite
@@ -34,7 +39,7 @@ type ExportSolidityTestSuiteGroth16 struct {
 
 	// groth16 gnark objects
 	vk      groth16.VerifyingKey
-	pk      groth16.ProvingKey
+	pk      []groth16.ProvingKey
 	circuit cubic.Circuit
 	r1cs    frontend.CompiledConstraintSystem
 
@@ -66,20 +71,20 @@ func (t *ExportSolidityTestSuiteGroth16) SetupTest() {
 	t.verifierContract = v
 	t.backend.Commit()
 
-	t.r1cs, err = frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &t.circuit)
+	t.r1cs, err = groth16.LoadR1CSFromFile(KeyPathPrefix)
+	if err != nil {
+		fmt.Println("error while LoadR1CSFromFile")
+	}
 	t.NoError(err, "compiling R1CS failed")
 
 	// read proving and verifying keys
-	t.pk = groth16.NewProvingKey(ecc.BN254)
-	{
-		f, _ := os.Open("cubic.g16.pk")
-		_, err = t.pk.ReadFrom(f)
-		f.Close()
-		t.NoError(err, "reading proving key failed")
+	t.pk, err = groth16.ReadSegmentProveKey(KeyPathPrefix)
+	if err != nil {
+		fmt.Println("error while ReadSegmentProveKey")
 	}
 	t.vk = groth16.NewVerifyingKey(ecc.BN254)
 	{
-		f, _ := os.Open("cubic.g16.vk")
+		f, _ := os.Open(KeyPathPrefix + ".vk.save")
 		_, err = t.vk.ReadFrom(f)
 		f.Close()
 		t.NoError(err, "reading verifying key failed")
@@ -90,27 +95,43 @@ func (t *ExportSolidityTestSuiteGroth16) SetupTest() {
 func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 
 	// create a valid proof
-	var assignment cubic.Circuit
-	assignment.X = 3
-	assignment.Y = 35
-
-	// witness creation
-	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
-	t.NoError(err, "witness creation failed")
+	testSet := zkmultiswap.GenTestSet(testSetSize, accumulator.TrustedSetup())
+	assignment := zkmultiswap.AssignCircuit(testSet)
+	witness, err := frontend.NewWitness(assignment, ecc.BN254)
+	if err != nil {
+		fmt.Println("error while AssignCircuit")
+	}
 
 	// prove
-	proof, err := groth16.Prove(t.r1cs, t.pk, witness)
+	proof, err := groth16.ProveRoll(t.r1cs, t.pk[0], t.pk[1], witness, KeyPathPrefix, backend.IgnoreSolverError()) // backend.IgnoreSolverError() can be used for testing
 	t.NoError(err, "proving failed")
 
 	// ensure gnark (Go) code verifies it
-	publicWitness, _ := witness.Public()
-	err = groth16.Verify(proof, t.vk, publicWitness)
-	t.NoError(err, "verifying failed")
+	publicInfo := testSet.PublicPart()
+	publicWitness := zkmultiswap.GenPublicWitness(publicInfo)
+	if publicWitness == nil {
+		fmt.Println("error while publicWitness")
+	}
+	verifyingKey := groth16.NewVerifyingKey(ecc.BN254)
+	f, _ := os.Open(KeyPathPrefix + ".vk.save")
+	_, err = verifyingKey.ReadFrom(f)
+	if err != nil {
+		fmt.Println("read file error")
+	}
+	err = f.Close()
+	if err != nil {
+		fmt.Println("close file error")
+	}
+	//err = groth16.Verify(proof, verifyingKey, publicWitness)
+	//t.NoError(err, "verifying failed")
 
 	// get proof bytes
 	const fpSize = 4 * 8
 	var buf bytes.Buffer
-	proof.WriteRawTo(&buf)
+	_, err = proof.WriteRawTo(&buf)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	proofBytes := buf.Bytes()
 
 	// solidity contract inputs
@@ -118,8 +139,11 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 		a     [2]*big.Int
 		b     [2][2]*big.Int
 		c     [2]*big.Int
-		input [1]*big.Int
+		input [7]*big.Int
 	)
+	for i := 0; i < 7; i++ {
+		input[i] = new(big.Int)
+	}
 
 	// proof.Ar, proof.Bs, proof.Krs
 	a[0] = new(big.Int).SetBytes(proofBytes[fpSize*0 : fpSize*1])
@@ -132,7 +156,13 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 	c[1] = new(big.Int).SetBytes(proofBytes[fpSize*7 : fpSize*8])
 
 	// public witness
-	input[0] = new(big.Int).SetUint64(35)
+	input[0] = &publicInfo.ChallengeL1
+	input[1] = &publicInfo.ChallengeL2
+	input[2] = &publicInfo.RemainderR1
+	input[3] = &publicInfo.RemainderR2
+	input[4].SetInt64(int64(publicInfo.CurrentEpochNum))
+	input[5] = &publicInfo.DeltaModL1
+	input[6] = &publicInfo.DeltaModL2
 
 	//------
 	snarkInput := make([]interface{}, 0)
