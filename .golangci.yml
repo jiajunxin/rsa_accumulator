@@ -1,6 +1,8 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
+  skip-dirs:
+    - zkmultiswap/gnark-tests
 
 linters:
   enable:
