@@ -28,7 +28,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	return
 
 	// // test Membership proof Verification and proof size
 	experiments.TestMembershipVerify()
