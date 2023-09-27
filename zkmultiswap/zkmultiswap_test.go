@@ -2,6 +2,7 @@ package zkmultiswap
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -104,4 +105,20 @@ func TestZkMultiSwapFailCases(t *testing.T) {
 	witness = *AssignCircuit(testSet)
 	witness.RemainderR2 = testSet.ChallengeL2
 	assert.SolvingFailed(&circuit, &witness, test.WithCurves(ecc.BN254))
+}
+
+func TestExponentiateGroth16(t *testing.T) {
+	assert := test.NewAssert(t)
+	var expCircuit CircuitExp
+	Randomizer1 := *big.NewInt(20000)
+	setup := accumulator.TrustedSetup()
+	var acc, wrongAcc big.Int
+	acc.Exp(setup.G, &Randomizer1, setup.N)
+	wrongAcc.Add(&acc, big.NewInt(1))
+	fmt.Println("x = ", setup.G.String())
+	fmt.Println("y = ", acc.String())
+	fmt.Println("N = ", setup.N.String())
+
+	assert.SolvingFailed(&expCircuit, &CircuitExp{X: *setup.G, E: Randomizer1, Y: wrongAcc, N: setup.N}, test.WithCurves(ecc.BN254))
+	assert.SolvingSucceeded(&expCircuit, &CircuitExp{X: *setup.G, E: Randomizer1, Y: acc, N: setup.N}, test.WithCurves(ecc.BN254))
 }

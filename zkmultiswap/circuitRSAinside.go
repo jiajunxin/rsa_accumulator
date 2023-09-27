@@ -3,12 +3,51 @@ package zkmultiswap
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/hash/poseidon"
+	"github.com/consensys/gnark/std/math/bits"
 )
 
-// Circuit is the Zk-MultiSwap circuit for gnark.
+// CircuitExp y == x**e mod N
+// only the bitSize least significant bits of e are used
+type CircuitExp struct {
+	// tagging a variable is optional
+	// default uses variable name and secret visibility.
+	X frontend.Variable `gnark:",public"`
+	Y frontend.Variable `gnark:",public"`
+	N frontend.Variable `gnark:",public"`
+
+	E frontend.Variable
+}
+
+// Define declares the circuit's constraints
+// y == x**e
+func (circuit *CircuitExp) Define(api frontend.API) error {
+
+	// number of bits of exponent
+	const bitSize = 255
+
+	// specify constraints
+	output := frontend.Variable(1)
+	binary := bits.ToBinary(api, circuit.E, bits.WithNbDigits(bitSize))
+
+	for i := 0; i < len(binary); i++ {
+		if i != 0 {
+			output = api.MulModP(output, output, circuit.N)
+		}
+		multiply := api.MulModP(output, circuit.X, circuit.N)
+		output = api.Select(binary[len(binary)-1-i], multiply, output)
+	}
+
+	api.AssertIsEqual(circuit.Y, output)
+
+	return nil
+}
+
+// CircuitRSAInside is the Zk-MultiSwap circuit for gnark.
 // gnark is a zk-SNARK library written in Go. Circuits are regular structs.
 // The inputs must be of type frontend.Variable and make up the witness.
-type Circuit struct {
+// The difference between CircuitRSAInside and Circuit is that:
+// CircuitRSAInside checks two PoKE protocol inside SNARK
+type CircuitRSAInside struct {
 	// struct tag on a variable is optional
 	// default uses variable name and secret visibility.
 	ChallengeL1     frontend.Variable `gnark:",public"` // a prime challenge number L1
@@ -21,6 +60,10 @@ type Circuit struct {
 	// This because Delta + Hash(x) mod L = (Delta mod L + Hash(x) mod L) mod L
 	DeltaModL1 frontend.Variable `gnark:",public"` // 2^1024 mod L1
 	DeltaModL2 frontend.Variable `gnark:",public"` // 2^1024 mod L2
+	Acc0       frontend.Variable `gnark:",public"` // the accumulator before update
+	AccMid     frontend.Variable `gnark:",public"` // the intermediate accumulator
+	Acc1       frontend.Variable `gnark:",public"` // the accumulator after update
+	N          frontend.Variable `gnark:",public"` // the RSA modulus for the hidden order group
 	//------------------------------private witness below--------------------------------------
 	Randomizer1      frontend.Variable   // Used to randomize the removed set
 	Randomizer2      frontend.Variable   // Used to randomize the inserted set
@@ -31,10 +74,12 @@ type Circuit struct {
 	OriginalHashes   []frontend.Variable // list of user hasher before update
 	OriginalUpdEpoch []frontend.Variable // list of user updated epoch number before update
 	UpdatedBalances  []frontend.Variable // list of user balances after update
+	Q1               frontend.Variable   // PoKE proof for AccMid to Acc0, Q1^(ChallengeL1)AccMid^(RemainderR1)=Acc0
+	Q2               frontend.Variable   // PoKE proof for AccMid to Acc1, Q2^(ChallengeL2)AccMid^(RemainderR2)=Acc1
 }
 
 // Define declares the circuit constraints
-func (circuit Circuit) Define(api frontend.API) error {
+func (circuit CircuitRSAInside) Define(api frontend.API) error {
 	api.ToBinary(circuit.Randomizer1, BitLength)
 	api.ToBinary(circuit.Randomizer2, BitLength)
 	api.AssertIsLess(circuit.DeltaModL1, circuit.ChallengeL1)
@@ -47,11 +92,35 @@ func (circuit Circuit) Define(api frontend.API) error {
 	//check input are in the correct range
 	api.AssertIsLess(circuit.RemainderR1, circuit.ChallengeL1)
 	api.AssertIsLess(circuit.RemainderR2, circuit.ChallengeL2)
-	// ToBinary not only returns the binary, but additionaly checks if the binary representation is same as the input,
+	// ToBinary not only returns the binary, but additionally checks if the binary representation is same as the input,
 	// which means the input can be represented with the bit-length
 	api.ToBinary(circuit.CurrentEpochNum, BitLength)
 	api.ToBinary(circuit.OriginalSum, BitLength)
 	api.ToBinary(circuit.UpdatedSum, BitLength)
+
+	// checking PoKE proof for AccMid to Acc0, Q1^(ChallengeL1)AccMid^(RemainderR1)=Acc0
+	// and PoKE proof for AccMid to Acc1, Q2^(ChallengeL2)AccMid^(RemainderR2)=Acc1
+	api.AssertIsLess(circuit.Q1, circuit.N)
+	api.AssertIsLess(circuit.Q2, circuit.N)
+	api.AssertIsLess(circuit.Acc0, circuit.N)
+	api.AssertIsLess(circuit.AccMid, circuit.N)
+	api.AssertIsLess(circuit.Acc1, circuit.N)
+
+	const challengeBitLen = 255
+
+	Q1L1 := frontend.Variable(1)
+	L1Binary := bits.ToBinary(api, circuit.ChallengeL1, bits.WithNbDigits(challengeBitLen))
+
+	for i := 0; i < len(L1Binary); i++ {
+		if i != 0 {
+			Q1L1 = api.MulModP(Q1L1, Q1L1, circuit.N)
+		}
+		multiplier := api.MulModP(Q1L1, circuit.Q1, circuit.N)
+		Q1L1 = api.Select(L1Binary[len(L1Binary)-1-i], multiplier, Q1L1)
+	}
+	api.AssertIsEqual(Q1L1, circuit.Acc0)
+
+	// end of checking the PoKE proof
 
 	// check we do not have repeating IDs and IDs in correct range
 	for i := 0; i < len(circuit.UserID)-1; i++ {
@@ -98,8 +167,8 @@ func (circuit Circuit) Define(api frontend.API) error {
 	return nil
 }
 
-// InitCircuitWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
-func InitCircuitWithSize(size uint32) *Circuit {
+// InitCircuitRSAWithSize init a circuit with challenges, OriginalHashes and CurrentEpochNum value 1, all other values 0. Use for test purpose only.
+func InitCircuitRSAWithSize(size uint32) *Circuit {
 	var circuit Circuit
 	circuit.ChallengeL1 = 1
 	circuit.ChallengeL2 = 1
@@ -128,8 +197,8 @@ func InitCircuitWithSize(size uint32) *Circuit {
 	return &circuit
 }
 
-// AssignCircuit assign a circuit with UpdateSet32 values.
-func AssignCircuit(input *UpdateSet32) *Circuit {
+// AssignCircuitRSA assign a circuit with UpdateSet32 values.
+func AssignCircuitRSA(input *UpdateSet32) *Circuit {
 	if !input.IsValid() {
 		panic("error in InitCircuit, the input set is invalid")
 	}
@@ -162,8 +231,8 @@ func AssignCircuit(input *UpdateSet32) *Circuit {
 	return &circuit
 }
 
-// AssignCircuitHelper assign a circuit with PublicInfo values.
-func AssignCircuitHelper(input *PublicInfo) *Circuit {
+// AssignCircuitRSAHelper assign a circuit with PublicInfo values.
+func AssignCircuitRSAHelper(input *PublicInfo) *Circuit {
 	circuit := InitCircuitWithSize(1)
 	circuit.ChallengeL1 = input.ChallengeL1
 	circuit.ChallengeL2 = input.ChallengeL2
