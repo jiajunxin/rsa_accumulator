@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/jiajunxin/rsa_accumulator/experiments"
 )
 
@@ -25,10 +23,10 @@ func main() {
 	// return
 	// zkmultiswap.TestMultiSwap(10)
 	// updateRates denotes the percentage of updates in the total users, i.e. number of updates = users/updateRates
-	updateRates := 64
+	// updateRates := 64
 
 	// twoTo14 := 16384
-	twoTo15 := 32768
+	// twoTo15 := 32768
 	// twoTo16 := 65536
 	// twoTo17 := 131072
 	// twoTo18 := 262144
@@ -59,8 +57,10 @@ func main() {
 	// experiments.TestMultiSwapWithDifferentSize()
 	// runtime.GC()
 	// fmt.Println("TestNotusMultiSwap for ", twoTo15, " users and ", uint32(twoTo15/updateRates), " updates in parallel")
-	fmt.Println("Assuming 32 group partations for 2^20 user, each group of 2^15 users uses 32 cores, total 1024 cores")
-	experiments.TestNotusParallel(uint32(twoTo15), uint32(twoTo15/updateRates))
+	// fmt.Println("Assuming 32 group partations for 2^20 user, each group of 2^15 users uses 32 cores, total 1024 cores")
+	// experiments.TestNotusParallel(uint32(twoTo15), uint32(twoTo15/updateRates))
+	experiments.TestRSAMembershipPreComputeDIParallel(32768, 5) //2^15, 32 cores
+	experiments.TestRSAMembershipPreComputeDIParallel(65536, 5) //2^16, 32 cores
 	// runtime.GC()
 	// fmt.Println("TestNotusMultiSwap for ", twoTo16, " users and ", uint32(twoTo16/updateRates), " updates in parallel")
 	// fmt.Println("Assuming 16 group partations for 2^20 user, each group of 2^16 users uses 32 cores, total 512 cores")
