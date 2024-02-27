@@ -20,7 +20,7 @@ func genRepWithDIHashFromPoseidon(set []string) []*big.Int {
 		ret[i] = new(big.Int)
 		temp := poseidon.Poseidon(ElementFromString(set[i]))
 		temp.ToBigIntRegular(ret[i])
-		ret[i].Add(ret[i], Min1024)
+		ret[i].Add(ret[i], Min2048)
 	}
 	return ret
 }

@@ -145,26 +145,31 @@ func TestDifferentMembership() {
 // TestPoKE tests PoKE's running time.
 func TestPoKE() {
 	setup := *accumulator.TrustedSetup()
-	set := accumulator.GenBenchSet(10)
-	rep := accumulator.GenRepresentatives(set, accumulator.HashToPrimeFromSha256)
-	exp := accumulator.SetProductRecursiveFast(rep)
-	accNew := accumulator.AccumulateNew(setup.G, exp, setup.N)
-	l := accumulator.HashToPrime(append([]byte(setup.G.String()), []byte(accNew.String())...))
-	remainder := big.NewInt(1)
-	quotient := big.NewInt(1)
-	quotient.DivMod(exp, l, remainder)
-	Q := accumulator.AccumulateNew(setup.G, quotient, setup.N)
+	repeatNum := 2
+	fmt.Println("g = ", setup.G.String())
+	fmt.Println("N = ", setup.N.String())
 
 	startingTime := time.Now().UTC()
-	repeatNum := 100
 	for i := 0; i < repeatNum; i++ {
+		set := accumulator.GenBenchSet(10 + i)
+		rep := accumulator.GenRepresentatives(set, accumulator.HashToPrimeFromSha256)
+		exp := accumulator.SetProductRecursiveFast(rep)
+		accNew := accumulator.AccumulateNew(setup.G, exp, setup.N)
 		l := accumulator.HashToPrime(append([]byte(setup.G.String()), []byte(accNew.String())...))
+		remainder := big.NewInt(1)
+		quotient := big.NewInt(1)
+		quotient.DivMod(exp, l, remainder)
+		Q := accumulator.AccumulateNew(setup.G, quotient, setup.N)
 		AccTest1 := accumulator.AccumulateNew(Q, l, setup.N)
-		//	fmt.Println("Q^l = ", AccTest1.String())
+		fmt.Println("Q = ", Q.String())
+		fmt.Println("l = ", l.String())
+		fmt.Println("Q^l mod N = ", AccTest1.String())
 		AccTest2 := accumulator.AccumulateNew(setup.G, remainder, setup.N)
-		//	fmt.Println("g^r = ", AccTest2.String())
+		fmt.Println("r = ", remainder.String())
+		fmt.Println("g^r mod N = ", AccTest2.String())
 		AccTest3 := AccTest1.Mul(AccTest1, AccTest2)
 		AccTest3.Mod(AccTest3, setup.N)
+		fmt.Println("Q^l g^r mod N = ", AccTest3.String())
 	}
 	duration := time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Running PoKE for 100 rounds Takes [%.3f] Seconds \n", duration.Seconds())
@@ -679,7 +684,7 @@ func TestNotusParallel(setsize, updatedSetSize uint32) {
 
 	// get accumulators
 	setup := *accumulator.TrustedSetup()
-	maxLen := setsize * 1024 / bits.UintSize
+	maxLen := setsize * 2048 / bits.UintSize
 	table := multiexp.NewPrecomputeTable(setup.G, setup.N, int(maxLen))
 
 	unchangedSet := accumulator.GenBenchSet(int(setsize - updatedSetSize))
