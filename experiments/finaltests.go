@@ -83,15 +83,20 @@ func TestBasicZKrsa() {
 	}
 
 	// zkPoKE
-	a := big.NewInt(123)
-	b := big.NewInt(54)
-	aPowB := new(big.Int).Exp(a, b, nil)
-	prover1 := proof.NewZKPoKEProver(pp)
-	poke, err := prover1.Prove(aPowB, a)
-	handleErr(err)
-	verifier1 := proof.NewZKPoKEVerifier(pp)
-	if ok, err := verifier1.Verify(poke, aPowB, a); !ok || err != nil {
-		panic("verification failed")
+	{
+		setup := accumulator.TrustedSetup()
+		pp := proof.PublicParameters{setup.N, setup.G, setup.H}
+		var exponent, C big.Int
+		exponent.SetInt64(666)
+		C.Exp(setup.G, &exponent, setup.N)
+		pokeproof, err := proof.ZKPoKEProve(&pp, pp.G, &exponent, &C)
+		if err != nil {
+			panic("error not empty for TestPoKEStar")
+		}
+		flag := proof.ZKPoKEVerify(&pp, pp.G, &C, pokeproof)
+		if flag != true {
+			panic("did not pass verification")
+		}
 	}
 
 }
