@@ -56,10 +56,7 @@ func PoKEStarVerify(pp *PublicParameters, C *big.Int, proof *PoKEStarProof) bool
 	l.Set(transcript.GetPrimeChallengeUsingTranscript())
 
 	temp.Set(MultiExp(proof.Q, &l, pp.G, proof.R, pp.N))
-	if temp.Cmp(C) == 0 {
-		return true
-	}
-	return false
+	return temp.Cmp(C) == 0
 }
 
 // ZKPoKEProof contains the proofs for ZKPoKE
@@ -152,10 +149,7 @@ func ZKPoKEVerify(pp *PublicParameters, u, w *big.Int, proof *ZKPoKEProof) bool 
 	rhs.Exp(w, &c, pp.N)
 	rhs.Mul(&rhs, proof.Au)
 	rhs.Mod(&rhs, pp.N)
-	if lhs.Cmp(&rhs) != 0 {
-		return false
-	}
-	return true
+	return lhs.Cmp(&rhs) == 0
 }
 
 // PoEProof contains the proofs for PoE
@@ -190,8 +184,5 @@ func PoEVerify(base, mod, C, x *big.Int, proof *PoEProof) bool {
 	l.Set(transcript.GetPrimeChallengeUsingTranscript())
 	r.Mod(x, &l)
 	temp.Set(MultiExp(proof.Q, &l, base, &r, mod))
-	if temp.Cmp(C) == 0 {
-		return true
-	}
-	return false
+	return temp.Cmp(C) == 0
 }
