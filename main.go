@@ -102,8 +102,8 @@ func main() {
 	fmt.Println("Enter 4 to test Membership precomputation under different group size in single thread. This experiment takes a very long time and large memory for precomputation table")
 	fmt.Println("Enter 5 to test Notus under different group size in parallel. This experiment takes a very long time and very large memory and disk space")
 	fmt.Println("Enter 6 to simulate the cost of a Merkle Swap with depth 28")
-
 	fmt.Println("Enter 9 to run all above experiments")
+	fmt.Println("Enter anything else to exit.")
 	_, err := fmt.Scan(&number)
 	if err != nil {
 		fmt.Println("Error reading integer:", err)
@@ -111,41 +111,72 @@ func main() {
 	}
 
 	switch {
-	case number == 1 || number == 9:
+	case number == 1:
 		fmt.Println("Test basic process of PoKE, MultiSwap and Smart contract generation")
 		startingTime := time.Now().UTC()
 		testbasicprocess()
 		duration := time.Now().UTC().Sub(startingTime)
 		fmt.Printf("Running basic process of PoKE, MultiSwap and Smart contract experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 2 || number == 9:
+	case number == 2:
 		fmt.Println("Test basic process of RSA accumulator, focusing on membership proof verification")
 		startingTime := time.Now().UTC()
 		testMembershipproof()
 		duration := time.Now().UTC().Sub(startingTime)
 		fmt.Printf("Running  basic process of RSA accumulator experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 3 || number == 9:
+	case number == 3:
 		fmt.Println("Test Single Core Component Profiler")
 		startingTime := time.Now().UTC()
 		singleCoreComponentProfiler(updateRates)
 		duration := time.Now().UTC().Sub(startingTime)
 		fmt.Printf("Running Single Core Component Profiler experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 4 || number == 9:
+	case number == 4:
 		fmt.Println("Test Membership precomputation in under different group size")
 		startingTime := time.Now().UTC()
 		experiments.TestDifferentMembershipForDISingleThread()
 		duration := time.Now().UTC().Sub(startingTime)
 		fmt.Printf("Running Membership precomputation experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 5 || number == 9:
+	case number == 5:
 		fmt.Println("Test Notus under different group size in parallel")
 		startingTime := time.Now().UTC()
 		testNotusParallel(updateRates)
 		duration := time.Now().UTC().Sub(startingTime)
 		fmt.Printf("Running Notus experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 6 || number == 9:
+	case number == 6:
 		startingTime := time.Now().UTC()
 		fmt.Println("Test to simulate the cost of a Merkle Swap with depth 28")
 		merkleswap.TestMerkleMultiSwap(1024)
 		duration := time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Running Merkle Swap experiment. Takes [%.3f] Seconds \n", duration.Seconds())
+	case number == 9:
+		fmt.Println("Test basic process of PoKE, MultiSwap and Smart contract generation")
+		startingTime := time.Now().UTC()
+		testbasicprocess()
+		duration := time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Running basic process of PoKE, MultiSwap and Smart contract experiment. Takes [%.3f] Seconds \n", duration.Seconds())
+		fmt.Println("Test basic process of RSA accumulator, focusing on membership proof verification")
+		startingTime = time.Now().UTC()
+		testMembershipproof()
+		duration = time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Running basic process of RSA accumulator experiment. Takes [%.3f] Seconds \n", duration.Seconds())
+		fmt.Println("Test Single Core Component Profiler")
+		startingTime = time.Now().UTC()
+		singleCoreComponentProfiler(updateRates)
+		duration = time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Running Single Core Component Profiler experiment. Takes [%.3f] Seconds \n", duration.Seconds())
+		fmt.Println("Test Membership precomputation in under different group size")
+		startingTime = time.Now().UTC()
+		experiments.TestDifferentMembershipForDISingleThread()
+		duration = time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Running Membership precomputation experiment. Takes [%.3f] Seconds \n", duration.Seconds())
+		fmt.Println("Test Notus under different group size in parallel")
+		startingTime = time.Now().UTC()
+		testNotusParallel(updateRates)
+		duration = time.Now().UTC().Sub(startingTime)
+		fmt.Printf("Running Notus experiment. Takes [%.3f] Seconds \n", duration.Seconds())
+		startingTime = time.Now().UTC()
+		fmt.Println("Test to simulate the cost of a Merkle Swap with depth 28")
+		merkleswap.TestMerkleMultiSwap(1024)
+		duration = time.Now().UTC().Sub(startingTime)
 		fmt.Printf("Running Merkle Swap experiment. Takes [%.3f] Seconds \n", duration.Seconds())
 	default:
 		return
