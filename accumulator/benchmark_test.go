@@ -29,7 +29,7 @@ func BenchmarkAccAndProve(b *testing.B) {
 func BenchmarkProveMembership(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, DIHashFromPoseidon)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -40,7 +40,7 @@ func BenchmarkProveMembership(b *testing.B) {
 func BenchmarkProveMembershipIter(b *testing.B) {
 	setSize := 1000
 	set := GenBenchSet(setSize)
-	rep := GenRepresentatives(set, HashToPrimeFromSha256)
+	rep := GenRepresentatives(set, DIHashFromPoseidon)
 	setup := *TrustedSetup()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -128,22 +128,20 @@ func groupElementSquare(N *big.Int, set []*big.Int) {
 func BenchmarkExp(b *testing.B) {
 	setup := *TrustedSetup()
 
-	var largeTestNum big.Int
-	largeTestNum.Mul(setup.N, setup.N)
-	setSize := 10000
+	setSize := 1000000
 	set := make([]*big.Int, setSize)
 	var err error
 	for i := range set {
-		set[i], err = crand.Int(crand.Reader, &largeTestNum)
-	}
-	if err != nil {
-		b.Fatal(err)
+		set[i], err = crand.Int(crand.Reader, setup.N)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()
 	var temp big.Int
-	for i := 0; i < b.N; i++ {
-		temp.Exp(setup.G, set[i], setup.N)
+	for j := 0; j < setSize; j++ {
+		temp.Exp(setup.G, set[j], setup.N)
 	}
 }
 
