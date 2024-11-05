@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jiajunxin/rsa_accumulator/experiments"
-	"github.com/jiajunxin/rsa_accumulator/merkleswap"
 	"github.com/jiajunxin/rsa_accumulator/zkmultiswap"
 )
 
@@ -87,99 +86,14 @@ func testNotusParallel(updateRates int) {
 }
 
 func main() {
-	//updateRates denotes the percentage of updates in the total users, i.e. number of updates = users/updateRates
-	updateRates := 64
-
-	var number int
-	fmt.Println("This code is used to benchmark the design of Notus: Dynamic Proofs of Liabilities from Zero-knowledge RSA Accumulators")
-	fmt.Println("RSA accumulator parameters are generated for TEST PURPOSE")
-	fmt.Println("DO NOT directly use in production")
-	fmt.Println("Enter an integer to indicate which experiment you want to run")
-	fmt.Println("Note that all SNARK circuit are output to file for reuse. You can keep all of them, or delete all of them, do not delete partically.")
-	fmt.Println("Enter 1 to run the basic process, including PoKE protocol, MultiSwap with 10 elements and a smart contract to verify MultiSwap")
-	fmt.Println("Enter 2 to run the basic process of RSA accumulator, focusing on membership proof verification")
-	fmt.Println("Enter 3 to test proportion of execution time consumed by each component of the system in single thread. This experiment takes a very long time!")
-	fmt.Println("Enter 4 to test Membership precomputation under different group size in single thread. This experiment takes a very long time and large memory for precomputation table")
-	fmt.Println("Enter 5 to test Notus under different group size in parallel. This experiment takes a very long time and very large memory and disk space.")
-	fmt.Println("Make sure you have 32 cores to get correct result.")
-	fmt.Println("Enter 6 to simulate the cost of a Merkle Swap with depth 28")
-	fmt.Println("Enter 9 to run all above experiments")
-	fmt.Println("Enter anything else to exit.")
-	_, err := fmt.Scan(&number)
-	if err != nil {
-		fmt.Println("Error reading integer:", err)
-		return
-	}
-
-	switch {
-	case number == 1:
-		fmt.Println("Test basic process of PoKE, MultiSwap and Smart contract generation")
-		startingTime := time.Now().UTC()
-		testbasicprocess()
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running basic process of PoKE, MultiSwap and Smart contract experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 2:
-		fmt.Println("Test basic process of RSA accumulator, focusing on membership proof verification")
-		startingTime := time.Now().UTC()
-		testMembershipproof()
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running  basic process of RSA accumulator experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 3:
-		fmt.Println("Test Single Core Component Profiler")
-		startingTime := time.Now().UTC()
-		singleCoreComponentProfiler(updateRates)
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Single Core Component Profiler experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 4:
-		fmt.Println("Test Membership precomputation in under different group size")
-		startingTime := time.Now().UTC()
-		experiments.TestDifferentMembershipForDISingleThread()
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Membership precomputation experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 5:
-		fmt.Println("Test Notus under different group size in parallel")
-		startingTime := time.Now().UTC()
-		testNotusParallel(updateRates)
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Notus experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 6:
-		startingTime := time.Now().UTC()
-		fmt.Println("Test to simulate the cost of a Merkle Swap with depth 28")
-		merkleswap.TestMerkleMultiSwap(1024)
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Merkle Swap experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	case number == 9:
-		fmt.Println("Test basic process of PoKE, MultiSwap and Smart contract generation")
-		startingTime := time.Now().UTC()
-		testbasicprocess()
-		duration := time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running basic process of PoKE, MultiSwap and Smart contract experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-		fmt.Println("Test basic process of RSA accumulator, focusing on membership proof verification")
-		startingTime = time.Now().UTC()
-		testMembershipproof()
-		duration = time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running basic process of RSA accumulator experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-		fmt.Println("Test Single Core Component Profiler")
-		startingTime = time.Now().UTC()
-		singleCoreComponentProfiler(updateRates)
-		duration = time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Single Core Component Profiler experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-		fmt.Println("Test Membership precomputation in under different group size")
-		startingTime = time.Now().UTC()
-		experiments.TestDifferentMembershipForDISingleThread()
-		duration = time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Membership precomputation experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-		fmt.Println("Test Notus under different group size in parallel")
-		startingTime = time.Now().UTC()
-		testNotusParallel(updateRates)
-		duration = time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Notus experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-		startingTime = time.Now().UTC()
-		fmt.Println("Test to simulate the cost of a Merkle Swap with depth 28")
-		merkleswap.TestMerkleMultiSwap(1024)
-		duration = time.Now().UTC().Sub(startingTime)
-		fmt.Printf("Running Merkle Swap experiment. Takes [%.3f] Seconds \n", duration.Seconds())
-	default:
-		return
-	}
+	println("Test for set size ", twoTo14, " with 2^", 3, " cores")
+	experiments.TestRSASubsetParallel(twoTo14, 1024, 3)
+	println("Test for set size ", twoTo15, " with 2^", 3, " cores")
+	experiments.TestRSASubsetParallel(twoTo15, 1024, 3)
+	println("Test for set size ", twoTo16, " with 2^", 3, " cores")
+	experiments.TestRSASubsetParallel(twoTo16, 1024, 3)
+	println("Test for set size ", twoTo17, " with 2^", 3, " cores")
+	experiments.TestRSASubsetParallel(twoTo17, 1024, 3)
+	println("Test for set size ", twoTo18, " with 2^", 3, " cores")
+	experiments.TestRSASubsetParallel(twoTo18, 1024, 3)
 }
