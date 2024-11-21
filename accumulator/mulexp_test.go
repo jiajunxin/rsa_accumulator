@@ -31,11 +31,11 @@ func TestGCB(t *testing.T) {
 
 	a, err := rand.Int(rand.Reader, &max)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	b, err := rand.Int(rand.Reader, &max)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 
 	var aCopy, bCopy big.Int
@@ -61,15 +61,15 @@ func TestSimpleExp(t *testing.T) {
 
 	g, err := rand.Int(rand.Reader, &max)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	x, err := rand.Int(rand.Reader, &max)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	N, err := rand.Int(rand.Reader, &max)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 
 	var result2 big.Int

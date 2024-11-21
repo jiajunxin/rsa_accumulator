@@ -19,19 +19,19 @@ func TestPublicWitness(t *testing.T) {
 	assignment := AssignCircuit(testSet)
 	witness, err := frontend.NewWitness(assignment, ecc.BN254)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	publicWitness, err := witness.Public()
 	if err != nil {
 		fmt.Println("error while generating public witness")
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 
 	publicPart := testSet.PublicPart()
 	assignment2 := AssignCircuitHelper(publicPart)
 	publicWitness2, err := frontend.NewWitness(assignment2, ecc.BN254, frontend.PublicOnly())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	if !reflect.DeepEqual(publicWitness.Vector, publicWitness2.Vector) {
 		t.Errorf("public witness and public witness build from public info are not equal")
@@ -40,12 +40,12 @@ func TestPublicWitness(t *testing.T) {
 	assignment.CurrentEpochNum = 666
 	witness, err = frontend.NewWitness(assignment, ecc.BN254)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	publicWitness, err = witness.Public()
 	if err != nil {
 		fmt.Println("error while generating public witness")
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	if reflect.DeepEqual(publicWitness.Vector, publicWitness2.Vector) {
 		t.Errorf("public witness and public witness should not be equal")
