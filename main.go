@@ -86,8 +86,12 @@ func testNotusParallel(updateRates int) {
 }
 
 func main() {
-	println("Test for ", twoTo14, " total users, with 1024 transaction in this batch, with 2^", 3, "cores")
+	println("Test for ", twoTo14, " total users, with 1024 transaction in this batch, with 8 cores")
+	experiments.OKXBenchParallel(twoTo14, 1024, 8)
+	println("Test for ", twoTo14, " total users, with 1024 transaction in this batch, with 3 cores")
 	experiments.OKXBenchParallel(twoTo14, 1024, 3)
+	println("Test for ", twoTo14, " total users, with 1024 transaction in this batch, with 1 cores")
+	experiments.OKXBenchParallel(twoTo14, 1024, 1)
 	//println("Test for ", twoTo15, " total users, with 1024 transaction in this batch, with 2^", 3, " cores")
 	// experiments.TestRSASubsetParallel(twoTo15, 1024, 3)
 	//println("Test for ", twoTo16, " total users, with 1024 transaction in this batch, with 2^", 3, " cores")
