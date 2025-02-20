@@ -16,7 +16,7 @@ import (
 )
 
 // OKXBenchParallel benchmark OKX circuit with at most 32 cores
-func OKXBenchParallel(setsize, updatedSetSize uint32, limit int) {
+func OKXBenchParallel(setsize, updatedSetSize uint32) {
 	if !isCircuitExist(updatedSetSize) {
 		fmt.Println("Circuit haven't been compiled for testSetSize = ", updatedSetSize, ". Start compiling.")
 		startingTime := time.Now().UTC()
@@ -84,34 +84,24 @@ func OKXBenchParallel(setsize, updatedSetSize uint32, limit int) {
 	originalProd = bigfft.Mul(originalProd, &removedRanProd)
 	runtime.GC()
 	startingTime = time.Now().UTC()
-	accMid := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
-	// accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
+	_, err := multiexp.ExpParallelAuto(setup.G, originalProd, setup.N, table)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Generate subset accumulator Takes [%.4f] Seconds \n", duration.Seconds())
-	runtime.GC()
-	startingTime = time.Now().UTC()
-	accMid = multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
-	// accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
-	duration = time.Now().UTC().Sub(startingTime)
-	fmt.Printf("Generate subset accumulator Takes [%.4f] Seconds \n", duration.Seconds())
-	// fmt.Println("accOri = ", accOri.String())
-	fmt.Println("accMid = ", accMid.String())
-	//--------------------------------------------finish generating accumulator--------------------------------
-	table = nil
-	runtime.GC()
-	testSet := zkmultiswap.GenTestSet(updatedSetSize, accumulator.TrustedSetup())
-	publicInfo := testSet.PublicPart()
-	proof, err := zkmultiswap.Prove(testSet)
 	if err != nil {
-		fmt.Println("Error during Prove")
 		panic(err)
 	}
 	runtime.GC()
-
-	flag := zkmultiswap.Verify(proof, updatedSetSize, publicInfo)
-	if flag {
-		fmt.Println("Verification passed")
-		return
+	startingTime = time.Now().UTC()
+	_, err = multiexp.ExpParallelAuto(setup.G, originalProd, setup.N, table)
+	// accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generate subset accumulator Takes [%.4f] Seconds \n", duration.Seconds())
+	if err != nil {
+		panic(err)
 	}
-	fmt.Println("Verification failed")
+	// fmt.Println("accOri = ", accOri.String())
+	//fmt.Println("accMid = ", accMid.String())
+	//--------------------------------------------finish generating accumulator--------------------------------
+	table = nil
+	runtime.GC()
 }
