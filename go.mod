@@ -7,7 +7,7 @@ require (
 	github.com/consensys/gnark-crypto v0.10.0
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/holiman/uint256 v1.2.2
-	github.com/jiajunxin/multiexp v0.1.2
+	github.com/jiajunxin/multiexp v0.1.3
 	github.com/kilic/bls12-381 v0.1.0
 	github.com/leanovate/gopter v0.2.9
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa
