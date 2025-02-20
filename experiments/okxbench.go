@@ -88,6 +88,12 @@ func OKXBenchParallel(setsize, updatedSetSize uint32, limit int) {
 	// accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
 	duration = time.Now().UTC().Sub(startingTime)
 	fmt.Printf("Generate subset accumulator Takes [%.4f] Seconds \n", duration.Seconds())
+	runtime.GC()
+	startingTime = time.Now().UTC()
+	accMid = multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
+	// accOri := multiexp.ExpParallel(setup.G, originalProd, setup.N, table, limit, 0)
+	duration = time.Now().UTC().Sub(startingTime)
+	fmt.Printf("Generate subset accumulator Takes [%.4f] Seconds \n", duration.Seconds())
 	// fmt.Println("accOri = ", accOri.String())
 	fmt.Println("accMid = ", accMid.String())
 	//--------------------------------------------finish generating accumulator--------------------------------
